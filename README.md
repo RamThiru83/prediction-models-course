@@ -15,7 +15,7 @@ Sign in or join with a code on the Account page. Learners get synced progress, n
 - Release control: hide a module or set an open date.
 - Join-code and WhatsApp contact setup.
 
-The join code for the first cohort is PMC-2026. Accounts and roles are shared with the EpiCompass project (same Supabase project, `profiles`, `cohorts`, `is_instructor()`); this course adds `pmc_` tables, in `supabase/pmc_schema.sql`.
+The join code for the first cohort is PMC-2026. Accounts and roles are shared with the EpiCompass project (same Supabase project, `profiles`, `cohorts`, `is_instructor()`); this course adds `pmc_` tables, in `pmc_schema.sql`.
 
 ## Data and privacy
 The Supabase publishable key in the page is public by design; row-level security protects data. Learners can read and change only their own rows; instructors can read all learner progress. Learner data are for teaching only. Using them for research needs ethics approval and separate consent.
