@@ -2621,281 +2621,207 @@ registerModule({
   part: 'Primer',
   title: 'Primer: the ideas you need before starting',
   book: 'Ch. 1, 4, 5, 15 (background)',
-  minutes: 60,
-  summary: 'Risk, odds, log-odds, logistic regression, Bayes rule, sampling variation, the bootstrap and the two basic questions about any model (does it rank patients, does it give correct risks).',
+  minutes: 40,
+  summary: 'The few ideas the course assumes: risk and odds, how logistic regression turns patient facts into a risk, why results vary between samples, and the two questions asked of every model.',
   objectives: [
-    'Convert between probability, odds and log-odds and interpret an odds ratio.',
-    'Calculate the predicted risk of a patient from a logistic regression equation.',
-    'Use sensitivity, specificity and prevalence to obtain positive and negative predictive values through Bayes rule.',
-    'Explain why a sample proportion varies from sample to sample and what a bootstrap sample is.',
-    'Define the c statistic and calibration in plain terms and compute them for a small example.'
+    'Explain what a prediction model produces and name its outcome and predictors.',
+    'Convert a risk into odds and back.',
+    'Calculate a patient\'s predicted risk from a simple logistic regression equation.',
+    'Explain why an estimate from a small sample is uncertain, and why the number of events matters.',
+    'Describe discrimination and calibration in plain words.'
   ],
   sections: [
     {
       id: 's1',
       title: 'What a clinical prediction model is',
       html: `
-<p>A <b>clinical prediction model</b> takes a few facts about a patient and returns the probability that the patient has, or will develop, a particular outcome. It is sometimes called a prediction rule, a risk score or a nomogram. The word "model" only means that the probability is calculated from a formula whose numbers were estimated from earlier patients.</p>
-<h3>The vocabulary</h3>
+<p>A <b>clinical prediction model</b> takes a few facts about a patient and returns the chance that the patient has, or will develop, a particular outcome. Risk scores and nomograms are examples. The numbers in the formula were estimated from earlier patients.</p>
 <ul>
-<li><b>Outcome (or endpoint):</b> what is being predicted, for example preterm birth before 37 completed weeks, neonatal sepsis, or gestational diabetes. In this course the outcome is usually binary: it happens (1) or it does not (0). A patient with the outcome is called an <b>event</b>.</li>
-<li><b>Predictors (or covariates, risk factors):</b> the facts used to predict, for example maternal age, haemoglobin, previous preterm birth.</li>
-<li><b>Incidence</b> is the proportion who develop the outcome over a stated follow-up period; <b>prevalence</b> is the proportion who have the condition now. In prediction work both are simply "the overall risk in this population" and are often written as a percentage.</li>
-<li><b>Absolute risk:</b> the predicted probability itself (for example 18%), as opposed to a relative measure such as a risk ratio.</li>
+<li><b>Outcome:</b> what is predicted, for example preterm birth or neonatal sepsis. In this course it either happens (1) or does not (0). A patient with the outcome is called an <b>event</b>.</li>
+<li><b>Predictors:</b> the facts used to predict, for example maternal age, haemoglobin or a previous preterm birth.</li>
+<li><b>Predicted risk:</b> the model's answer for one patient, for example 18%.</li>
 </ul>
-<h3>Two kinds of question</h3>
-<p><b>Diagnostic</b> models estimate the probability that a condition is present now (for example, a newborn has sepsis at the time of examination). The data are cross-sectional: predictors and the true diagnosis are collected at about the same time. <b>Prognostic</b> models estimate the probability of a future outcome (for example, a woman booked at 12 weeks delivers preterm). The data come from a cohort followed over time.</p>
-<h3>Prediction is not the same as explanation</h3>
-<p>An aetiological study asks whether an exposure causes an outcome and worries about confounding. A prediction study asks how well a set of predictors together estimates the outcome risk for a new patient. A predictor can be useful for prediction without being a cause. The book describes prediction as primarily an <b>estimation problem</b> (what is this patient's risk?) and secondarily a hypothesis-testing problem (is this predictor associated with the outcome?). This course spends most of its time on estimation: getting each patient's risk right.</p>
-<div class="callout key"><b>Key idea</b><p>A prediction model is judged by whether its risks are close to the truth for patients who were not used to build it. Everything in this course is about building models whose risks stay accurate in new patients.</p></div>
-<p class="src">Source: Ch. 1, §1.1-1.2; Ch. 2, §2.1</p>`
+<p>A <b>diagnostic</b> model estimates the chance that a condition is present now (does this newborn have sepsis?). A <b>prognostic</b> model estimates the chance of a future outcome (will this woman deliver preterm?).</p>
+<p>Prediction is not the same as finding causes. A predictor is useful if it helps estimate the risk, whether or not it causes the outcome.</p>
+<div class="callout key"><b>Key idea</b><p>A model is good if its risks are close to the truth for new patients, not just for the patients used to build it. The whole course is about achieving that.</p></div>
+<p class="src">Source: Ch. 1, §1.1-1.2</p>`
     },
     {
       id: 's2',
-      title: 'Probability, odds and log-odds',
+      title: 'Risk and odds',
       html: `
-<p>Regression models for binary outcomes work on a scale that is not the probability scale. You need to move between three equivalent ways of stating the same chance.</p>
-<table class="data">
-<tr><th>Scale</th><th>Definition</th><th>Range</th><th>Example for 20% risk</th></tr>
-<tr><td>Probability (risk) p</td><td>events / all patients</td><td>0 to 1</td><td>0.20</td></tr>
-<tr><td>Odds</td><td>p / (1 − p) = events / non-events</td><td>0 to infinity</td><td>0.20 / 0.80 = 0.25, or "1 to 4"</td></tr>
-<tr><td>Log-odds (logit)</td><td>ln[ p / (1 − p) ]</td><td>−infinity to +infinity</td><td>ln(0.25) = −1.386</td></tr>
-</table>
-<div class="formula">odds = p / (1 − p)        p = odds / (1 + odds)        logit(p) = ln(odds)</div>
-<p>Here ln is the natural logarithm and exp is its inverse, so exp(logit) gives the odds back. A probability of 50% has odds 1 and log-odds 0. Probabilities below 50% have negative log-odds; above 50% positive.</p>
-<div class="callout eg"><b>Worked example: a risk of 12%</b>
-<p>Odds = 0.12 / 0.88 = 0.136. This is about 3 events for every 22 non-events. The log-odds = ln(0.136) = −1.99. Going back: odds 0.136 / (1 + 0.136) = 0.12.</p>
-<p>For small risks, odds and risk are close (a 1% risk has odds 0.0101). For large risks they differ a great deal (an 80% risk has odds 4, a 95% risk has odds 19).</p></div>
-<table class="data">
-<tr><th>p</th><th>Odds</th><th>Log-odds</th></tr>
-<tr><td>1%</td><td>0.0101</td><td>−4.60</td></tr>
-<tr><td>5%</td><td>0.0526</td><td>−2.94</td></tr>
-<tr><td>10%</td><td>0.111</td><td>−2.20</td></tr>
-<tr><td>20%</td><td>0.25</td><td>−1.39</td></tr>
-<tr><td>50%</td><td>1</td><td>0</td></tr>
-<tr><td>80%</td><td>4</td><td>1.39</td></tr>
-<tr><td>95%</td><td>19</td><td>2.94</td></tr>
-</table>
-<h3>Why log-odds?</h3>
-<p>A probability must stay between 0 and 1, so a straight-line formula for p can give impossible values such as 130% or −5%. Log-odds can take any value, so a straight-line formula for log-odds is safe, and converting back always gives a valid probability. Also, effects that multiply the odds become additive on the log-odds scale, which is why logistic regression is built there.</p>
-<h3>Ratios of odds and ratios of risks</h3>
-<p>An <b>odds ratio (OR)</b> divides one odds by another. If the risk is 30% in exposed women and 12% in unexposed women, the risk ratio is 0.30 / 0.12 = 2.5, but the odds ratio is (0.30/0.70) / (0.12/0.88) = 0.4286 / 0.1364 = 3.14. When the outcome is rare the two are close; when it is common the OR is further from 1 than the risk ratio.</p>
+<p>Regression models for a yes/no outcome work with <b>odds</b> rather than risk, so you need to switch between the two.</p>
+<div class="formula">odds = risk / (1 − risk)        risk = odds / (1 + odds)</div>
+<div class="callout eg"><b>Worked example: a risk of 20%</b>
+<p>Odds = 0.20 / 0.80 = 0.25, that is one event for every four non-events. Going back: 0.25 / 1.25 = 0.20.</p></div>
+<p>For small risks, odds and risk are almost the same (a 5% risk has odds 0.053). For large risks they differ a lot (an 80% risk has odds 4).</p>
+<p>An <b>odds ratio</b> compares two odds. If it is 1, the two groups have the same odds; above 1, the first group has higher odds. When the outcome is common, an odds ratio looks larger than the matching ratio of risks, so do not read it as "times the risk".</p>
+<p>Regression actually uses the logarithm of the odds, the <b>log-odds</b>, because it can take any value from minus to plus infinity. A risk of 50% has log-odds 0; lower risks have negative log-odds.</p>
 <div data-widget="oddsConverter"></div>
 <ul class="try">
-<li>Move the probability slider to 12% and read the odds, the "1 in X" figure and the log-odds. Compare with the worked example.</li>
-<li>Move it to 1%, then 5%, then 10%, and note how close the odds are to the probability. Repeat at 70% and 90%.</li>
-<li>Type an odds of 4 in the odds box and check that the probability returned is 80%.</li>
+<li>Set the risk to 20% and check that the odds are 0.25.</li>
+<li>Compare risk and odds at 5% and then at 80%.</li>
 </ul>
-<p class="src">Source: Ch. 4, §4.2 (logistic model), standard definitions</p>`
+<p class="src">Source: Ch. 4, §4.2</p>`
     },
     {
       id: 's3',
-      title: 'The logistic regression model',
+      title: 'Logistic regression in one example',
       html: `
-<p><b>Logistic regression</b> is the standard model for a binary outcome. For a patient with predictor values x<sub>1</sub>, x<sub>2</sub>, ..., x<sub>k</sub> it first forms a <b>linear predictor</b> (lp), then converts it to a probability.</p>
-<div class="formula">lp = α + β<sub>1</sub>x<sub>1</sub> + β<sub>2</sub>x<sub>2</sub> + ... + β<sub>k</sub>x<sub>k</sub><br>logit(p) = lp        p = e<sup>lp</sup> / (1 + e<sup>lp</sup>) = 1 / (1 + e<sup>−lp</sup>)</div>
-<ul>
-<li>The <b>intercept</b> α is the log-odds for a patient whose predictors are all 0. It mainly sets the overall risk level.</li>
-<li>Each <b>coefficient</b> β is the change in log-odds for a one-unit increase in that predictor, other predictors fixed.</li>
-<li><b>exp(β)</b> is the <b>odds ratio</b> for a one-unit increase. A coefficient of 0 means no effect (OR = 1); positive coefficients raise risk; negative lower it.</li>
-</ul>
-<p>The S-shaped relation between lp and p is flat at the ends and steepest in the middle: lp = 0 gives 50%, lp = −4 gives below 2%, and lp = +4 gives above 98%.</p>
-<div class="callout eg"><b>Worked example (Illustrative, synthetic): previous preterm birth</b>
-<p>Suppose a model for preterm birth is logit(p) = −2.2 + 1.5 × prior_ptb, where prior_ptb is 1 if the woman had a previous preterm birth and 0 otherwise.</p>
+<p><b>Logistic regression</b> is the standard model for a yes/no outcome. It works in two steps.</p>
 <ol>
-<li>No previous preterm birth: lp = −2.2, risk = 1 / (1 + e<sup>2.2</sup>) = 0.0998, about 10%.</li>
-<li>Previous preterm birth: lp = −2.2 + 1.5 = −0.7, risk = 1 / (1 + e<sup>0.7</sup>) = 0.332, about 33%.</li>
-<li>The OR is exp(1.5) = 4.48. Check from the two risks: (0.332/0.668) / (0.0998/0.9002) = 0.497 / 0.1109 = 4.48.</li>
-<li>Add chronic hypertension with β = 0.9. A woman with both predictors has lp = −2.2 + 1.5 + 0.9 = 0.2, risk = 55%.</li>
+<li>Add up a score, the <b>linear predictor</b> (lp): a starting value (the <b>intercept</b>) plus a <b>coefficient</b> for each predictor the patient has.</li>
+<li>Turn the score into a risk:</li>
 </ol>
-<p>The effects multiply on the odds scale (OR 4.48 for prior preterm birth times OR 2.46 for hypertension). They do not simply add on the risk scale: the extra risk from hypertension depends on where the woman started.</p></div>
-<h3>Continuous predictors</h3>
-<p>For a continuous predictor such as age, β is the log-odds change per unit (per year). If β = 0.05 per year, the OR per year is exp(0.05) = 1.051 and the OR per 10 years is exp(0.5) = 1.65. The model assumes the same log-odds change at every age (a straight line on the log-odds scale). Later modules ask when that assumption is acceptable.</p>
-<h3>Where the coefficients come from</h3>
-<p>The coefficients are chosen by <b>maximum likelihood</b>: the values that make the observed outcomes most probable under the model. Software does this; you only need to know that the estimates are the best fit to the data in hand, which is exactly why they can look better on those data than they will in new patients (Section 6).</p>
+<div class="formula">lp = α + β<sub>1</sub>x<sub>1</sub> + β<sub>2</sub>x<sub>2</sub> + ...        risk = 1 / (1 + e<sup>−lp</sup>)</div>
+<p>A positive coefficient raises the risk and a negative one lowers it. exp(coefficient) is the <b>odds ratio</b> for that predictor.</p>
+<div class="callout eg"><b>Worked example (Illustrative, synthetic): previous preterm birth</b>
+<p>A model for preterm birth is lp = −2.2 + 1.5 × prior_ptb, where prior_ptb is 1 if the woman had a previous preterm birth and 0 if not.</p>
+<ol>
+<li>No previous preterm birth: lp = −2.2, risk = 1 / (1 + e<sup>2.2</sup>) = about 10%.</li>
+<li>Previous preterm birth: lp = −0.7, risk = 1 / (1 + e<sup>0.7</sup>) = about 33%.</li>
+<li>The odds ratio is exp(1.5) = 4.5. The risk rises from 10% to 33%, which is 3.3 times, not 4.5 times.</li>
+</ol></div>
+<p>Software chooses the coefficients that fit the study data best. Because they are tuned to those patients, the model usually looks better on them than it will on new patients. This is the starting point of Module 4.</p>
 <div data-widget="logisticCurve"></div>
 <ul class="try">
-<li>Set intercept α = −2.2 and switch on "binary predictor" with β = 1.5. Read the two risks and the OR and compare with the worked example.</li>
-<li>Switch the binary predictor off. Set β = 0.5 and read the OR per unit, then the risks at x = 0, 5 and 10. Notice the curve is steeper in the middle of its range.</li>
-<li>Set β = 0 and observe a flat curve: the predictor carries no information.</li>
+<li>Set the intercept to −2.2, switch on "binary predictor" with β = 1.5, and check the two risks against the example.</li>
+<li>Set β = 0 and see that the predictor no longer changes the risk.</li>
 </ul>
 <p class="src">Source: Ch. 4, §4.2</p>`
     },
     {
       id: 's4',
-      title: 'Sensitivity, specificity and Bayes rule',
+      title: 'Test results: sensitivity, specificity and predictive values',
       html: `
-<p>Diagnostic tests are described by two numbers measured against the true diagnosis (the reference standard).</p>
+<p>When a model or test sorts patients into "positive" and "negative", four counts arise: true and false positives, true and false negatives.</p>
 <ul>
-<li><b>Sensitivity</b> = TP / (TP + FN): the share of patients with the condition who test positive.</li>
-<li><b>Specificity</b> = TN / (TN + FP): the share of patients without the condition who test negative.</li>
+<li><b>Sensitivity:</b> of the patients with the condition, the share who test positive.</li>
+<li><b>Specificity:</b> of the patients without the condition, the share who test negative.</li>
+<li><b>Positive predictive value (PPV):</b> of the patients who test positive, the share who have the condition. The <b>negative predictive value (NPV)</b> is the same for negatives.</li>
 </ul>
-<p>TP, FP, FN, TN are the cells of the 2 × 2 table: true positives, false positives, false negatives, true negatives. For decisions, patients and clinicians need the reverse: given a test result, what is the chance of disease?</p>
-<ul>
-<li><b>Positive predictive value (PPV)</b> = TP / (TP + FP).</li>
-<li><b>Negative predictive value (NPV)</b> = TN / (TN + FN).</li>
-</ul>
-<p>PPV and NPV depend on prevalence, whereas sensitivity and specificity do not (to a first approximation). <b>Bayes rule</b> in odds form shows how:</p>
-<div class="formula">posterior odds = prior odds × likelihood ratio<br>LR+ = sensitivity / (1 − specificity)        LR− = (1 − sensitivity) / specificity</div>
-<p>The <b>prior odds</b> are the odds of disease before the test (from prevalence). The <b>likelihood ratio</b> (LR) states how much the result multiplies the odds. LR+ is used after a positive result, LR− after a negative result. The <b>posterior</b> odds are converted back to a probability, which equals PPV after a positive and 1 − NPV after a negative result.</p>
-<div class="callout book"><b>Book example</b>
-<p>Sensitivity 80%, specificity 90%, prevalence 10%, N = 1000. The table is: test positive 80 with disease and 90 without; test negative 20 with disease and 810 without. LR+ = 0.80 / 0.10 = 8 and LR− = 0.20 / 0.90 = 0.22. The probability of disease is 47% after a positive and 2.4% after a negative test.</p></div>
-<div class="callout mch"><b>Illustrative (synthetic): a bedside score for neonatal sepsis</b>
-<p>A bedside sign set has sensitivity 85% and specificity 70%. Prevalence of sepsis in the unit is 14%. Per 1000 newborns: 140 have sepsis, 860 do not.</p>
+<div class="callout mch"><b>Illustrative (synthetic): a bedside check for neonatal sepsis</b>
+<p>Sensitivity 85%, specificity 70%, and 14% of newborns in the unit have sepsis. Out of 1000 newborns, 140 have sepsis and 860 do not.</p>
 <ol>
-<li>TP = 0.85 × 140 = 119; FN = 21. TN = 0.70 × 860 = 602; FP = 258.</li>
-<li>PPV = 119 / (119 + 258) = 31.6%. NPV = 602 / (602 + 21) = 96.6%.</li>
-<li>By Bayes rule: prior odds = 0.14 / 0.86 = 0.163. LR+ = 0.85 / 0.30 = 2.83; posterior odds = 0.163 × 2.83 = 0.461, probability 0.461 / 1.461 = 31.6%. Same answer.</li>
-<li>After a negative result: LR− = 0.15 / 0.70 = 0.214; posterior odds 0.163 × 0.214 = 0.0349, probability 3.4%.</li>
-</ol>
-<p>A positive sign set raises the risk from 14% to 32%, a useful shift but far from certainty, because most newborns do not have sepsis.</p></div>
-<h3>The link to logistic regression</h3>
-<p>Take a single binary test as the predictor. The logistic model for disease given the test has OR = LR+ / LR−, intercept = ln(prior odds × LR−) (the log-odds of disease when the test is negative), and coefficient = ln(LR+ / LR−). In the book example: OR = 8 / 0.222 = 36, coefficient = ln 36 = 3.583, intercept = ln(0.111 × 0.222) = −3.701. So a logistic model is Bayes rule written in a form that handles several predictors at once. A related model that multiplies the separate likelihood ratios of several predictors without adjusting for their correlation is called naive Bayes; because correlated predictors are counted twice, its predictions tend to be too extreme.</p>
+<li>Test positive with sepsis: 85% of 140 = 119. Test positive without sepsis: 30% of 860 = 258.</li>
+<li>PPV = 119 / (119 + 258) = 32%. Most positives are false alarms, because most newborns do not have sepsis.</li>
+<li>Test negative without sepsis: 70% of 860 = 602; with sepsis: 21. NPV = 602 / 623 = 97%.</li>
+</ol></div>
+<p>Sensitivity and specificity describe the test. PPV and NPV also depend on how common the condition is, so they change from one setting to another.</p>
 <div data-widget="bayes2x2"></div>
 <ul class="try">
-<li>Set sensitivity 85%, specificity 70%, prevalence 14% and check the 2 × 2 counts, PPV and NPV against the worked example.</li>
-<li>Keep sensitivity and specificity fixed and raise prevalence to 40%. Watch the post-test probability after a positive result rise.</li>
-<li>Read the equivalent logistic intercept and coefficient and confirm that the OR equals LR+ divided by LR−.</li>
+<li>Set 85%, 70% and 14% and check the counts and the risk after a positive result against the example.</li>
+<li>Raise the prevalence to 40% and watch the risk after a positive result rise.</li>
 </ul>
-<p class="src">Source: Ch. 4, §4.4 (Bayes rule, logistic link, naive Bayes)</p>`
+<p class="src">Source: Ch. 4, §4.4</p>`
     },
     {
       id: 's5',
-      title: 'Sampling variation and the bootstrap',
+      title: 'Why results vary between samples',
       html: `
-<p>Every number computed from a sample is only an estimate of the same number in the underlying population. Draw another sample and the estimate changes. This <b>sampling variation</b> is the root of the main problem studied in this course (overfitting), so it is worth seeing numerically.</p>
-<h3>Variation of a proportion</h3>
-<p>If the true risk is p and a sample has n patients, the observed proportion has standard error (SE) = √[ p(1 − p) / n ]. About 95% of samples give an observed proportion within p ± 1.96 SE.</p>
-<div class="callout eg"><b>Worked example (Illustrative, synthetic): true preterm risk 12%</b>
+<p>Any figure from a study is only an estimate. Another sample of patients would give a somewhat different figure. The smaller the sample, the bigger the swings.</p>
+<div class="callout eg"><b>Illustrative (synthetic): the true preterm birth risk is 12%</b>
 <table class="data">
-<tr><th>n</th><th>SE</th><th>95% of samples fall between</th></tr>
-<tr><td>50</td><td>4.6%</td><td>3.0% and 21.0%</td></tr>
-<tr><td>100</td><td>3.25%</td><td>5.6% and 18.4%</td></tr>
-<tr><td>500</td><td>1.45%</td><td>9.2% and 14.9%</td></tr>
-<tr><td>1000</td><td>1.03%</td><td>10.0% and 14.0%</td></tr>
+<tr><th>Women in the sample</th><th>95% of samples show between</th></tr>
+<tr><td>50</td><td>3% and 21%</td></tr>
+<tr><td>100</td><td>6% and 18%</td></tr>
+<tr><td>1000</td><td>10% and 14%</td></tr>
 </table>
-<p>A clinic that sees 100 women can observe anything from about 6% to 18% preterm births by chance alone, even when nothing differs from the district rate of 12%.</p></div>
-<h3>What matters is the number of events</h3>
-<p>For a binary outcome the information in a study is carried mainly by the number of patients who had the outcome. The book's example: a procedure with incidence 0.1% studied in 10,000 patients yields only 10 events, and that number of events determines how much can be learned. The count of events is called the <b>effective sample size</b>.</p>
+<p>A clinic with 100 deliveries can see anywhere from 6% to 18% preterm births by chance alone.</p></div>
+<p>For a yes/no outcome, what matters most is the <b>number of events</b>, not the number of patients. A study of 10,000 patients with a 0.1% outcome has only 10 events, and that is what limits what it can show.</p>
 <h3>The bootstrap</h3>
-<p>Sometimes the formula for variation is unavailable or complicated, as when a whole modelling procedure is repeated. The <b>bootstrap</b> imitates drawing new samples by resampling the data we already have:</p>
-<ol>
-<li>From the original sample of n patients, draw n patients <b>with replacement</b>: after each draw the patient is put back, so some patients appear twice or more and others not at all. This is one bootstrap sample.</li>
-<li>Recompute the quantity of interest (a proportion, a coefficient, a performance measure) in the bootstrap sample.</li>
-<li>Repeat many times (100 to 500 or more). The spread of the results shows the sampling variation.</li>
-</ol>
-<p>The chance that a particular patient appears at least once in a bootstrap sample is 1 − (1 − 1/n)<sup>n</sup>. This is 65.1% for n = 10, 63.4% for n = 100, and tends to 1 − 1/e = 63.2%. So a bootstrap sample contains about 63% of the distinct original patients, with duplicates making up the rest. Later modules use the bootstrap to estimate how optimistic a model's performance is.</p>
+<p>The <b>bootstrap</b> imitates taking new samples from the data you already have. Draw patients at random from your own sample, putting each one back after it is drawn, until you have a new sample of the same size. Some patients appear twice, others not at all (about 63% of the original patients appear). Repeat this many times and see how much the result changes. Later modules use it to check how optimistic a model is.</p>
 <div data-widget="samplingDemo"></div>
 <ul class="try">
-<li>With true risk 12% and n = 100, click "Draw 200 samples" and compare the 2.5th and 97.5th percentiles with the table above. Repeat with n = 1000.</li>
-<li>Click "One bootstrap" and read the share of original subjects appearing at least once. Compare it with 63.2%.</li>
-<li>Lower the true risk to 2% at n = 200 and notice that the histogram becomes lopsided: few events means unstable estimates.</li>
+<li>With a true risk of 12% and n = 100, draw 200 samples and compare the spread with the table. Then try n = 1000.</li>
+<li>Click "One bootstrap" and check that about 63% of the original patients appear.</li>
 </ul>
-<p class="src">Source: Ch. 1, §1.2.2; Ch. 5, §5.3 (bootstrap)</p>`
+<p class="src">Source: Ch. 1, §1.2.2; Ch. 5, §5.3</p>`
     },
     {
       id: 's6',
-      title: 'Judging a model: new data, discrimination and calibration',
+      title: 'The two questions asked of every model',
       html: `
-<h3>Apparent performance versus performance in new patients</h3>
-<p>When a model is tested on the same patients used to build it, the result is called its <b>apparent</b> performance. Because the coefficients were tuned to those patients, apparent performance is usually better than the performance in new patients. The difference is called <b>optimism</b>, and a model that looks good in its own data but performs worse in new patients is said to be <b>overfitted</b>. The first four development modules explain how to prevent and measure this. For now, remember that a model should be judged on data that were not used to fit it.</p>
-<h3>Question 1: does the model rank patients correctly? (discrimination)</h3>
-<p>The <b>c statistic</b> (equal to the area under the ROC curve, AUC) is the probability that, for a randomly chosen pair of one patient with the outcome and one without, the patient with the outcome has the higher predicted risk. A value of 0.5 is a coin flip; 1 is perfect ranking. Ties count one half.</p>
+<p>A model tested on the same patients used to build it looks better than it really is. This is its <b>apparent</b> performance; the excess over performance in new patients is the <b>optimism</b>, and a model with a lot of it is <b>overfitted</b>. Always judge a model on patients it was not built on.</p>
+<h3>1. Does it rank patients correctly? (discrimination)</h3>
+<p>The <b>c statistic</b> answers this. Take one patient with the outcome and one without: the c statistic is the chance that the model gives the higher risk to the patient with the outcome. 0.5 is no better than a coin toss; 1 is perfect.</p>
 <div class="callout eg"><b>Worked example: seven women</b>
-<p>Predicted risks of 3 women who delivered preterm: 0.40, 0.25, 0.60. Predicted risks of 4 who did not: 0.10, 0.30, 0.20, 0.50.</p>
-<ol>
-<li>There are 3 × 4 = 12 event / non-event pairs.</li>
-<li>Pair each event with each non-event and count how often the event has the higher risk. 0.40 beats 0.10, 0.30, 0.20 (3 of 4). 0.25 beats 0.10, 0.20 (2 of 4). 0.60 beats all four (4 of 4). Total = 9.</li>
-<li>c = 9 / 12 = 0.75.</li>
-</ol></div>
-<h3>Question 2: are the predicted risks right? (calibration)</h3>
-<p><b>Calibration</b> compares predicted with observed risks. If the model says 20%, about 20 of 100 such patients should have the outcome. Two simple summaries:</p>
-<ul>
-<li><b>Calibration-in-the-large:</b> the mean predicted risk against the observed proportion. In the seven-woman example the mean prediction is 0.336 and the observed proportion is 3/7 = 0.429, so the model underestimates risk overall.</li>
-<li><b>Calibration slope:</b> the coefficient obtained when the outcome is regressed on the model's linear predictor in new data. A slope of 1 is ideal; below 1 means predictions are too extreme (high risks too high, low risks too low), which is the typical signature of overfitting.</li>
-</ul>
-<h3>Overall accuracy: the Brier score</h3>
-<p>The <b>Brier score</b> is the mean squared difference between outcome (0 or 1) and predicted risk: mean of (y − p)². In the seven-woman example it is 0.210. Lower is better; 0 is perfect. It reflects both calibration and discrimination.</p>
-<div class="callout key"><b>Key idea</b><p>Discrimination and calibration answer different questions. A model can rank patients well (high c) while all its risks are too high, and a model can be well calibrated on average while ranking no better than chance. A useful risk model needs both.</p></div>
+<p>Predicted risks of 3 women who delivered preterm: 0.40, 0.25, 0.60. Of 4 who did not: 0.10, 0.30, 0.20, 0.50. There are 3 × 4 = 12 pairs. The woman who delivered preterm has the higher risk in 9 of them (0.40 beats three, 0.25 beats two, 0.60 beats all four), so c = 9 / 12 = 0.75.</p></div>
+<h3>2. Are the risks the right size? (calibration)</h3>
+<p>If the model says 20% for a group of patients, about 20% of them should have the outcome. In the seven women the average predicted risk is 34% but 3 of 7 (43%) delivered preterm, so the model predicts too low. An overfitted model typically gives risks that are too extreme: too high for high-risk patients and too low for low-risk ones.</p>
+<div class="callout key"><b>Key idea</b><p>A model can rank patients well and still give risks that are too high or too low, so both questions must be answered.</p></div>
 <p class="src">Source: Ch. 5, §5.1; Ch. 15, §15.1-15.4</p>`
     },
     {
       id: 's7',
-      title: 'Checklist of terms used in the course',
+      title: 'Terms used in the course',
       html: `
-<p>Return to this table when a later module uses a term without redefining it.</p>
+<p>Return to this table when a later module uses a term without explaining it.</p>
 <table class="data">
 <tr><th>Term</th><th>Meaning</th></tr>
-<tr><td>Event / non-event</td><td>Patient with / without the outcome.</td></tr>
-<tr><td>Linear predictor (lp)</td><td>α + Σ β<sub>i</sub>x<sub>i</sub>, the model's log-odds for a patient.</td></tr>
-<tr><td>Odds ratio</td><td>exp(β); multiplicative change in odds per unit of the predictor.</td></tr>
-<tr><td>Likelihood ratio</td><td>Factor by which a test result multiplies the odds of disease.</td></tr>
-<tr><td>Standard error</td><td>Typical size of the sampling variation of an estimate.</td></tr>
-<tr><td>Bootstrap</td><td>Resampling with replacement to mimic new samples.</td></tr>
-<tr><td>Apparent performance</td><td>Performance measured in the data used to build the model.</td></tr>
-<tr><td>Optimism</td><td>Apparent performance minus performance in new patients.</td></tr>
-<tr><td>Overfitting</td><td>Model describes the sample better than the population; predictions too extreme in new patients.</td></tr>
-<tr><td>c statistic (AUC)</td><td>Probability that a patient with the outcome has the higher predicted risk than one without.</td></tr>
+<tr><td>Event</td><td>A patient with the outcome.</td></tr>
+<tr><td>Linear predictor</td><td>The model's score for a patient before it is turned into a risk.</td></tr>
+<tr><td>Odds ratio</td><td>How much a predictor multiplies the odds.</td></tr>
+<tr><td>Bootstrap</td><td>Resampling your own data, with replacement, to mimic new samples.</td></tr>
+<tr><td>Apparent performance</td><td>Performance in the patients used to build the model.</td></tr>
+<tr><td>Optimism, overfitting</td><td>The model looks better in its own data than in new patients.</td></tr>
+<tr><td>c statistic</td><td>The chance that a patient with the outcome gets a higher risk than one without.</td></tr>
 <tr><td>Calibration</td><td>Agreement between predicted and observed risks.</td></tr>
-<tr><td>Brier score</td><td>Mean (y − p)²; overall accuracy of predicted risks.</td></tr>
-<tr><td>Internal validation</td><td>Estimating performance for the same population from the development data (for example by bootstrap).</td></tr>
-<tr><td>External validation</td><td>Testing the model in different patients, place or time.</td></tr>
+<tr><td>Validation</td><td>Testing a model's performance: internally on the development data, externally in other patients, places or times.</td></tr>
 </table>
 <h3>Datasets used in the course</h3>
 <p>All datasets are synthetic: they were generated by computer and contain no real women or newborns.</p>
 <div data-widget="datasetCard" data-set="ptb_dev"></div>
 <ul class="try">
-<li>Read the codebook and note which columns are the outcome and which are candidate predictors.</li>
-<li>Look at the first rows and check that <b>preterm</b> is coded 0 or 1.</li>
-<li>Download the CSV if you wish to repeat any analysis in your own software.</li>
+<li>Read the codebook and find the outcome column and the predictors.</li>
+<li>Check that <b>preterm</b> is coded 0 or 1.</li>
 </ul>`
     }
   ],
   keyPoints: [
-    'A prediction model turns patient characteristics into an absolute risk for a defined outcome.',
-    'Probability, odds and log-odds are the same information on three scales: odds = p/(1 − p), logit = ln(odds).',
-    'In logistic regression lp = α + Σβx; risk = 1/(1 + e^−lp); exp(β) is the odds ratio per unit.',
-    'Posterior odds = prior odds × likelihood ratio; PPV and NPV change with prevalence.',
-    'Estimates vary from sample to sample; the number of events, not the number of patients, drives precision.',
-    'A bootstrap sample draws n patients with replacement and contains about 63.2% of the distinct originals.',
-    'Apparent performance is optimistic; judge a model on data not used to fit it.',
-    'Discrimination (c statistic) and calibration answer different questions; report both.'
+    'A prediction model turns facts about a patient into a predicted risk of a defined outcome.',
+    'Odds = risk / (1 − risk); an odds ratio is not a risk ratio when the outcome is common.',
+    'Logistic regression adds up a score (lp) and turns it into a risk: 1 / (1 + e^−lp).',
+    'PPV and NPV depend on how common the condition is; sensitivity and specificity largely do not.',
+    'Small samples give unstable estimates; the number of events matters most.',
+    'A model looks better on its own data than on new patients; judge it on new data.',
+    'Discrimination (ranking) and calibration (right-sized risks) are different questions; check both.'
   ],
   quiz: [
     {
       q: 'A woman has a predicted preterm-birth risk of 20%. What are her odds of preterm birth?',
       options: ['0.20', '0.25', '0.80', '4'],
       answer: 1,
-      why: 'Odds = p / (1 − p) = 0.20 / 0.80 = 0.25 (one event for every four non-events). 0.20 is the probability itself, a common slip when odds and risk are treated as interchangeable (they only agree approximately for small risks). 0.80 is the probability of no event. 4 is the odds of no event (0.80 / 0.20), the inverse.'
+      why: 'Odds = risk / (1 − risk) = 0.20 / 0.80 = 0.25. 0.20 is the risk itself. 0.80 is the chance of no event, and 4 is the odds of no event.'
     },
     {
-      q: 'In a logistic model for preterm birth, the coefficient for previous preterm birth is 1.5 and exp(1.5) = 4.5. What does 4.5 mean?',
+      q: 'In a model for preterm birth, the odds ratio for a previous preterm birth is 4.5. What does this mean?',
       options: [
-        'The risk of preterm birth is 4.5 times higher in women with a previous preterm birth.',
+        'The risk of preterm birth is 4.5 times higher.',
         'The risk is 4.5 percentage points higher.',
         'The linear predictor equals 4.5 for these women.',
-        'The odds of preterm birth are 4.5 times higher in women with a previous preterm birth than in otherwise similar women without.'
+        'The odds of preterm birth are 4.5 times higher than in otherwise similar women without a previous preterm birth.'
       ],
       answer: 3,
-      why: 'exp(β) is an odds ratio: it multiplies the odds. Reading it as a risk ratio (first option) is the commonest error and is only roughly correct when the outcome is rare; at a baseline risk of 10% the risks are 10% and 33%, a ratio of 3.3, not 4.5. It is not an absolute difference (second option), and 1.5, not 4.5, is the change in the linear predictor (third option).'
+      why: 'An odds ratio multiplies the odds. Reading it as a risk ratio is the commonest slip: in the worked example the risks are 10% and 33%, only 3.3 times higher. It is not a difference in percentage points, and the linear predictor changes by 1.5, not 4.5.'
     },
     {
-      q: 'A model has linear predictor lp = −2.2 + 1.5 = −0.7 for a woman with a previous preterm birth. What is her predicted risk?',
+      q: 'A model has linear predictor lp = −0.7 for a woman. What is her predicted risk?',
       options: ['33%', '50%', '67%', '0.5%'],
       answer: 0,
-      why: 'Risk = 1 / (1 + e^0.7) = 1 / (1 + 2.014) = 0.332. 50% would correspond to lp = 0, not −0.7. 67% is what you get with the sign wrong (lp = +0.7). The value e^−0.7 = 0.497 is the odds, not the risk, and mistaking it for a probability gives about 50%.'
+      why: 'Risk = 1 / (1 + e^0.7) = 1 / 3.01 = 0.33. A risk of 50% needs lp = 0. 67% comes from getting the sign wrong.'
     },
     {
-      q: 'A test has sensitivity 90% and specificity 80%. In a population with 5% prevalence, what is the probability of disease after a positive result?',
-      options: ['90%', '80%', '19%', '4.5%'],
+      q: 'Of 1000 women, 50 have the condition. A test has sensitivity 90% and specificity 80%. What share of positive results are true positives?',
+      options: ['90%', '80%', '19%', '5%'],
       answer: 2,
-      why: 'LR+ = 0.90 / 0.20 = 4.5. Prior odds = 0.05 / 0.95 = 0.0526; posterior odds = 0.0526 × 4.5 = 0.237; probability = 0.237 / 1.237 = 19%. Giving 90% confuses sensitivity with the predictive value. The figure 4.5 is the likelihood ratio, not a percentage. At low prevalence most positive results are false positives.'
+      why: 'True positives = 90% of 50 = 45. False positives = 20% of 950 = 190. PPV = 45 / (45 + 190) = 19%. 90% is the sensitivity, not the PPV. When a condition is uncommon, most positives are false alarms.'
     },
     {
-      q: 'In a bootstrap sample of n = 1000 patients drawn with replacement, about what proportion of the distinct original patients appear at least once?',
+      q: 'In a bootstrap sample drawn with replacement from 1000 patients, about what share of the original patients appear at least once?',
       options: ['37%', '63%', '50%', '100%'],
       answer: 1,
-      why: 'The chance that a given patient is never drawn is (1 − 1/n)^n, which tends to 1/e = 36.8%, so 63.2% appear at least once. 37% is the proportion that do not appear. 100% would only occur if resampling were without replacement. 50% has no basis.'
+      why: 'About 63% appear and 37% are left out, because some patients are drawn more than once. 100% would only happen if patients were not put back after each draw.'
     },
     {
       q: 'A model has a c statistic of 0.75. Which statement is correct?',
@@ -2903,10 +2829,10 @@ registerModule({
         '75% of patients are classified correctly.',
         'Predicted risks are on average 75% of the observed risks.',
         'The model explains 75% of the variation in the outcome.',
-        'In a randomly chosen pair with one event and one non-event, the patient with the event has the higher predicted risk in 75% of pairs.'
+        'In 75% of pairs of one patient with and one without the outcome, the patient with the outcome has the higher predicted risk.'
       ],
       answer: 3,
-      why: 'The c statistic is a probability of correct ranking within event / non-event pairs. It does not need a cutoff, so it is not a percentage correctly classified. It says nothing about whether risks have the right size (calibration), and it is not a proportion of variance explained.'
+      why: 'The c statistic is about ranking within pairs. It needs no cut-off, so it is not the share classified correctly, and it says nothing about whether the risks are the right size (calibration).'
     }
   ],
   tasks: [
@@ -2914,50 +2840,50 @@ registerModule({
       id: 't1',
       title: 'From equation to risks',
       level: 'Apply',
-      scenario: `<p>Illustrative (synthetic). A model for preterm birth is logit(p) = −3.0 + 0.8 × chronic_htn + 1.2 × prior_ptb, with each predictor coded 0 or 1.</p>`,
+      scenario: `<p>Illustrative (synthetic). A model for preterm birth is lp = −3.0 + 0.8 × chronic_htn + 1.2 × prior_ptb, with each predictor coded 0 or 1.</p>`,
       questions: [
         '<b>(a)</b> Calculate the predicted risk for a woman with neither predictor, with chronic hypertension only, with a previous preterm birth only, and with both.',
         '<b>(b)</b> Give the odds ratio for each predictor.',
-        '<b>(c)</b> Compare the ratio of risks (both versus neither) with the product of the two odds ratios and explain the difference.'
+        '<b>(c)</b> Is the risk for a woman with both predictors simply the sum of the two separate increases? Explain.'
       ],
-      answer: `<p><b>(a)</b> Linear predictor then risk = 1 / (1 + e<sup>−lp</sup>):</p>
+      answer: `<p><b>(a)</b> Add up lp, then risk = 1 / (1 + e<sup>−lp</sup>):</p>
 <table class="data">
-<tr><th>Profile</th><th>lp</th><th>Risk</th></tr>
+<tr><th>Woman</th><th>lp</th><th>Risk</th></tr>
 <tr><td>Neither</td><td>−3.0</td><td>4.7%</td></tr>
 <tr><td>Hypertension only</td><td>−2.2</td><td>10.0%</td></tr>
 <tr><td>Previous preterm only</td><td>−1.8</td><td>14.2%</td></tr>
 <tr><td>Both</td><td>−1.0</td><td>26.9%</td></tr>
 </table>
-<p><b>(b)</b> OR (hypertension) = exp(0.8) = 2.23; OR (previous preterm birth) = exp(1.2) = 3.32.</p>
-<p><b>(c)</b> The OR for having both is exp(0.8 + 1.2) = exp(2.0) = 7.39 = 2.23 × 3.32: effects multiply on the odds scale. The risk ratio is 26.9% / 4.7% = 5.7, smaller than 7.39. Odds ratios exaggerate risk ratios when the outcome is not rare, and the added risk from one predictor depends on the level of risk the woman already has.</p>`
+<p><b>(b)</b> Hypertension: exp(0.8) = 2.2. Previous preterm birth: exp(1.2) = 3.3.</p>
+<p><b>(c)</b> No. The separate increases are 5.3 and 9.5 percentage points, which would add to 19.5%, but the risk with both is 26.9%. The coefficients add on the score (lp) scale, not on the risk scale, so the extra risk from one predictor depends on how high the risk already is.</p>`
     },
     {
       id: 't2',
-      title: 'Prevalence changes predictive values',
+      title: 'The same test in two settings',
       level: 'Apply',
-      scenario: `<p>Illustrative (synthetic). A bedside neonatal sepsis sign set has sensitivity 85% and specificity 70%. Open the Bayes 2 × 2 widget (it is in Section 4).</p>`,
+      scenario: `<p>Illustrative (synthetic). A bedside sepsis check has sensitivity 85% and specificity 70%. It is used in a referral unit where 40% of newborns tested have sepsis, and in a community clinic where 14% do.</p>`,
       questions: [
-        '<b>(a)</b> Before using the widget, predict whether the PPV will rise or fall when prevalence rises from 14% to 40% with sensitivity and specificity unchanged.',
-        '<b>(b)</b> Set the three sliders to 85%, 70% and 14%, and record the PPV and NPV. Then set prevalence to 40% and record them again.',
-        '<b>(c)</b> Explain in two sentences why a sign set that works in a referral unit may be less reassuring or less alarming in a community clinic.'
+        '<b>(a)</b> Before calculating, guess in which setting a positive result is more likely to be a true positive.',
+        '<b>(b)</b> For 1000 newborns in each setting, calculate the PPV and NPV. You can check your answers with the widget in Section 4.',
+        '<b>(c)</b> In two sentences, explain why the same test means different things in the two settings.'
       ],
-      answer: `<p><b>(a)</b> PPV rises with prevalence (more of the positives are true positives); NPV falls.</p>
-<p><b>(b)</b> At 14%: PPV = 31.6%, NPV = 96.6% (LR+ = 2.83, LR− = 0.214, post-test risk 31.6% after positive, 3.4% after negative). At 40%: prior odds = 0.667; after positive, odds = 0.667 × 2.83 = 1.89, so PPV = 65.4%; after negative, odds = 0.667 × 0.214 = 0.143, so the risk of sepsis is 12.5% and NPV = 87.5%.</p>
-<p><b>(c)</b> The likelihood ratios are fixed by sensitivity and specificity, but what a result means for the patient depends on the prior odds, which differ between settings. A negative result that excludes sepsis to 3.4% in a unit with 14% prevalence leaves a 12.5% risk where prevalence is 40%.</p>`
+      answer: `<p><b>(a)</b> In the referral unit, where sepsis is more common.</p>
+<p><b>(b)</b> Community clinic (14%): 119 true and 258 false positives, PPV 32%; 602 true and 21 false negatives, NPV 97%. Referral unit (40%): 340 true positives (85% of 400) and 180 false positives (30% of 600), PPV 65%; 420 true negatives and 60 false negatives, NPV 87.5%.</p>
+<p><b>(c)</b> Sensitivity and specificity are the same in both places, but how many patients have the condition before testing differs. When the condition is common, positives are more often real and negatives less reassuring.</p>`
     },
     {
       id: 't3',
       title: 'Is this clinic really different?',
       level: 'Analyze',
-      scenario: `<p>Illustrative (synthetic). The district preterm birth rate is 12%. (i) A new clinic reports 5 preterm births among its first 25 deliveries (20%) and the manager proposes a review. (ii) A larger hospital reports 16% among 400 deliveries.</p>`,
+      scenario: `<p>Illustrative (synthetic). The district preterm birth rate is 12%. (i) A new clinic reports 10 preterm births among its first 50 deliveries (20%) and the manager proposes a review. (ii) A larger hospital reports 16% among 400 deliveries.</p>`,
       questions: [
-        '<b>(a)</b> Taking 12% as the true risk, calculate the standard error and the range within which 95% of samples would fall for each clinic.',
-        '<b>(b)</b> Decide whether each observed figure is compatible with chance alone and state what you would advise.',
-        '<b>(c)</b> Describe how a bootstrap could be used to show the clinic manager the uncertainty around the 20% figure, without using a formula.'
+        '<b>(a)</b> Use the sampling widget in Section 5 (true risk 12%) to find the range that 95% of samples fall in for 50 and for 400 deliveries.',
+        '<b>(b)</b> Is each observed figure compatible with chance alone? What would you advise?',
+        '<b>(c)</b> How could a bootstrap show the manager the uncertainty around the 20% figure?'
       ],
-      answer: `<p><b>(a)</b> Clinic (i): SE = √(0.12 × 0.88 / 25) = 0.065, so 95% of samples lie between 12% − 12.7% and 12% + 12.7%, that is roughly 0% to 24.7%. Hospital (ii): SE = √(0.12 × 0.88 / 400) = 0.0162; the range is 8.8% to 15.2%.</p>
-<p><b>(b)</b> The 20% in a sample of 25 is within the expected range (the probability of 5 or more events among 25 when the risk is 12% is about 17%, so this happens by chance roughly once in six clinics). There is no evidence of a difference and a review on this basis would be premature; wait for more deliveries. The 16% in 400 deliveries is 4 / 1.62 = 2.5 standard errors above 12% and outside the chance range, so it deserves attention (case-mix, referral pattern, outcome definition) before any conclusion about quality.</p>
-<p><b>(c)</b> Write the 25 outcomes on cards (5 marked preterm). Draw 25 cards with replacement, return each card, and compute the proportion. Repeat several hundred times and take the 2.5th and 97.5th percentiles of the proportions; the interval will be wide, and it will include 12%.</p>`
+      answer: `<p><b>(a)</b> With 50 deliveries, about 3% to 21%. With 400, about 9% to 15%.</p>
+<p><b>(b)</b> The clinic's 20% is inside the chance range: a clinic with a true risk of 12% would see 10 or more preterm births among 50 deliveries about once in 14 times. A review on this basis is premature; wait for more deliveries. The hospital's 16% is outside its range, so it deserves a closer look (case-mix, referral pattern, how preterm birth was recorded) before drawing conclusions about quality.</p>
+<p><b>(c)</b> Write the 50 outcomes on cards (10 marked preterm). Draw 50 cards one at a time, putting each back, and note the share of preterm. Repeat a few hundred times: the shares spread widely, and the range includes 12%.</p>`
     }
   ]
 });
@@ -8497,7 +8423,7 @@ registerRef({
 <tr><td>19</td><td>Patterns of external validity: case-mix, coefficients, sample size for validation</td><td>14</td></tr>
 </tbody></table>
 
-<p>The Primer (Module 0) covers odds, logistic regression basics, Bayes' rule and sampling, which the chapters assume. The Capstone applies Chapters 1 to 19 together.</p>
+<p>The Primer (Module 0) covers risk and odds, logistic regression basics, test accuracy and sampling, which the chapters assume. The Capstone applies Chapters 1 to 19 together.</p>
 
 <div class="callout warn"><b>Outside this course</b><p>Chapters 20 and 21 (updating an existing model: recalibration of the intercept and slope, re-estimation of coefficients, extension with new predictors) and Chapters 22 to 24 (extended case studies) are not covered. This course teaches how to detect miscalibration and poor transportability, not how to repair a model by updating. Any statement here about updating is limited to noting that it exists.</p></div>
 `
