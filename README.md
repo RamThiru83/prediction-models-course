@@ -1,6 +1,6 @@
-# Clinical prediction models: development and validation
+# CliPr: clinical prediction models, development and validation
 
-A self-contained learning course built on Steyerberg, *Clinical Prediction Models* (2009), chapters 1 to 19. Modules, simulators, quizzes, case tasks with answers at the end, and downloadable synthetic datasets. All data are synthetic. For teaching; not for clinical use.
+CliPr is a self-contained learning course built on Steyerberg, *Clinical Prediction Models* (2009), chapters 1 to 19. Modules, simulators, quizzes, case tasks with answers at the end, and downloadable synthetic datasets. All data are synthetic. For teaching; not for clinical use.
 
 Live site: https://ramthiru83.github.io/prediction-models-course/
 
@@ -19,6 +19,12 @@ The join code for the first cohort is PMC-2026. Accounts and roles are shared wi
 
 ## Data and privacy
 The Supabase publishable key in the page is public by design; row-level security protects data. Learners can read and change only their own rows; instructors can read all learner progress. Learner data are for teaching only. Using them for research needs ethics approval and separate consent.
+
+## Branding
+Same BRIC-THSTI palette, type (Instrument Sans and Serif) and layout style as EpiCompass. The mark is a decision curve: the model net-benefit curve above the treat-all line and the treat-none baseline (`favicon.svg`).
+
+## How to use
+The in-app page "How to use this course" explains the course path, notes and highlights, and the instructor tools.
 
 ## Hosting
 Static single file (`index.html`) on GitHub Pages. Rebuild is not required; replace the file to update.
