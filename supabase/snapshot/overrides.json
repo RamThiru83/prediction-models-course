@@ -1,0 +1,80 @@
+[
+  {
+    "key": "m01:15",
+    "html": "The book treats prediction primarily as an estimation problem. This changes how data are analysed. In an aetiological study, adjustment for confounders is the central concern, and causal effect estimates are made in terms of risk difference, risk ratio, odds ratio etc.,. In a prediction study the aim is accurate absolute risks for new patients, so a predictor is kept for its contribution to those risks. Many papers announce a new \"prognostic factor\", but the prognostic value of a new marker has to be shown <b>in addition to</b> already known and easily measured predictors. For example, a new genetic marker needs to improve predictions over age, parity and history before it is called useful.",
+    "base_hash": "1ubqhht",
+    "updated_at": "2026-10-23T20:21:22.137+00:00"
+  },
+  {
+    "key": "m01:18",
+    "html": "Statistical models for prediction fall into regression models, classification methods (for example classification trees) and neural networks. This course concentrates on regression models, the most widely used in medicine, assuming a modest number of candidate predictors (the book considers fewer than about 25) and that subject-matter knowledge from clinicians and earlier studies is available. Settings with thousands of candidate predictors (genomics, proteomics) are outside this scope. Prediction modelling on medical images is also out of scope.&nbsp;",
+    "base_hash": "1grlc18",
+    "updated_at": "2026-10-23T20:21:22.137+00:00"
+  },
+  {
+    "key": "m01:21",
+    "html": "The book groups applications into public health, clinical practice and research. This section covers the first two; research uses are described in next section. The examples quoted from the book are labelled; the maternal and child health (MCH) examples are synthetic illustrations.",
+    "base_hash": "1y9ywzc",
+    "updated_at": "2026-10-23T20:21:22.137+00:00"
+  },
+  {
+    "key": "p0:0",
+    "html": "Learn about risk, odds, log-odds, logistic regression, Bayes rule, sampling variation, the bootstrap and the two basic questions about any model (does it rank patients, does it give correct risks). Trust me, you will need them!",
+    "base_hash": "1e2t8qq",
+    "updated_at": "2026-10-23T17:45:17.332+00:00"
+  },
+  {
+    "key": "p0:10",
+    "html": "<b>Predictors (or covariates, risk factors):</b> the facts used to predict, for example maternal age, haemoglobin, previous preterm birth for predicting preterm birth. Some computer scientists may call them as features. I would prefer to use predictors!",
+    "base_hash": "13wiqdl",
+    "updated_at": "2026-10-23T18:35:55.049+00:00"
+  },
+  {
+    "key": "p0:11",
+    "html": "<b>Incidence</b> is the proportion who develop the outcome over a stated follow-up period; <b>prevalence</b> is the proportion who have the condition now. In prediction work, both are simply \"the overall risk in this population\" and are often written as a percentage.",
+    "base_hash": "bu4ns9",
+    "updated_at": "2026-10-23T18:35:55.049+00:00"
+  },
+  {
+    "key": "p0:12",
+    "html": "<b>Absolute risk:</b> the predicted probability itself (for example, 18%).",
+    "base_hash": "3v4gow",
+    "updated_at": "2026-10-23T18:35:55.049+00:00"
+  },
+  {
+    "key": "p0:16",
+    "html": "An aetiological study asks whether an exposure causes an outcome and worries about confounding. A prediction study asks how well a set of predictors together estimates the outcome risk for a new patient. A predictor can be useful for prediction without being a cause. The book describes prediction as primarily an <b>estimation problem</b> (what is this patient's risk?). This course spends most of its time on estimation: getting each patient's risk right.",
+    "base_hash": "q7cs5n",
+    "updated_at": "2026-10-23T18:35:55.049+00:00"
+  },
+  {
+    "key": "p0:18",
+    "html": "Source: Ch. 1, §1.1-1.2; Ch. 2, §2.1 Steyerberg's book",
+    "base_hash": "b3v205",
+    "updated_at": "2026-10-23T18:35:55.049+00:00"
+  },
+  {
+    "key": "p0:26",
+    "html": "*",
+    "base_hash": "1o3w130",
+    "updated_at": "2026-10-23T18:46:22.749+00:00"
+  },
+  {
+    "key": "p0:27",
+    "html": "*",
+    "base_hash": "isd4qc",
+    "updated_at": "2026-10-23T18:46:22.749+00:00"
+  },
+  {
+    "key": "p0:7",
+    "html": "A <b>clinical prediction model</b> takes some information about a patient/person and returns the probability that the patient has, or will develop, a particular outcome. It is sometimes called a prediction rule, a risk score or a nomogram. The word \"model\" only means that the probability is calculated from a formula whose numbers were estimated from earlier patients.",
+    "base_hash": "wrh0ns",
+    "updated_at": "2026-10-23T18:35:55.049+00:00"
+  },
+  {
+    "key": "p0:9",
+    "html": "<b>Outcome (or endpoint):</b> what is being predicted, for example preterm birth before 37 completed weeks, neonatal sepsis, or gestational diabetes. In this course (for the sake of simplicity) the outcome is usually binary: it happens (1) or it does not (0). A patient /person with the outcome is called an <b>event</b>.",
+    "base_hash": "emz4o0",
+    "updated_at": "2026-10-23T18:35:55.049+00:00"
+  }
+]
