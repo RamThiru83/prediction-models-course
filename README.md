@@ -17,6 +17,25 @@ Sign in or join with a code on the Account page. Learners get synced progress, n
 
 The join code for the first cohort is PMC-2026. Accounts and roles are shared with the EpiCompass project (same Supabase project, `profiles`, `cohorts`, `is_instructor()`); this course adds `pmc_` tables, in `pmc_schema.sql`.
 
+## Repository layout
+- `index.html`: the published page (GitHub Pages serves this file).
+- `src/` and `content/`: the source. `node build.js --site` rebuilds `index.html` from them; `node build.js --check` reports whether `index.html` is up to date.
+- `supabase/snapshot/`: a daily copy of the in-app text edits and release settings (written by the workflow below).
+- `supabase/folded.json`: in-app edits that have already been written into the source.
+- `tools/mirror_from_github.py`: copies this repository into a local folder without overwriting local changes.
+
+## Keeping the copies in step
+There are four places the course lives: the in-app edits (Supabase), this repository, the published page, and the instructor's local folder.
+
+1. **In-app edits to GitHub.** The workflow `.github/workflows/sync-supabase.yml` runs daily at 06:53 IST (or on demand from the Actions tab). It copies the in-app edits and release settings into `supabase/snapshot/`, lists any edits not yet folded into the source, and warns if `index.html` is not a fresh build.
+2. **Folding edits into the source.** An in-app edit stays live on top of the page until it is written into `content/`. Once folded and `index.html` is rebuilt, the edit is recorded in `supabase/folded.json`; the live override then no longer applies, because its text is now the page's own.
+3. **GitHub to the local folder.** `tools/mirror_from_github.py` brings new or changed files down. A file changed locally is never overwritten; it is reported as needing upload, or as a conflict if GitHub changed it too.
+4. **Local folder to GitHub.** If the local folder holds `sync/github-token.txt` (a fine-grained token for this repository only, with Contents read and write), the same script commits local changes to GitHub in one commit. Only course files on a fixed list (`index.html`, `README.md`, `favicon.svg`, `pmc_schema.sql`, `build.js`, `src/`, `content/`, `tools/`, `supabase/folded.json`) are ever pushed; the `sync/` folder never is. Without a token, upload changed files by hand.
+
+A daily scheduled task on the instructor's computer runs steps 2 to 4 and reports anything that needs a decision.
+
+Learner data (progress, notes, answers) stay in Supabase and are never copied to GitHub.
+
 ## Data and privacy
 The Supabase publishable key in the page is public by design; row-level security protects data. Learners can read and change only their own rows; instructors can read all learner progress. Learner data are for teaching only. Using them for research needs ethics approval and separate consent.
 
@@ -25,6 +44,3 @@ Same BRIC-THSTI palette, type (Instrument Sans and Serif) and layout style as Ep
 
 ## How to use
 The in-app page "How to use this course" explains the course path, notes and highlights, and the instructor tools.
-
-## Hosting
-Static single file (`index.html`) on GitHub Pages. Rebuild is not required; replace the file to update.

@@ -2622,7 +2622,7 @@ registerModule({
   title: 'Primer: the ideas you need before starting',
   book: 'Ch. 1, 4, 5, 15 (background)',
   minutes: 40,
-  summary: 'The few ideas the course assumes: risk and odds, how logistic regression turns patient facts into a risk, why results vary between samples, and the two questions asked of every model.',
+  summary: 'The few ideas the course assumes: risk and odds, how logistic regression turns patient facts into a risk, why results vary between samples, and the two questions asked of every model. Trust me, you will need them!',
   objectives: [
     'Explain what a prediction model produces and name its outcome and predictors.',
     'Convert a risk into odds and back.',
@@ -2635,16 +2635,17 @@ registerModule({
       id: 's1',
       title: 'What a clinical prediction model is',
       html: `
-<p>A <b>clinical prediction model</b> takes a few facts about a patient and returns the chance that the patient has, or will develop, a particular outcome. Risk scores and nomograms are examples. The numbers in the formula were estimated from earlier patients.</p>
+<p>A <b>clinical prediction model</b> takes some information about a patient/person and returns the chance that the patient has, or will develop, a particular outcome. Risk scores and nomograms are examples. The numbers in the formula were estimated from earlier patients.</p>
 <ul>
-<li><b>Outcome:</b> what is predicted, for example preterm birth or neonatal sepsis. In this course it either happens (1) or does not (0). A patient with the outcome is called an <b>event</b>.</li>
-<li><b>Predictors:</b> the facts used to predict, for example maternal age, haemoglobin or a previous preterm birth.</li>
-<li><b>Predicted risk:</b> the model's answer for one patient, for example 18%.</li>
+<li><b>Outcome:</b> what is predicted, for example preterm birth or neonatal sepsis. In this course (for the sake of simplicity) it either happens (1) or does not (0). A patient/person with the outcome is called an <b>event</b>.</li>
+<li><b>Predictors:</b> the facts used to predict, for example maternal age, haemoglobin or a previous preterm birth for predicting preterm birth. Some computer scientists may call them features. I would prefer to use predictors!</li>
+<li><b>Incidence</b> is the proportion who develop the outcome over a stated follow-up period; <b>prevalence</b> is the proportion who have the condition now. In prediction work, both are simply "the overall risk in this population" and are often written as a percentage.</li>
+<li><b>Absolute risk:</b> the predicted probability itself (for example, 18%).</li>
 </ul>
 <p>A <b>diagnostic</b> model estimates the chance that a condition is present now (does this newborn have sepsis?). A <b>prognostic</b> model estimates the chance of a future outcome (will this woman deliver preterm?).</p>
-<p>Prediction is not the same as finding causes. A predictor is useful if it helps estimate the risk, whether or not it causes the outcome.</p>
+<p>An aetiological study asks whether an exposure causes an outcome and worries about confounding. A prediction study asks how well a set of predictors together estimates the outcome risk for a new patient. A predictor can be useful for prediction without being a cause. The book describes prediction as primarily an <b>estimation problem</b> (what is this patient's risk?). This course spends most of its time on estimation: getting each patient's risk right.</p>
 <div class="callout key"><b>Key idea</b><p>A model is good if its risks are close to the truth for new patients, not just for the patients used to build it. The whole course is about achieving that.</p></div>
-<p class="src">Source: Ch. 1, §1.1-1.2</p>`
+<p class="src">Source: Ch. 1, §1.1-1.2; Ch. 2, §2.1 Steyerberg's book</p>`
     },
     {
       id: 's2',
@@ -2655,7 +2656,6 @@ registerModule({
 <div class="callout eg"><b>Worked example: a risk of 20%</b>
 <p>Odds = 0.20 / 0.80 = 0.25, that is one event for every four non-events. Going back: 0.25 / 1.25 = 0.20.</p></div>
 <p>For small risks, odds and risk are almost the same (a 5% risk has odds 0.053). For large risks they differ a lot (an 80% risk has odds 4).</p>
-<p>An <b>odds ratio</b> compares two odds. If it is 1, the two groups have the same odds; above 1, the first group has higher odds. When the outcome is common, an odds ratio looks larger than the matching ratio of risks, so do not read it as "times the risk".</p>
 <p>Regression actually uses the logarithm of the odds, the <b>log-odds</b>, because it can take any value from minus to plus infinity. A risk of 50% has log-odds 0; lower risks have negative log-odds.</p>
 <div data-widget="oddsConverter"></div>
 <ul class="try">
@@ -2674,7 +2674,7 @@ registerModule({
 <li>Turn the score into a risk:</li>
 </ol>
 <div class="formula">lp = α + β<sub>1</sub>x<sub>1</sub> + β<sub>2</sub>x<sub>2</sub> + ...        risk = 1 / (1 + e<sup>−lp</sup>)</div>
-<p>A positive coefficient raises the risk and a negative one lowers it. exp(coefficient) is the <b>odds ratio</b> for that predictor.</p>
+<p>A positive coefficient raises the risk and a negative one lowers it. exp(coefficient) is the <b>odds ratio</b> for that predictor: how much it multiplies the odds.</p>
 <div class="callout eg"><b>Worked example (Illustrative, synthetic): previous preterm birth</b>
 <p>A model for preterm birth is lp = −2.2 + 1.5 × prior_ptb, where prior_ptb is 1 if the woman had a previous preterm birth and 0 if not.</p>
 <ol>
@@ -2919,17 +2919,17 @@ registerModule({
 <li><b>Estimation:</b> what is the risk of preterm birth for this woman? How accurate is the estimate?</li>
 <li><b>Hypothesis testing:</b> is maternal haemoglobin associated with preterm birth? Is the association still present after adjusting for age and parity?</li>
 </ul>
-<p>The book treats prediction primarily as an estimation problem and secondarily as a testing problem. This changes how data are analysed. In an aetiological study, adjustment for confounders is the central concern, and a predictor is judged by its p-value. In a prediction study the aim is accurate absolute risks for new patients, so a predictor is kept for its contribution to those risks. Many papers announce a new "prognostic factor", but the prognostic value of a new marker has to be shown <b>in addition to</b> already known and easily measured predictors. For example, a new genetic marker needs to improve predictions over age, parity and history before it is called useful.</p>
+<p>The book treats prediction primarily as an estimation problem. This changes how data are analysed. In an aetiological study, adjustment for confounders is the central concern, and causal effect estimates are made in terms of risk difference, risk ratio, odds ratio, etc. In a prediction study the aim is accurate absolute risks for new patients, so a predictor is kept for its contribution to those risks. Many papers announce a new "prognostic factor", but the prognostic value of a new marker has to be shown <b>in addition to</b> already known and easily measured predictors. For example, a new genetic marker needs to improve predictions over age, parity and history before it is called useful.</p>
 <div class="callout key"><b>Key idea</b><p>A prediction model is judged by the quality of the risks it gives to patients not used to build it. The same data that show an association do not show that the model predicts well.</p></div>
 <h3>Types of prediction model</h3>
-<p>Statistical models for prediction fall into regression models, classification methods (for example classification trees) and neural networks. This course concentrates on regression models, the most widely used in medicine, assuming a modest number of candidate predictors (the book considers fewer than about 25) and that subject-matter knowledge from clinicians and earlier studies is available. Settings with thousands of candidate predictors (genomics, proteomics) are outside this scope.</p>
+<p>Statistical models for prediction fall into regression models, classification methods (for example classification trees) and neural networks. This course concentrates on regression models, the most widely used in medicine, assuming a modest number of candidate predictors (the book considers fewer than about 25) and that subject-matter knowledge from clinicians and earlier studies is available. Settings with thousands of candidate predictors (genomics, proteomics) are outside this scope. Prediction modelling on medical images is also out of scope.</p>
 <p class="src">Source: Ch. 1, §1.1-1.2</p>`
     },
     {
       id: 's2',
       title: 'Where prediction models are used',
       html: `
-<p>The book groups applications into public health, clinical practice and research. This section covers the first two; research uses follow in Section 4. The examples quoted from the book are labelled; the maternal and child health (MCH) examples are synthetic illustrations.</p>
+<p>The book groups applications into public health, clinical practice and research. This section covers the first two; research uses are described later, in "Prediction models in research". The examples quoted from the book are labelled; the maternal and child health (MCH) examples are synthetic illustrations.</p>
 <h3>Public health: targeting preventive interventions</h3>
 <p>Models predict who will develop disease in the future, so that screening, prevention or chemoprophylaxis can be offered to people at relatively high risk. A key requirement is <b>calibration</b>: among 100 people given a 10% predicted risk, about 10 should have the outcome.</p>
 <div class="callout book"><b>Book example</b>
