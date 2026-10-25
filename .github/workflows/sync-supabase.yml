@@ -1,0 +1,47 @@
+# Copies the in-app course-text edits and module release settings from Supabase into this repository
+# once a day, so GitHub keeps a dated record of them. Learner data are never copied.
+# It also checks that index.html is an up-to-date build of src/ and content/.
+name: Sync in-app edits from Supabase
+
+on:
+  schedule:
+    - cron: '23 1 * * *'   # daily, 06:53 IST
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    env:
+      SB_URL: https://odsrftvuceizketmcesy.supabase.co
+      # Publishable key: public by design (it is in index.html); row-level security limits it to public rows.
+      SB_KEY: sb_publishable_x3BnqzNP3On0O1C-axPtSw_UbeFLnnw
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Fetch in-app edits and release settings
+        run: |
+          mkdir -p supabase/snapshot
+          curl -fsS "$SB_URL/rest/v1/pmc_overrides?select=key,html,base_hash,updated_at&order=key" -H "apikey: $SB_KEY" | jq . > supabase/snapshot/overrides.json
+          curl -fsS "$SB_URL/rest/v1/pmc_settings?select=key,value,updated_at&order=key" -H "apikey: $SB_KEY" | jq . > supabase/snapshot/settings.json
+
+      - name: List in-app edits not yet folded into the source
+        run: |
+          jq -r --slurpfile f supabase/folded.json '
+            def stamp: .key + "@" + (.updated_at | sub(" "; "T") | .[0:19]);
+            ($f[0] | map(stamp)) as $done
+            | map(select(stamp as $k | $done | index($k) | not))
+            | if length == 0 then "No new in-app edits." else ("New in-app edits to fold into the source: " + (map(.key) | join(", "))) end
+          ' supabase/snapshot/overrides.json | tee -a "$GITHUB_STEP_SUMMARY"
+
+      - name: Check index.html matches the source
+        run: node build.js --check || echo "::warning::index.html is not a fresh build of src/ and content/. Run node build.js --site and commit index.html."
+
+      - name: Commit the snapshot if it changed
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add supabase/snapshot
+          if git diff --cached --quiet; then echo "Snapshot unchanged."; else git commit -m "Snapshot in-app edits and release settings" && git push; fi
