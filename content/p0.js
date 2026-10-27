@@ -4,7 +4,7 @@ registerModule({
   part: 'Primer',
   title: 'Primer: the ideas you need before starting',
   book: 'Ch. 1, 4, 5, 15 (background)',
-  minutes: 40,
+  minutes: 45,
   summary: 'The few ideas the course assumes: risk and odds, how logistic regression turns patient facts into a risk, why results vary between samples, and the two questions asked of every model. Trust me, you will need them!',
   objectives: [
     'Explain what a prediction model produces and name its outcome and predictors.',
@@ -12,6 +12,67 @@ registerModule({
     'Calculate a patient\'s predicted risk from a simple logistic regression equation.',
     'Explain why an estimate from a small sample is uncertain, and why the number of events matters.',
     'Describe discrimination and calibration in plain words.'
+  ],
+  format: 'cases',
+  essentials: `
+<ul>
+<li>A <b>clinical prediction model</b> takes some information about a patient/person (the <b>predictors</b>; some computer scientists call them features) and returns the chance of an <b>outcome</b>. In this course the outcome is, for simplicity, yes or no; a patient with it is an <b>event</b>.</li>
+<li><b>Odds</b> = risk / (1 − risk). Regression works with the logarithm of the odds, the <b>log-odds</b>.</li>
+<li><b>Logistic regression:</b> add up a score, lp = α + β<sub>1</sub>x<sub>1</sub> + β<sub>2</sub>x<sub>2</sub> + ..., then risk = 1 / (1 + e<sup>−lp</sup>). exp(β) is the <b>odds ratio</b>, which is not a risk ratio when the outcome is common.</li>
+<li><b>Sensitivity and specificity</b> describe a test. <b>Predictive values</b> (PPV, NPV) also depend on how common the condition is.</li>
+<li>Every estimate varies from sample to sample. For a yes/no outcome, the <b>number of events</b> limits what a study can show.</li>
+<li>Judge a model on patients it was not built on, with two questions: does it <b>rank</b> patients correctly (discrimination, the c statistic), and are its risks the <b>right size</b> (calibration)?</li>
+</ul>`,
+  cases: [
+    {
+      id: 'c1',
+      title: 'A risk at booking',
+      html: `
+<p class="scenario">Illustrative (synthetic). A district hospital antenatal clinic wants to estimate each woman's risk of preterm birth at her booking visit. The team has a model: lp = −3.0 + 0.8 × chronic_htn + 1.2 × prior_ptb, with each predictor coded 1 if present and 0 if not.</p>
+<div class="need"><b>What you need</b>
+<p>Odds = risk / (1 − risk), and risk = odds / (1 + odds). A 20% risk is odds of 0.25: one event for every four non-events. For small risks the two are close; for large risks they are not (80% is odds 4).</p>
+<p>The model adds up its score (lp), then turns it into a risk with 1 / (1 + e<sup>−lp</sup>). A score of 0 is a risk of 50%. exp(coefficient) is the odds ratio: how much that predictor multiplies the odds.</p></div>
+<div data-widget="oddsConverter"></div>
+[[task:0]]
+<div data-widget="logisticCurve"></div>
+[[task:1]]
+[[task:2]]`
+    },
+    {
+      id: 'c2',
+      title: 'A sepsis check in two units',
+      html: `
+<p class="scenario">Illustrative (synthetic). A bedside check for neonatal sepsis has sensitivity 85% and specificity 70%. It is used in a referral unit, where 40% of the newborns tested have sepsis, and in a community clinic, where 14% do.</p>
+<div class="need"><b>What you need</b>
+<p><b>Sensitivity:</b> of those with the condition, the share who test positive. <b>Specificity:</b> of those without it, the share who test negative. <b>PPV:</b> of those who test positive, the share who have it; <b>NPV</b> is the same for negatives.</p>
+<p>Work in counts. Out of 1000 newborns at 14%: 140 have sepsis, so 85% of 140 = 119 test positive; 860 do not, so 30% of 860 = 258 also test positive. PPV = 119 / 377 = 32%.</p></div>
+<div data-widget="bayes2x2"></div>
+[[task:3]]
+[[task:4]]`
+    },
+    {
+      id: 'c3',
+      title: 'Is this clinic really different?',
+      html: `
+<p class="scenario">Illustrative (synthetic). The district preterm birth rate is 12%. A new clinic and a large hospital report their first figures, and the district manager wants to know which deserve a review.</p>
+<div class="need"><b>What you need</b>
+<p>A figure from a sample is an estimate; another sample would give a different one, and small samples swing more. With a true risk of 12%, samples of 50 women range from about 3% to 21%, and samples of 1000 from about 10% to 14%.</p>
+<p>For a yes/no outcome, the information sits in the <b>number of events</b>, not the number of patients. The <b>bootstrap</b> imitates new samples by drawing patients from your own data with replacement: some appear twice, others not at all (about 63% of them appear).</p></div>
+<div data-widget="samplingDemo"></div>
+[[task:5]]
+[[task:6]]`
+    },
+    {
+      id: 'c4',
+      title: 'Does the model work?',
+      html: `
+<p class="scenario">Illustrative (synthetic). A preterm birth model was built in one hospital and is now being tried on women in a second hospital.</p>
+<div class="need"><b>What you need</b>
+<p>A model always looks better on the patients used to build it (<b>apparent</b> performance). The excess is <b>optimism</b>; a model with a lot of it is <b>overfitted</b>, and its risks tend to be too extreme in new patients: too high for high-risk patients, too low for low-risk ones.</p>
+<p><b>c statistic:</b> take every pair of one event and one non-event; c is the share of pairs in which the event has the higher predicted risk. 0.5 is a coin toss, 1 is perfect. <b>Calibration</b> compares predicted with observed risk: if the model says 20%, about 20% should have the outcome.</p></div>
+[[task:7]]
+[[task:8]]`
+    }
   ],
   sections: [
     {
@@ -220,10 +281,24 @@ registerModule({
   ],
   tasks: [
     {
+      id: 't0',
+      title: 'Risk and odds',
+      level: 'Apply',
+      scenario: `<p>Use the odds converter above to check your answers.</p>`,
+      questions: [
+        '<b>(a)</b> Convert a preterm birth risk of 12% into odds.',
+        '<b>(b)</b> A woman has odds of 0.25. What is her risk?',
+        '<b>(c)</b> For a risk of 2% and a risk of 80%, compare the odds with the risk. When can odds and risk be used interchangeably?'
+      ],
+      answer: `<p><b>(a)</b> Odds = 0.12 / 0.88 = 0.136, about 3 events for every 22 non-events.</p>
+<p><b>(b)</b> Risk = 0.25 / 1.25 = 0.20, that is 20%.</p>
+<p><b>(c)</b> At 2% the odds are 0.020, almost the same as the risk. At 80% the odds are 4, very different from 0.8. Odds and risk are close only when the outcome is uncommon.</p>`
+    },
+    {
       id: 't1',
       title: 'From equation to risks',
       level: 'Apply',
-      scenario: `<p>Illustrative (synthetic). A model for preterm birth is lp = −3.0 + 0.8 × chronic_htn + 1.2 × prior_ptb, with each predictor coded 0 or 1.</p>`,
+      scenario: `<p>Use the model in the case: lp = −3.0 + 0.8 × chronic_htn + 1.2 × prior_ptb.</p>`,
       questions: [
         '<b>(a)</b> Calculate the predicted risk for a woman with neither predictor, with chronic hypertension only, with a previous preterm birth only, and with both.',
         '<b>(b)</b> Give the odds ratio for each predictor.',
@@ -242,12 +317,24 @@ registerModule({
     },
     {
       id: 't2',
+      title: 'Odds ratio or risk ratio?',
+      level: 'Analyze',
+      scenario: `<p>A colleague reads the model and tells the midwives: "a previous preterm birth gives a woman 3.3 times the risk of preterm birth".</p>`,
+      questions: [
+        '<b>(a)</b> Using your risks from Task 2, calculate the ratio of risks for a previous preterm birth in women without hypertension and in women with hypertension.',
+        '<b>(b)</b> Correct the colleague\'s sentence.'
+      ],
+      answer: `<p><b>(a)</b> Without hypertension: 14.2% / 4.7% = 3.0. With hypertension: 26.9% / 10.0% = 2.7.</p>
+<p><b>(b)</b> "A previous preterm birth multiplies the <i>odds</i> of preterm birth by 3.3. In terms of risk, it is about 3 times for women without hypertension and less for women already at higher risk." The odds ratio is the same for every woman in this model; the risk ratio is not, and it moves further from the odds ratio as the risk rises.</p>`
+    },
+    {
+      id: 't3',
       title: 'The same test in two settings',
       level: 'Apply',
-      scenario: `<p>Illustrative (synthetic). A bedside sepsis check has sensitivity 85% and specificity 70%. It is used in a referral unit where 40% of newborns tested have sepsis, and in a community clinic where 14% do.</p>`,
+      scenario: `<p>Use the sepsis check in the case: sensitivity 85%, specificity 70%.</p>`,
       questions: [
         '<b>(a)</b> Before calculating, guess in which setting a positive result is more likely to be a true positive.',
-        '<b>(b)</b> For 1000 newborns in each setting, calculate the PPV and NPV. You can check your answers with the widget in Section 4.',
+        '<b>(b)</b> For 1000 newborns in each setting, calculate the PPV and NPV. Check your answers with the widget above.',
         '<b>(c)</b> In two sentences, explain why the same test means different things in the two settings.'
       ],
       answer: `<p><b>(a)</b> In the referral unit, where sepsis is more common.</p>
@@ -255,18 +342,70 @@ registerModule({
 <p><b>(c)</b> Sensitivity and specificity are the same in both places, but how many patients have the condition before testing differs. When the condition is common, positives are more often real and negatives less reassuring.</p>`
     },
     {
-      id: 't3',
+      id: 't4',
+      title: 'A negative check in the referral unit',
+      level: 'Evaluate',
+      scenario: `<p>In the referral unit, a newborn with a suspected infection has a negative bedside check. A trainee proposes to withhold antibiotics.</p>`,
+      questions: [
+        '<b>(a)</b> Using Task 4, what is this newborn\'s chance of sepsis after the negative result?',
+        '<b>(b)</b> Missing sepsis is far worse than giving antibiotics to a newborn who does not need them. Would you accept the trainee\'s proposal? Would your answer be the same in the community clinic?'
+      ],
+      answer: `<p><b>(a)</b> 60 of the 480 negatives have sepsis: 12.5%, about one in eight.</p>
+<p><b>(b)</b> No. When missing a case is much worse than unnecessary treatment, the risk at which treatment stops being worthwhile is low, and one in eight is far above it. In the community clinic the risk after a negative check is 3.4%, so the decision is closer and depends on how much worse a missed case is judged to be. Module 1 turns this judgement into a treatment threshold.</p>`
+    },
+    {
+      id: 't5',
       title: 'Is this clinic really different?',
       level: 'Analyze',
-      scenario: `<p>Illustrative (synthetic). The district preterm birth rate is 12%. (i) A new clinic reports 10 preterm births among its first 50 deliveries (20%) and the manager proposes a review. (ii) A larger hospital reports 16% among 400 deliveries.</p>`,
+      scenario: `<p>(i) A new clinic reports 10 preterm births among its first 50 deliveries (20%), and the manager proposes a review. (ii) A larger hospital reports 16% among 400 deliveries. The district rate is 12%.</p>`,
       questions: [
-        '<b>(a)</b> Use the sampling widget in Section 5 (true risk 12%) to find the range that 95% of samples fall in for 50 and for 400 deliveries.',
+        '<b>(a)</b> Use the sampling widget above (true risk 12%) to find the range that 95% of samples fall in for 50 and for 400 deliveries.',
         '<b>(b)</b> Is each observed figure compatible with chance alone? What would you advise?',
         '<b>(c)</b> How could a bootstrap show the manager the uncertainty around the 20% figure?'
       ],
       answer: `<p><b>(a)</b> With 50 deliveries, about 3% to 21%. With 400, about 9% to 15%.</p>
 <p><b>(b)</b> The clinic's 20% is inside the chance range: a clinic with a true risk of 12% would see 10 or more preterm births among 50 deliveries about once in 14 times. A review on this basis is premature; wait for more deliveries. The hospital's 16% is outside its range, so it deserves a closer look (case-mix, referral pattern, how preterm birth was recorded) before drawing conclusions about quality.</p>
 <p><b>(c)</b> Write the 50 outcomes on cards (10 marked preterm). Draw 50 cards one at a time, putting each back, and note the share of preterm. Repeat a few hundred times: the shares spread widely, and the range includes 12%.</p>`
+    },
+    {
+      id: 't6',
+      title: 'Events, not patients',
+      level: 'Apply',
+      scenario: `<p>Two cohorts are offered for building a model. Cohort A: 5,000 women, outcome in 1%. Cohort B: 800 women, outcome in 15%.</p>`,
+      questions: [
+        '<b>(a)</b> How many events does each cohort have?',
+        '<b>(b)</b> Which cohort carries more information for building a prediction model, and why?'
+      ],
+      answer: `<p><b>(a)</b> A: 1% of 5,000 = 50 events. B: 15% of 800 = 120 events.</p>
+<p><b>(b)</b> Cohort B, although it is six times smaller. For a yes/no outcome the information is carried mainly by the smaller of the two groups, here the events, so B's 120 events let it support more predictors and give steadier estimates than A's 50.</p>`
+    },
+    {
+      id: 't7',
+      title: 'Count the pairs',
+      level: 'Apply',
+      scenario: `<p>In the second hospital, five women are followed to delivery. Predicted risks for the two who delivered preterm: 0.30 and 0.15. For the three who did not: 0.10, 0.20 and 0.05.</p>`,
+      questions: [
+        '<b>(a)</b> Calculate the c statistic by counting pairs.',
+        '<b>(b)</b> Compare the average predicted risk with the share who delivered preterm.',
+        '<b>(c)</b> In one sentence, describe how this model performs on the two questions.'
+      ],
+      answer: `<p><b>(a)</b> There are 2 × 3 = 6 pairs. 0.30 is higher than all three non-events (3 pairs); 0.15 is higher than 0.10 and 0.05 but not 0.20 (2 pairs). c = 5 / 6 = 0.83.</p>
+<p><b>(b)</b> Average predicted risk = (0.30 + 0.15 + 0.10 + 0.20 + 0.05) / 5 = 0.16; observed share = 2 / 5 = 0.40.</p>
+<p><b>(c)</b> It ranks the women well but its risks are much too low, so it discriminates but is poorly calibrated. (Five women are far too few to judge a real model; the point is the reasoning.)</p>`
+    },
+    {
+      id: 't8',
+      title: 'From one hospital to another',
+      level: 'Evaluate',
+      scenario: `<p>The model had a c statistic of 0.82 in the hospital where it was built and 0.71 in the second hospital. In the second hospital, women given high risks had fewer preterm births than predicted, and women given low risks had more.</p>`,
+      questions: [
+        '<b>(a)</b> Name the pattern in the risks and the problem it usually points to.',
+        '<b>(b)</b> Give a second, different reason why performance could fall in another hospital.',
+        '<b>(c)</b> What should the team have done before trying the model elsewhere?'
+      ],
+      answer: `<p><b>(a)</b> The risks are too extreme: too high at the top, too low at the bottom. This is the usual sign of overfitting: the model learned features of its own sample that do not hold in new women, so its apparent performance (0.82) was optimistic.</p>
+<p><b>(b)</b> The hospitals may simply differ: a different mix of women, a different referral pattern or a different way of recording gestational age can change performance even for a model that is not overfitted.</p>
+<p><b>(c)</b> Estimate the optimism in the development data first (internal validation, for example with the bootstrap), and only then test the model in the new hospital (external validation). Modules 4, 13 and 14 cover this.</p>`
     }
   ]
 });

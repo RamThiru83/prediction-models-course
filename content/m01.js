@@ -14,6 +14,65 @@ registerModule({
     'List the seven modelling steps in order and state what each one decides.',
     'Define a prediction problem (population, outcome, predictors, intended use) before analysing any data.'
   ],
+  format: 'cases',
+  essentials: `
+<ul>
+<li>Prediction is first an <b>estimation</b> problem: the aim is accurate absolute risks for new patients. A new marker earns its place only if it improves on predictors that are already known and easy to measure.</li>
+<li>A <b>diagnostic</b> model estimates whether a condition is present now (cross-sectional data); a <b>prognostic</b> model estimates a future outcome (a cohort followed over time).</li>
+<li>A risk becomes a decision through a <b>threshold</b>: threshold = harm / (harm + benefit). For a treatment with a constant relative risk RR and an absolute harm H, treat if the risk r &gt; H / (1 − RR). The threshold is a clinical choice, not a statistical one.</li>
+<li>The <b>effective sample size</b> is the number of events. The more of a model that must be learned from the data, the more events are needed.</li>
+<li>Models also serve research: selecting and stratifying trial patients, adjusting trial analyses, propensity scores, and comparing hospitals after accounting for case-mix.</li>
+<li>The <b>seven steps</b>: data inspection, coding of predictors, model specification, estimation, performance, validation, presentation. They are preceded by defining the problem, and only predictors known at the moment of prediction may be used.</li>
+</ul>`,
+  cases: [
+    {
+      id: 'c1',
+      title: 'Extra antenatal visits for the women most at risk',
+      html: `
+<p class="scenario">Illustrative (synthetic). A district health team wants to offer extra antenatal contacts to the women most at risk of preterm birth, deciding at the booking visit. It has two synthetic datasets to work with: an antenatal cohort (ptb_dev) and a newborn-unit dataset (sepsis).</p>
+<div class="need"><b>What you need</b>
+<p>Before any analysis, define the problem in one or two sentences each: the research question, the intended application (who uses the risk, when, to decide what), the outcome, the predictors, the study design, the statistical model and the sample size.</p>
+<p>A model can only use what is known at the moment of prediction. A predictor recorded later in pregnancy makes a booking-visit model unusable, however well it predicts in the data. A <b>prognostic</b> design follows women forward to the outcome; a <b>diagnostic</b> design measures predictors and the condition at the same time.</p></div>
+<div data-widget="datasetCard" data-set="ptb_dev"></div>
+<div data-widget="datasetCard" data-set="sepsis"></div>
+[[task:0]]
+[[task:1]]`
+    },
+    {
+      id: 'c2',
+      title: 'Who should get the preventive treatment?',
+      html: `
+<p class="scenario">Illustrative (synthetic). A preventive treatment in pregnancy lowers the risk of an adverse outcome but has side-effects of its own. The booking-visit model gives each woman a predicted risk. The team must decide whom to treat.</p>
+<div class="need"><b>What you need</b>
+<p>The treatment threshold is the risk at which treating and not treating are equally good. If <b>harm</b> is the net loss from treating someone who would not have the outcome and <b>benefit</b> the net gain from treating someone who would, threshold = harm / (harm + benefit).</p>
+<p>For a treatment that lowers risk by a constant relative amount (RR) and causes a constant absolute harm H, the benefit for a woman at risk r is (1 − RR) × r, so treat if r &gt; H / (1 − RR). Example: RR 0.5 and H 3% give a break-even risk of 0.03 / 0.5 = 6%. A woman at 10% gains 5% − 3% = 2%; a woman at 4% loses 1%.</p></div>
+[[task:2]]
+[[task:3]]`
+    },
+    {
+      id: 'c3',
+      title: 'A trial and a hospital comparison',
+      html: `
+<p class="scenario">Illustrative (synthetic). The same team is planning a randomised trial of a preterm birth prevention programme, and the state wants to compare neonatal mortality between hospitals.</p>
+<div class="need"><b>What you need</b>
+<p>In research, a prediction model can replace several separate inclusion criteria with one predicted risk, and summarise prognosis for stratified randomisation.</p>
+<p>In a randomised trial analysed with logistic regression, adjusting for strongly prognostic baseline covariates moves the treatment effect further from zero, increases its standard error, and still increases power, because the estimate grows more than the standard error. For a continuous outcome analysed with linear regression, the estimate is unchanged when groups are balanced, and the standard error falls.</p>
+<p>Hospitals receive different patients, so raw outcome rates cannot be compared. A model gives each hospital an <b>expected</b> rate from its own case-mix, and observed can then be compared with expected. Without randomisation, a <b>propensity score</b> (the predicted probability of receiving a treatment) can adjust for observed confounders.</p></div>
+[[task:4]]
+[[task:5]]`
+    },
+    {
+      id: 'c4',
+      title: 'A model proposal under review',
+      html: `
+<p class="scenario">Illustrative (synthetic). You are asked to review two things for a research committee: a team's modelling plan, and a proposal for a postpartum haemorrhage model.</p>
+<div class="need"><b>What you need</b>
+<p>The seven steps, in order: (1) data inspection, including missing values; (2) coding of predictors; (3) model specification: which predictors, and whether effects are additive and linear; (4) estimation, limiting overfitting with shrinkage or penalisation; (5) performance: calibration, discrimination, clinical usefulness; (6) validation: internal (same population) and external (other settings); (7) presentation as a formula, score chart or nomogram.</p>
+<p>Each choice tuned to the data makes performance look better than it will be in new patients, so the plan should be fixed in advance. Internal validity is a precondition for external validity.</p></div>
+[[task:6]]
+[[task:7]]`
+    }
+  ],
   sections: [
     {
       id: 's1',
@@ -272,7 +331,37 @@ registerModule({
   ],
   tasks: [
     {
+      id: 't0',
+      title: 'Define the prediction problem',
+      level: 'Create',
+      scenario: `<p>Write the district team's problem definition before any data are analysed.</p>`,
+      questions: [
+        '<b>(a)</b> In one sentence each, state the research question, the intended application, the outcome definition and the study design.',
+        '<b>(b)</b> List five candidate predictors that would be known at the booking visit, and two that would tempt an analyst but are not known then.',
+        '<b>(c)</b> Which statistical model fits this outcome, and what number from the data must you check before deciding how many predictors to consider?'
+      ],
+      answer: `<p><b>(a)</b> <b>Research question:</b> the probability of preterm birth (before 37 completed weeks) in women booking at the district antenatal clinic. <b>Intended application:</b> midwives at the booking visit use the predicted risk to decide who is offered extra antenatal contacts. <b>Outcome:</b> gestational age at delivery below 37 weeks, dated by the best available method (early ultrasound where possible), recorded at delivery. <b>Design:</b> a prospective cohort of women followed from booking to delivery, a prognostic design.</p>
+<p><b>(b)</b> Known at booking: maternal age, BMI, haemoglobin, parity, previous preterm birth, chronic hypertension, tobacco use. Not known at booking: number of antenatal visits over the pregnancy, mode of delivery, birth weight.</p>
+<p><b>(c)</b> Binary logistic regression. Check the number of preterm births (the events), because the number of events, not the number of women, limits how many predictors can be studied (Module 2).</p>`
+    },
+    {
       id: 't1',
+      title: 'Classify the datasets and the predictors',
+      level: 'Analyze',
+      scenario: `<p>Open the two dataset cards in Case 1 (ptb_dev and sepsis) and read the summaries and codebooks.</p>`,
+      questions: [
+        '<b>(a)</b> For each dataset state whether it is a prognostic or a diagnostic design and justify your answer.',
+        '<b>(b)</b> Suppose a preterm-birth model is meant for use at the first antenatal (booking) visit. Which ptb_dev columns would you not allow as predictors, and why?',
+        '<b>(c)</b> From the ptb_dev card, take the number of preterm births and divide by 15, the number of parameters in the full 14-term model (age uses 2 parameters). Comment on what this tells you.',
+        '<b>(d)</b> In the sepsis codebook identify one predictor that is cheap and available at the bedside and one that requires a laboratory test. Why does this distinction matter for a prediction model?'
+      ],
+      answer: `<p><b>(a)</b> ptb_dev is prognostic: women are identified at booking and followed to delivery, where the outcome (delivery before 37 weeks) occurs later. sepsis is diagnostic: newborns are examined at one time and the presence of sepsis (assessed by the reference standard described in the codebook) refers to their current condition.</p>
+<p><b>(b)</b> Number of antenatal visits (<b>anc_visits</b>) accumulates over pregnancy, so it is not known at booking; using it would leak information from after the time of prediction. The fetal sex column (<b>female_fetus</b>) is not routinely known at booking either. Variables recorded at or before booking (age, BMI, haemoglobin, parity, history, chronic hypertension, tobacco, SES, height, season of conception) are acceptable; bacteriuria depends on whether the urine culture is part of the booking visit in the intended workflow.</p>
+<p><b>(c)</b> The cohort has <span data-live="ptb_dev_events"></span> preterm births. Dividing by 15 gives the events per candidate parameter (EPV), about 15 to 16 at an incidence near 12% in 2,000 women. That is above 10, the minimum rule of thumb taught in Module 2, but well below the 50 events per candidate that reliable data-driven selection needs (Module 8), so selecting predictors from all 15 parameters in this cohort would be unreliable.</p>
+<p><b>(d)</b> Temperature, respiratory rate, poor feeding and lethargy are bedside signs; C-reactive protein needs a blood test. A prediction model should use predictors that are readily available and affordable where it will be used, and a costlier test is best judged by its incremental value over the cheaper predictors (a model without it versus with it). This is developed in Module 2.</p>`
+    },
+    {
+      id: 't2',
       title: 'Thresholds for a preventive treatment',
       level: 'Apply',
       scenario: `<p>Illustrative (synthetic). A preventive treatment during pregnancy lowers the risk of an adverse outcome by 30% in relative terms (RR = 0.7) in every risk group. It causes an absolute harm of 2% (an excess risk of a side-effect that is comparable in importance to the outcome). A booking-visit model gives predicted risks of the adverse outcome of 3%, 8% and 15% for three women.</p>`,
@@ -295,23 +384,59 @@ registerModule({
 <p><b>Interpretation:</b> a model is useful for this decision only if it separates women above and below about 6.7%; a model whose risks are miscalibrated around that value can lead to wrong decisions even if it ranks women well.</p>`
     },
     {
-      id: 't2',
-      title: 'Classify the datasets and the predictors',
+      id: 't3',
+      title: 'A capacity limit is not a threshold',
       level: 'Analyze',
-      scenario: `<p>Open the two dataset cards in Section 7 (ptb_dev and sepsis) and read the summaries and codebooks.</p>`,
+      scenario: `<p>The programme can afford the preventive treatment for only the 20% of women with the highest predicted risk.</p>`,
       questions: [
-        '<b>(a)</b> For each dataset state whether it is a prognostic or a diagnostic design and justify your answer.',
-        '<b>(b)</b> Suppose a preterm-birth model is meant for use at the first antenatal (booking) visit. Which ptb_dev columns would you not allow as predictors, and why?',
-        '<b>(c)</b> From the ptb_dev card, take the number of preterm births and divide by 15, the number of parameters in the full 14-term model (age uses 2 parameters). Comment on what this tells you.',
-        '<b>(d)</b> In the sepsis codebook identify one predictor that is cheap and available at the bedside and one that requires a laboratory test. Why does this distinction matter for a prediction model?'
+        '<b>(a)</b> How does choosing "the top 20%" differ from choosing "everyone above the break-even risk"?',
+        '<b>(b)</b> What happens if the risk at the 20% cut-off is below the break-even risk? And if it is above?',
+        '<b>(c)</b> Which property of the model decides how many future events fall within the top 20%, and which decides whether its risks can be compared with the break-even value?'
       ],
-      answer: `<p><b>(a)</b> ptb_dev is prognostic: women are identified at booking and followed to delivery, where the outcome (delivery before 37 weeks) occurs later. sepsis is diagnostic: newborns are examined at one time and the presence of sepsis (assessed by the reference standard described in the codebook) refers to their current condition.</p>
-<p><b>(b)</b> Number of antenatal visits (<b>anc_visits</b>) accumulates over pregnancy, so it is not known at booking; using it would leak information from after the time of prediction. The fetal sex column (<b>female_fetus</b>) is not routinely known at booking either. Variables recorded at or before booking (age, BMI, haemoglobin, parity, history, chronic hypertension, tobacco, SES, height, season of conception) are acceptable; bacteriuria depends on whether the urine culture is part of the booking visit in the intended workflow.</p>
-<p><b>(c)</b> The cohort has <span data-live="ptb_dev_events"></span> preterm births. Dividing by 15 gives the events per candidate parameter (EPV), about 15 to 16 at an incidence near 12% in 2,000 women. That is above 10, the minimum rule of thumb taught in Module 2, but well below the 50 events per candidate that reliable data-driven selection needs (Module 8), so selecting predictors from all 15 parameters in this cohort would be unreliable.</p>
-<p><b>(d)</b> Temperature, respiratory rate, poor feeding and lethargy are bedside signs; C-reactive protein needs a blood test. A prediction model should use predictors that are readily available and affordable where it will be used, and a costlier test is best judged by its incremental value over the cheaper predictors (a model without it versus with it). This is developed in Module 2.</p>`
+      answer: `<p><b>(a)</b> The top 20% is a rule based on rank: it fixes how many women are treated, whatever their risks. The break-even rule is based on the size of each woman's risk compared with the balance of harm and benefit.</p>
+<p><b>(b)</b> If the cut-off lies below the break-even risk, some treated women are harmed on balance. If it lies above, some women who would benefit go untreated because of capacity, which is a resource decision to state openly.</p>
+<p><b>(c)</b> Discrimination (ranking) decides how many of the future events are concentrated among the top 20%. Calibration decides whether the predicted risks mean what they say, so that they can be compared with the break-even risk.</p>`
     },
     {
-      id: 't3',
+      id: 't4',
+      title: 'Adjusting a trial for prognosis',
+      level: 'Apply',
+      scenario: `<p>The prevention trial will randomise 2,000 women and analyse preterm birth with logistic regression. The statistician proposes adjusting the treatment effect for previous preterm birth and cervical length, which are strongly prognostic; randomisation is expected to balance them between arms.</p>`,
+      questions: [
+        '<b>(a)</b> Compared with the unadjusted analysis, what happens to the estimated treatment odds ratio, its standard error and the power?',
+        '<b>(b)</b> A colleague says the adjusted odds ratio must be wrong because it differs from the unadjusted one although the arms are balanced. How do you reply?',
+        '<b>(c)</b> How would the answer to (a) differ if the outcome were birth weight analysed with linear regression?'
+      ],
+      answer: `<p><b>(a)</b> The adjusted odds ratio moves further from 1, its standard error increases, and power increases, because the estimate grows more than its standard error. The gain is larger when the covariates predict the outcome strongly; the book reports sample-size reductions of roughly 12% to 30% for covariate sets with R² of 13% to 40%.</p>
+<p><b>(b)</b> In logistic regression the adjusted and unadjusted effects are not expected to agree even with perfect balance: the adjusted odds ratio describes the effect for women with the same values of the covariates. It is not biased by the adjustment; it answers a slightly different, more individual question.</p>
+<p><b>(c)</b> With linear regression and balanced arms the estimated effect is the same with or without adjustment, while the standard error falls, so power also increases.</p>`
+    },
+    {
+      id: 't5',
+      title: 'Comparing hospitals fairly',
+      level: 'Apply',
+      scenario: `<p>Neonatal mortality is 6.0% in a referral hospital and 2.0% in a district hospital. A case-mix model (birth weight, gestational age, maternal factors) gives an expected mortality of 7.0% for the referral hospital's babies and 1.5% for the district hospital's.</p>`,
+      questions: [
+        '<b>(a)</b> Calculate the observed-to-expected ratio for each hospital and interpret it.',
+        '<b>(b)</b> Give two reasons to be cautious before ranking the hospitals on these ratios.'
+      ],
+      answer: `<p><b>(a)</b> Referral: 6.0 / 7.0 = 0.86, fewer deaths than expected for its case-mix. District: 2.0 / 1.5 = 1.33, more deaths than expected. The raw rates suggested the opposite.</p>
+<p><b>(b)</b> The model adjusts only for the characteristics it contains; unmeasured differences in severity remain. The expected rates are only as good as the model's calibration in each hospital. And with few deaths in a small hospital, a ratio of 1.33 can arise by chance (Primer, Case 3).</p>`
+    },
+    {
+      id: 't6',
+      title: 'Put the plan in order',
+      level: 'Understand',
+      scenario: `<p>A team lists its planned activities in no particular order: (i) test the model in a second state; (ii) decide how to handle missing haemoglobin values; (iii) estimate coefficients with shrinkage; (iv) present the model as a score chart; (v) decide whether age has a linear effect; (vi) decide whether to keep BMI continuous or group it; (vii) estimate the c statistic and a calibration plot; (viii) estimate optimism with the bootstrap.</p>`,
+      questions: [
+        '<b>(a)</b> Assign each activity to its step (1 to 7) and put them in order.',
+        '<b>(b)</b> Why must (viii) come before (i)?'
+      ],
+      answer: `<p><b>(a)</b> Step 1, data inspection: (ii). Step 2, coding: (vi). Step 3, specification: (v). Step 4, estimation: (iii). Step 5, performance: (vii). Step 6, validation: (viii) internal, then (i) external. Step 7, presentation: (iv).</p>
+<p><b>(b)</b> Internal validity is a precondition for external validity. If the model is overfitted in its own population, a fall in performance elsewhere cannot be separated from optimism that was present from the start.</p>`
+    },
+    {
+      id: 't7',
       title: 'Critique a postpartum haemorrhage prediction proposal',
       level: 'Evaluate',
       scenario: `<p>Illustrative (synthetic). A group proposes a model to identify, at admission in labour, women at high risk of postpartum haemorrhage (PPH) so that primary health centres can give a prophylactic bundle. They use data from a completed randomised trial of an oxytocin regimen in three tertiary hospitals, which excluded women with multiple pregnancy and antepartum haemorrhage. Candidate predictors: maternal age, parity, haemoglobin, duration of labour, oxytocin augmentation, mode of delivery, birth weight, retained placenta. PPH is defined as visually estimated blood loss of 500 ml or more recorded by the birth attendant. The authors plan to report p-values for each predictor and a c statistic, to classify women as high risk when predicted risk exceeds 50%, and to deploy the model after this analysis.</p>`,

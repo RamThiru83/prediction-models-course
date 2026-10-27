@@ -255,14 +255,33 @@ App.pageModule = function (m) {
   var h = '<p class="eyebrow">' + m.part + (m.num === 0 ? '' : ' · ' + (typeof m.num === 'number' ? 'Module ' + m.num : m.num)) + '</p><h1>' + m.title + '</h1><p class="lede">' + m.summary + '</p>' +
     '<div class="meta"><span><b>Source</b> ' + m.book + '</span><span><b>Study time</b> about ' + m.minutes + ' minutes</span></div>' +
     '<div class="callout key"><b>After this module you can</b><ul>' + m.objectives.map(function (o) { return '<li>' + o + '</li>'; }).join('') + '</ul></div>';
+  var taskHtml = function (t, i) { return '<div class="task" data-ti="' + i + '"><h3>Task ' + (i + 1) + '. ' + t.title + ' <span class="lvl">' + t.level + '</span></h3>' + t.scenario + t.questions.map(function (q) { return '<p>' + q + '</p>'; }).join('') + '</div>'; };
+  if (m.format === 'cases') {
+    /* case-led layout: essentials, then cases with their tasks, quiz, answers at the end, full notes collapsed */
+    h += '<section class="sec essentials" id="' + m.id + '-ess"><h2>The essentials</h2>' + m.essentials + '</section>';
+    m.cases.forEach(function (c, k) {
+      h += '<section class="sec case" id="' + m.id + '-' + c.id + '"><h2>Case ' + (k + 1) + '. ' + c.title + '</h2>' +
+        c.html.replace(/\[\[task:(\d+)\]\]/g, function (_, n) { return taskHtml(m.tasks[+n], +n); }) + '</section>';
+    });
+    h += '<section class="sec"><h2>Check yourself</h2><p>Answer each question to see the explanation. Wrong answers are explained too.</p><div id="quizbox">' + App.quizHtml(m) + '</div></section>';
+  } else {
   m.sections.forEach(function (s) { h += '<section class="sec" id="' + m.id + '-' + s.id + '"><h2>' + s.title + '</h2>' + s.html + '</section>'; });
   h += '<section class="sec"><h2>Key points</h2><ul class="kp">' + m.keyPoints.map(function (k) { return '<li>' + k + '</li>'; }).join('') + '</ul></section>';
   h += '<section class="sec"><h2>Check your understanding</h2><p>Answer each question to see the explanation. Wrong answers are explained too.</p><div id="quizbox">' + App.quizHtml(m) + '</div></section>';
   h += '<section class="sec"><h2>Case tasks</h2><p>Attempt each task before opening the worked answers at the end of this page.</p>';
-  m.tasks.forEach(function (t, i) { h += '<div class="task"><h3>Task ' + (i + 1) + '. ' + t.title + ' <span class="lvl">' + t.level + '</span></h3>' + t.scenario + t.questions.map(function (q) { return '<p>' + q + '</p>'; }).join('') + '</div>'; });
-  h += '</section><section class="sec"><h2>Worked answers</h2>';
+  m.tasks.forEach(function (t, i) { h += taskHtml(t, i); });
+  h += '</section>';
+  }
+  h += '<section class="sec"><h2>Worked answers</h2>' + (m.format === 'cases' ? '<p>Open an answer only after you have written your own.</p>' : '');
   m.tasks.forEach(function (t, i) { h += '<details class="ans"><summary>Task ' + (i + 1) + '. ' + t.title + '</summary><div>' + t.answer + '</div></details>'; });
-  h += '</section><div class="callout key"><b>Finished?</b><p><button type="button" class="btn pri" id="markdone">' + (App.prog.done[m.id] ? 'Marked complete (click to undo)' : 'Mark this module complete') + '</button></p></div>';
+  h += '</section>';
+  if (m.format === 'cases' && m.sections && m.sections.length) {
+    var strip = function (x) { return x.replace(/<div data-widget="[^"]*"[^>]*><\/div>/g, '<p class="muted">The simulator for this part is in the cases above.</p>').replace(/<ul class="try">[\s\S]*?<\/ul>/g, ''); };
+    h += '<details class="fullnotes"><summary>Full notes for this module (optional reading)</summary>';
+    m.sections.forEach(function (s) { h += '<section class="sec" id="' + m.id + '-' + s.id + '"><h2>' + s.title + '</h2>' + strip(s.html) + '</section>'; });
+    h += '</details>';
+  }
+  h += '<div class="callout key"><b>Finished?</b><p><button type="button" class="btn pri" id="markdone">' + (App.prog.done[m.id] ? 'Marked complete (click to undo)' : 'Mark this module complete') + '</button></p></div>';
   h += '<div class="pager"><span>' + (prev ? '<a class="btn" href="#' + prev.id + '">← ' + prev.title + '</a>' : '') + '</span><span>' + (next ? '<a class="btn" href="#' + next.id + '">' + next.title + ' →</a>' : '') + '</span></div>';
   return { html: h, after: function (root) {
     App.wireQuiz(root.querySelector('#quizbox'), m);
