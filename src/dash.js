@@ -106,10 +106,11 @@
   };
   TAB.content = function (body, redraw) {
     var keys = Object.keys(App.over).sort();
-    if (!keys.length) { body.innerHTML = '<p class="lede">No published text edits yet. Switch on “Edit course text” in the left rail, open a module and click any text to edit it.</p>'; return; }
-    var cache = {}; function blocksFor(id) { if (!cache[id]) { try { cache[id] = App.blocksOf(App.byId[id]); } catch (e) { cache[id] = []; } } return cache[id]; }
+    if (!keys.length) { body.innerHTML = '<p class="lede">No published text edits yet. Switch on “Edit course text” in the left rail, open any module or page and click any text to edit it.</p>'; return; }
+    var cache = {}, live = {}; function blocksFor(id) { if (!cache[id]) { try { cache[id] = App.blocksOf(id); } catch (e) { cache[id] = []; } live[id] = App.resolveOver(id, cache[id]); } return cache[id]; }
+    var pname = function (id) { return App.byId[id] ? App.byId[id].title : (App.refs[id] ? App.refs[id].title : ({ home: 'Home', about: 'About', howto: 'How to use CliPr', datasets: 'Datasets' })[id] || id); };
     body.innerHTML = '<p class="lede">Edits published to all learners. An edit marked <b>outdated</b> no longer matches the underlying text (the course was updated) and is ignored until reverted or re-edited.</p>' +
-      K.tbl(['Where', 'Edited text', 'Status', ''], keys.map(function (k) { var p = k.split(':'), m = App.byId[p[0]], b = blocksFor(p[0])[+p[1]], ok = b && b.__hash === App.over[k].base_hash; return ['<a href="#' + p[0] + '">' + esc(m ? m.title : p[0]) + '</a> · block ' + p[1], esc(strip(App.over[k].html).slice(0, 140)), ok ? 'live' : 'outdated', '<button type="button" class="btn sm" data-rv="' + k + '">Revert</button>']; }));
+      K.tbl(['Where', 'Edited text', 'Status', ''], keys.map(function (k) { var p = k.split(':'); blocksFor(p[0]); var ok = !!live[p[0]][k]; return ['<a href="#' + p[0] + '">' + esc(pname(p[0])) + '</a> · block ' + p[1], esc(strip(App.over[k].html).slice(0, 140)), ok ? 'live' : 'outdated', '<button type="button" class="btn sm" data-rv="' + k + '">Revert</button>']; }));
     Array.prototype.forEach.call(body.querySelectorAll('[data-rv]'), function (b) { b.onclick = function () { b.disabled = true; SB.del('pmc_overrides', 'key=eq.' + encodeURIComponent(b.getAttribute('data-rv'))).then(App.loadRemote).then(redraw); }; });
   };
   TAB.setup = function (body, redraw) {

@@ -27,18 +27,62 @@ K.clean = function (html) {
 var BSEL = '.lede,.need p,.need li,.sec p,.sec li,.sec h2,.sec h3,.sec summary,.task h3,.task p,.callout p,.callout li,.qt,.opt > span:last-child,.kp li';
 function hash(s) { var h = 5381, i; for (i = 0; i < s.length; i++) h = ((h << 5) + h + s.charCodeAt(i)) | 0; return (h >>> 0).toString(36); }
 function textOf(el) { var c = el.cloneNode(true); Array.prototype.forEach.call(c.querySelectorAll('[data-live]'), function (n) { n.textContent = ''; }); return c.textContent.replace(/\s+/g, ' ').trim(); }
-App.blocks = function (root) {
+/* Second set of editable blocks (titles, objectives, story, case aims, tables, formulas, callout titles,
+   quiz explanations). They are numbered after the first set, so keys of existing edits never shift. */
+var BSEL2 = '.col > h1,.goals li,.story p,.caim,.meta span,.flowhint,.sec td,.sec th,.callout td,.callout th,.formula,.callout > b,.whysrc';
+/* on the other pages (home, about, how to, datasets, glossary, formulas, checklist, chapter map) all plain text is editable */
+var PSEL = BSEL2 + ',.col p,.col h2,.col h3,.col li,.col td,.col th,.col dt,.col dd,.col summary,.col .card b,.col .card span';
+App.EDIT_PAGES = { home: 1, about: 1, howto: 1, datasets: 1 };
+App.editable = function (id) { return !!(App.byId[id] || App.refs[id] || App.EDIT_PAGES[id]); };
+App.pageFor = function (id) {
+  if (App.byId[id]) return App.pageModule(App.byId[id]);
+  if (App.refs[id]) return App.pageRef(id);
+  return { home: App.pageHome, about: App.pageAbout, howto: App.pageHowto, datasets: App.pageDatasets }[id]();
+};
+App.blocks = function (root, page) {
   var out = [];
+  function skip(el) {
+    if (el.closest('[data-widget],.wg,.why,.foot,.pager,#qscore,.myans,.note-card,.secbar,.edbar,.stepbar,.stepnav,.prog,.num,.acctbox,form')) return true;
+    var b = el.closest('button'); return !!(b && !b.classList.contains('opt'));
+  }
+  function add(el) { el.setAttribute('data-bi', out.length); el.__orig = el.innerHTML; el.__hash = hash(textOf(el)); out.push(el); }
   Array.prototype.forEach.call(root.querySelectorAll(BSEL), function (el) {
-    if (el.closest('[data-widget],.wg,.why,.foot,.pager,#qscore,.myans,.note-card,.secbar,.edbar')) return;
-    var b = el.closest('button'); if (b && !b.classList.contains('opt')) return;
-    if (el.querySelector(BSEL)) return;
-    el.setAttribute('data-bi', out.length); el.__orig = el.innerHTML; el.__hash = hash(textOf(el)); out.push(el);
+    if (skip(el) || el.querySelector(BSEL)) return; add(el);
+  });
+  var first = out.slice();
+  Array.prototype.forEach.call(root.querySelectorAll(page ? PSEL : BSEL2), function (el) {
+    if (skip(el) || first.indexOf(el) >= 0 || el.querySelector(BSEL + ',' + (page ? PSEL : BSEL2))) return;
+    for (var i = 0; i < first.length; i++) if (first[i].contains(el) || el.contains(first[i])) return;
+    if (!textOf(el)) return; add(el);
   });
   return out;
 };
+/* show any published edit of a quiz explanation wherever the explanation is displayed */
+App.syncWhy = function (root) {
+  Array.prototype.forEach.call(root.querySelectorAll('.q'), function (qd) {
+    var src = qd.querySelector('.whysrc'), t = qd.querySelector('.why .whyt'); if (src && t) t.innerHTML = src.innerHTML;
+  });
+};
 /* blocks of a module computed off-screen (dashboard uses it to flag stale edits) */
-App.blocksOf = function (m) { var d = document.createElement('div'); d.innerHTML = App.pageModule(m).html; return App.blocks(d); };
+App.blocksOf = function (id) {
+  if (id && id.id) id = id.id;
+  var d = document.createElement('div'); d.className = 'col'; d.innerHTML = App.pageFor(id).html; return App.blocks(d, !App.byId[id]);
+};
+/* match published edits to blocks: by position first, then by the original text when the position has moved
+   (for example when a page differs between instructors and learners) */
+App.resolveOver = function (id, blocks) {
+  var map = {}, taken = [];
+  Object.keys(App.over).forEach(function (k) {
+    var p = k.lastIndexOf(':'); if (k.slice(0, p) !== id) return;
+    var el = blocks[+k.slice(p + 1)]; if (el && el.__hash === App.over[k].base_hash) { map[k] = el; taken.push(el); }
+  });
+  Object.keys(App.over).forEach(function (k) {
+    var p = k.lastIndexOf(':'); if (k.slice(0, p) !== id || map[k]) return;
+    var c = blocks.filter(function (el) { return taken.indexOf(el) < 0 && el.__hash === App.over[k].base_hash; });
+    if (c.length === 1) { map[k] = c[0]; taken.push(c[0]); }
+  });
+  return map;
+};
 
 /* ---------- text offsets that ignore live values ---------- */
 function tnodes(block) {
@@ -73,13 +117,13 @@ function uid8() { return Date.now().toString(36) + Math.random().toString(36).sl
 /* ---------- decorate a module page ---------- */
 App.decorate = function (root, m) {
   var col = root.querySelector('.col'); if (!col) return;
-  var blocks = App.blocks(col), P = App.prog, canEdit = App.edit && App.acct.isInstructor();
+  var page = !App.byId[m.id], blocks = App.blocks(col, page), P = App.prog, canEdit = App.edit && App.acct.isInstructor();
   App.curBlocks = blocks;
-  blocks.forEach(function (el, i) {
-    var o = App.over[m.id + ':' + i];
-    if (o && o.base_hash === el.__hash) { el.innerHTML = K.clean(o.html); el.classList.add('edited'); el.__over = true; }
-  });
+  var om = App.resolveOver(m.id, blocks);
+  Object.keys(om).forEach(function (k) { var el = om[k]; el.innerHTML = K.clean(App.over[k].html); el.classList.add('edited'); el.__over = true; el.__okey = k; });
+  if (page) { if (canEdit) App.decorateEdit(col, m, blocks); return; }
   P.seen = P.seen || {}; if (Date.now() - (P.seen[m.id] || 0) > 600000) { P.seen[m.id] = Date.now(); App.save(); }
+  App.syncWhy(col);
   if (canEdit) { App.decorateEdit(col, m, blocks); return; }
   /* highlights */
   (P.hl[m.id] || []).forEach(function (h) {
@@ -175,7 +219,7 @@ App.showFeedback = function (el, key) {
 /* ---------- instructor inline editing ---------- */
 App.decorateEdit = function (col, m, blocks) {
   var dirty = {}, bar = document.createElement('div'); bar.className = 'edbar';
-  bar.innerHTML = '<span class="ed-t"><b>Editing course text.</b> Click any paragraph, list item, heading, quiz question or option. Changes publish to all learners when you save.</span><span class="ed-c"></span><button type="button" class="btn pri sm" data-s disabled>Save changes</button><button type="button" class="btn sm" data-d disabled>Discard</button><button type="button" class="btn sm" data-r>Revert this page to original</button><button type="button" class="btn sm" data-x>Exit editing</button>';
+  bar.innerHTML = '<span class="ed-t"><b>Editing course text.</b> Click any text: headings, paragraphs, list items, table cells, formulas, quiz questions, options and explanations. Changes publish to all learners when you save.</span><span class="ed-c"></span><button type="button" class="btn pri sm" data-s disabled>Save changes</button><button type="button" class="btn sm" data-d disabled>Discard</button><button type="button" class="btn sm" data-r>Revert this page to original</button><button type="button" class="btn sm" data-x>Exit editing</button>';
   document.body.appendChild(bar); App.edbar = bar;
   function upd() { var n = Object.keys(dirty).length; bar.querySelector('.ed-c').textContent = n ? n + ' unsaved' : ''; bar.querySelector('[data-s]').disabled = !n; bar.querySelector('[data-d]').disabled = !n; }
   Array.prototype.forEach.call(col.querySelectorAll('.q button.opt'), function (b) {
@@ -183,7 +227,10 @@ App.decorateEdit = function (col, m, blocks) {
   });
   blocks.forEach(function (el, i) {
     el.contentEditable = 'true'; el.classList.add('ed'); el.spellcheck = true;
-    el.addEventListener('input', function () { dirty[i] = 1; upd(); });
+    if (el.classList.contains('whysrc')) el.hidden = false;
+    /* the same text shown in several places (the story appears on every step) is edited once, everywhere */
+    var twins = blocks.filter(function (o, j) { return j !== i && o.__orig === el.__orig && o.__hash === el.__hash; });
+    el.addEventListener('input', function () { dirty[i] = 1; twins.forEach(function (o) { o.innerHTML = el.innerHTML; dirty[+o.getAttribute('data-bi')] = 1; }); upd(); });
     el.addEventListener('keydown', function (e) { if (e.key === 'Enter') e.preventDefault(); });
     el.addEventListener('paste', function (e) { e.preventDefault(); var t = (e.clipboardData || window.clipboardData).getData('text/plain').replace(/\s+/g, ' '); document.execCommand('insertText', false, t); });
   });
@@ -194,7 +241,7 @@ App.decorateEdit = function (col, m, blocks) {
   bar.querySelector('[data-s]').onclick = function () {
     var btn = this; btn.disabled = true; btn.textContent = 'Saving…'; var jobs = [];
     Object.keys(dirty).forEach(function (i) {
-      var el = blocks[i], key = m.id + ':' + i, html = serial(el);
+      var el = blocks[i], key = el.__okey || (m.id + ':' + i), html = serial(el);
       if (html === origClean(el)) { if (App.over[key]) jobs.push(SB.del('pmc_overrides', 'key=eq.' + encodeURIComponent(key))); }
       else if (!html.replace(/<[^>]*>/g, '').trim()) { /* refuse to publish an empty block */ }
       else jobs.push(SB.upsert('pmc_overrides', { key: key, html: html.slice(0, 19000), base_hash: el.__hash, updated_at: new Date().toISOString() }, 'key'));

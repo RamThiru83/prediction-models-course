@@ -63,7 +63,17 @@ def push(folder, token, paths):
 
 
 def main(folder, mac_wins=False):
-    raw = subprocess.run(["curl", "-fsSL", ZIP_URL], capture_output=True, check=True).stdout
+    # Download the exact current commit, not refs/heads/main: the branch archive can be served from a cache for a
+    # short while after a push, which would make a just-pushed file look "changed on GitHub" and pull back the old copy.
+    url = ZIP_URL
+    try:
+        head = subprocess.run(["curl", "-fsSL", "-H", "Accept: application/vnd.github.sha", API + "/commits/main"],
+                              capture_output=True, check=True, timeout=60).stdout.decode().strip()
+        if re.fullmatch(r"[0-9a-f]{40}", head):
+            url = "https://codeload.github.com/%s/zip/%s" % (REPO, head)
+    except Exception:
+        pass
+    raw = subprocess.run(["curl", "-fsSL", url], capture_output=True, check=True).stdout
     z = zipfile.ZipFile(io.BytesIO(raw))
     remote = {}
     for name in z.namelist():

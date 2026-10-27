@@ -132,7 +132,7 @@ App.pageHowto = function () {
     h += '<h2>For instructors</h2><ul>' +
       '<li><b>Class dashboard</b> has six tabs. Class shows the roster, the concept mastery grid and CSV downloads. Questions lists the questions learners miss most on their first attempt. Learners opens one learner: their modules, written answers (where you can leave feedback), notes, and a temporary password if they are locked out.</li>' +
       '<li><b>Release</b> hides a module or sets the date it opens. Hidden or not-yet-open modules are also left out of learners’ mastery check.</li>' +
-      '<li><b>Edit course text.</b> Tick the box in the contents panel, click into any paragraph, list item or heading, change it, and Save. The edit is published to every learner at once. Revert this page restores the original. Edits to text that was later changed in a new version of the course are flagged as outdated under Course text.</li>' +
+      '<li><b>Edit course text.</b> Tick the box in the contents panel, open any module or reference page, click into any text (headings, paragraphs, list items, table cells, formulas, objectives, the story, quiz questions, options and explanations), change it, and Save. Text that appears on several steps, such as the story, changes everywhere at once. The edit is published to every learner at once. Revert this page restores the original. Edits to text that was later changed in a new version of the course are flagged as outdated under Course text.</li>' +
       '<li><b>Setup</b> is where join codes are created or switched off, and where the WhatsApp number for Ask your instructor is set.</li></ul>' +
       '<p>Learner data are for teaching only. Using them for research needs ethics approval and separate consent.</p>';
   }

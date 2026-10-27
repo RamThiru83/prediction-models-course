@@ -161,8 +161,25 @@ App.quizHtml = function (mod) {
     return '<div class="q" data-m="' + mod.id + '" data-i="' + i + '"><div class="qt">' + (i + 1) + '. ' + q.q + '</div>' + q.options.map(function (o, j) {
       var cls = (a === undefined || a === null) ? '' : (j === q.answer ? ' right' : (j === a ? ' wrong' : ''));
       return '<button type="button" class="opt' + cls + '" data-j="' + j + '"><span class="k">' + 'ABCD'[j] + '</span><span>' + o + '</span></button>';
-    }).join('') + ((a !== undefined && a !== null) ? '<div class="why"><b>' + (a === q.answer ? 'Correct. ' : 'Not quite. ') + '</b>' + q.why + '</div>' : '') + '</div>';
+    }).join('') + '<div class="whysrc" hidden>' + q.why + '</div>' + ((a !== undefined && a !== null) ? '<div class="why"><b>' + (a === q.answer ? 'Correct. ' : 'Not quite. ') + '</b><span class="whyt">' + q.why + '</span></div>' : '') + '</div>';
   }).join('') + '<p class="num" id="qscore"></p>';
+};
+/* a module's quiz with any published instructor edits applied (used by the mastery check) */
+App.quizLive = function (m) {
+  if (!App.over || !Object.keys(App.over).some(function (k) { return k.indexOf(m.id + ':') === 0; }) || !App.blocksOf) return m.quiz;
+  try {
+    var blocks = App.blocksOf(m.id), om = App.resolveOver(m.id, blocks);
+    Object.keys(om).forEach(function (k) { om[k].innerHTML = K.clean(App.over[k].html); });
+    var root = blocks.length ? blocks[0].closest('.col') : null;
+    return m.quiz.map(function (q, i) {
+      var qd = root && root.querySelector('.q[data-i="' + i + '"]'); if (!qd) return q;
+      var o = {}; for (var k in q) o[k] = q[k];
+      o.q = qd.querySelector('.qt').innerHTML.replace(/^\s*\d+\.\s*/, '');
+      o.options = Array.prototype.map.call(qd.querySelectorAll('.opt > span:last-child'), function (x) { return x.innerHTML; });
+      var w = qd.querySelector('.whysrc'); if (w) o.why = w.innerHTML;
+      return o;
+    });
+  } catch (e) { return m.quiz; }
 };
 App.quizScore = function (mod) { var s = App.prog.quiz[mod.id] || [], c = 0, d = 0; mod.quiz.forEach(function (q, i) { if (s[i] !== undefined && s[i] !== null) { d++; if (s[i] === q.answer) c++; } }); return { c: c, d: d, n: mod.quiz.length }; };
 App.wireQuiz = function (root, mod) {
@@ -176,7 +193,7 @@ App.wireQuiz = function (root, mod) {
       if (arr[i] !== undefined && arr[i] !== null) return;
       var j = +b.getAttribute('data-j'); arr[i] = j; var P = App.prog; P.first[mod.id] = P.first[mod.id] || {}; if (P.first[mod.id][i] === undefined) P.first[mod.id][i] = (j === q.answer) ? 1 : 0; P.qt[mod.id] = Date.now(); App.save();
       Array.prototype.forEach.call(qd.querySelectorAll('.opt'), function (o, k) { if (k === q.answer) o.classList.add('right'); else if (k === j) o.classList.add('wrong'); });
-      var w = document.createElement('div'); w.className = 'why'; w.innerHTML = '<b>' + (j === q.answer ? 'Correct. ' : 'Not quite. ') + '</b>' + q.why; qd.appendChild(w); upd(); App.markNav();
+      var src = qd.querySelector('.whysrc'), w = document.createElement('div'); w.className = 'why'; w.innerHTML = '<b>' + (j === q.answer ? 'Correct. ' : 'Not quite. ') + '</b><span class="whyt">' + (src ? src.innerHTML : q.why) + '</span>'; qd.appendChild(w); upd(); App.markNav();
     });
   });
 };
@@ -415,7 +432,7 @@ App.pageMastery = function () {
   return { html: h, after: function (root) {
     var body = root.querySelector('#mbody');
     function start(n) {
-      var pool = []; App.mods_sorted().forEach(function (m) { if (App.lockInfo(m)) return; m.quiz.forEach(function (q, i) { pool.push({ m: m, q: q }); }); });
+      var pool = []; App.mods_sorted().forEach(function (m) { if (App.lockInfo(m)) return; App.quizLive(m).forEach(function (q, i) { pool.push({ m: m, q: q }); }); });
       for (var i = pool.length - 1; i > 0; i--) { var j = Math.floor(Math.random() * (i + 1)); var t = pool[i]; pool[i] = pool[j]; pool[j] = t; }
       App.mastery = { items: pool.slice(0, n), i: 0, ans: [] }; show();
     }
@@ -453,7 +470,7 @@ App.route = function (keepScroll) {
   App.cur = id;
   var root = document.getElementById('page');
   root.innerHTML = '<div class="col">' + page.html + '<div class="foot">All data in this course are synthetic. Methods follow Steyerberg, Clinical Prediction Models (2009), chapters 1 to 19. For teaching; not for clinical use.</div></div>';
-  App.clearEdbar(); if (App.byId[id] && !App.lockInfo(App.byId[id])) App.decorate(root, App.byId[id]);
+  App.clearEdbar(); if (App.byId[id] ? !App.lockInfo(App.byId[id]) : App.editable(id)) App.decorate(root, App.byId[id] || { id: id });
   Array.prototype.forEach.call(root.querySelectorAll('[data-widget]'), K.mount);
   App.fillLive(); if (page.after) page.after(root);
   App.markNav(); App.askBtn();
