@@ -12,7 +12,7 @@ const body = `<title>CliPr</title>
 <style>
 ${css}
 </style>
-<div class="topbar"><b>CliPr</b><button type="button" class="btn sm" id="menu" aria-label="Open contents">Contents</button></div>
+<div class="topbar"><b>CliPr</b><span class="tbtns"><button type="button" class="btn sm themebtn"></button><button type="button" class="btn sm" id="menu" aria-label="Open contents">Contents</button></span></div>
 <div class="shell">
 <aside class="rail" id="rail" aria-label="Course contents"></aside>
 <main class="main" id="page"></main>

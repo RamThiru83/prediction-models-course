@@ -279,3 +279,6 @@ details.ccard[open] > summary::after { transform: rotate(225deg); top: 28px; }
 .anssec details.ans:target, .task:target { outline: 2px solid var(--practise); }
 @media (max-width: 700px) { .flow { grid-template-columns: repeat(2, minmax(0, 1fr)); } .cbody { padding: 4px 12px 12px; } details.ccard > summary { padding: 14px 42px 12px 14px; } .ctitle { font-size: 20px; } }
 .case, .task, details.ans, .sec, .essentials { scroll-margin-top: 72px; }
+
+.themerow { margin: -6px 6px 12px; }
+.tbtns { display: flex; gap: 6px; }

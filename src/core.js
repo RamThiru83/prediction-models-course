@@ -187,7 +187,7 @@ App.MARK = '<svg class="mark" viewBox="0 0 64 64" aria-hidden="true"><rect width
 App.LOGO = '<a class="inst-logo" href="https://thsti.res.in" target="_blank" rel="noopener"><img alt="BRIC-THSTI" src="data:image/png;base64,__LOGO__"></a>';
 App.modLabel = function (m) { return m.num === 0 ? 'P' : (typeof m.num === 'number' ? String(m.num) : 'C'); };
 App.buildNav = function () {
-  var h = '<a class="brand" href="#home">' + App.MARK + '<span class="tx"><b>CliPr</b><span>Clinical prediction models</span></span></a>' + App.chipHtml() + '<nav class="nav">';
+  var h = '<a class="brand" href="#home">' + App.MARK + '<span class="tx"><b>CliPr</b><span>Clinical prediction models</span></span></a><p class="themerow"><button type="button" class="btn sm themebtn"></button></p>' + App.chipHtml() + '<nav class="nav">';
   h += '<a href="#home" data-p="home"><span class="n"></span><span>Start here</span><span></span></a>';
   h += '<a href="#howto" data-p="howto"><span class="n"></span><span>How to use this course</span><span></span></a>';
   var parts = {}, order = [];
@@ -204,6 +204,7 @@ App.buildNav = function () {
   [['glossary', 'Glossary'], ['formulas', 'Formula sheet'], ['steps', 'Seven-step checklist'], ['map', 'Chapter map']].forEach(function (r) { if (App.refs[r[0]]) h += '<a href="#' + r[0] + '" data-p="' + r[0] + '"><span class="n"></span><span>' + r[1] + '</span><span></span></a>'; });
   h += '<a href="#about" data-p="about"><span class="n"></span><span>About this course</span><span></span></a></nav>';
   document.getElementById('rail').innerHTML = h + App.LOGO;
+  App.theme.label();
 };
 App.markNav = function () {
   Array.prototype.forEach.call(document.querySelectorAll('[data-d]'), function (s) { var id = s.getAttribute('data-d'); s.textContent = App.lockInfo(App.byId[id]) ? 'locked' : (App.prog.done[id] ? '✓' : ''); });
@@ -370,7 +371,18 @@ App.route = function (keepScroll) {
   if (!keepScroll) window.scrollTo(0, 0);
 };
 App.afterAccount = function () { App.buildNav(); App.route(true); };
+/* ===== light / dark theme toggle (remembered in this browser; default follows the device) ===== */
+App.theme = {
+  stored: function () { try { var t = localStorage.getItem('pmc.theme'); return t === 'light' || t === 'dark' ? t : null; } catch (e) { return null; } },
+  current: function () { return document.documentElement.getAttribute('data-theme') || (window.matchMedia && matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light'); },
+  apply: function (t) { if (t) document.documentElement.setAttribute('data-theme', t); App.theme.label(); },
+  label: function () { var next = App.theme.current() === 'dark' ? 'light' : 'dark';
+    Array.prototype.forEach.call(document.querySelectorAll('.themebtn'), function (b) { b.textContent = next === 'dark' ? 'Dark theme' : 'Light theme'; b.setAttribute('aria-label', 'Switch to ' + next + ' theme'); b.setAttribute('aria-pressed', String(next === 'light')); }); },
+  toggle: function () { var t = App.theme.current() === 'dark' ? 'light' : 'dark'; try { localStorage.setItem('pmc.theme', t); } catch (e) {} App.theme.apply(t); }
+};
 App.init = function () {
+  App.theme.apply(App.theme.stored());
+  document.addEventListener('click', function (e) { if (e.target.closest('.themebtn')) App.theme.toggle(); });
   App.load(); App.buildNav();
   document.getElementById('menu').addEventListener('click', function () { document.getElementById('rail').classList.toggle('open'); });
   window.addEventListener('hashchange', function () { App.route(); });
