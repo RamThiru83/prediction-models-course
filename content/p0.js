@@ -23,7 +23,7 @@ registerModule({
 <li>Every estimate varies from sample to sample. For a yes/no outcome, the <b>number of events</b> limits what a study can show.</li>
 <li>Judge a model on patients it was not built on, with two questions: does it <b>rank</b> patients correctly (discrimination, the c statistic), and are its risks the <b>right size</b> (calibration)?</li>
 </ul>`,
-  story: 'You follow the maternity team of a district hospital (fictional, with synthetic data) as they start to use predicted risks: first for preterm birth at the booking visit, then a bedside check for newborn sepsis, then the district\'s own figures, and finally a test of their model in a second hospital.',
+  story: 'Throughout the course you follow the maternity team of a district hospital. The hospital and its data are fictional and synthetic. It runs an antenatal clinic, where women book early in pregnancy, and a newborn unit, and it sends its sickest babies to a regional referral unit. In this primer the team starts to use predicted risks: for preterm birth at the booking visit, for a bedside sepsis check in newborns, for the district\'s own figures, and finally to test its model in a second hospital.',
   cases: [
     {
       id: 'c1',

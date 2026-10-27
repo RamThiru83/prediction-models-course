@@ -24,7 +24,7 @@ registerModule({
 <li>Models also serve research: selecting and stratifying trial patients, adjusting trial analyses, propensity scores, and comparing hospitals after accounting for case-mix.</li>
 <li>The <b>seven steps</b>: data inspection, coding of predictors, model specification, estimation, performance, validation, presentation. They are preceded by defining the problem, and only predictors known at the moment of prediction may be used.</li>
 </ul>`,
-  story: 'The same district maternity team (fictional, with synthetic data) now plans its own booking-visit model for preterm birth. You follow the project from defining the problem, to using the risks for a treatment decision, to research uses, and finally to a review by the research committee.',
+  story: 'Throughout the course you follow the maternity team of a district hospital. The hospital and its data are fictional and synthetic. It runs an antenatal clinic, where women book early in pregnancy, and a newborn unit, and it sends its sickest babies to a regional referral unit. In this module the team plans its own model to predict preterm birth at the booking visit. You follow the project from defining the problem, to using the predicted risks for a treatment decision, to research uses, and finally to a review by the research committee. You do not need the primer for this story.',
   cases: [
     {
       id: 'c1',
