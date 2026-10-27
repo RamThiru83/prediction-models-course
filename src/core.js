@@ -260,8 +260,8 @@ App.pageCaseModule = function (m, prev, next) {
   steps.push({ key: 'quiz', label: 'Quiz', sub: m.quiz.length + ' questions', cls: 'check' });
   steps.push({ key: 'answers', label: 'Answers', sub: 'worked', cls: 'answers' });
   var hasNotes = m.sections && m.sections.length;
-  if (hasNotes) steps.push({ key: 'notes', label: 'Notes', sub: 'optional', cls: 'notes' });
-  var stepTitle = function (s) { return s.title ? s.label + '. ' + s.title : ({ Quiz: 'Check yourself', Answers: 'Worked answers', Notes: 'Full notes' }[s.label] || s.label); };
+  if (hasNotes) steps.push({ key: 'notes', label: 'Notes', sub: 'reference', cls: 'notes' });
+  var stepTitle = function (s) { return s.title ? s.label + '. ' + s.title : ({ Quiz: 'Check yourself', Answers: 'Worked answers', Notes: 'Reference notes' }[s.label] || s.label); };
   var h = '<p class="eyebrow">' + m.part + (m.num === 0 ? '' : ' · ' + (typeof m.num === 'number' ? 'Module ' + m.num : m.num)) + '</p><h1>' + m.title + '</h1>';
   h += '<nav class="stepbar" aria-label="Steps in this module">' + steps.map(function (s, i) {
     return '<button type="button" class="stp ' + s.cls + '" data-step="' + i + '" aria-controls="' + m.id + '-st-' + s.key + '"><span class="stl">' + s.label + '</span><span class="sts">' + s.sub + '</span><span class="tick" aria-hidden="true"></span></button>'; }).join('') + '</nav>';
@@ -295,7 +295,7 @@ App.pageCaseModule = function (m, prev, next) {
         '<div class="callout key"><b>Finished?</b><p><button type="button" class="btn pri" id="markdone">' + (P.done[m.id] ? 'Marked complete (click to undo)' : 'Mark this module complete') + '</button></p></div>';
     } else if (s.key === 'notes') {
       var strip = function (x) { return x.replace(/<div data-widget="[^"]*"[^>]*><\/div>/g, '<p class="muted">The simulator for this part is in the cases.</p>').replace(/<ul class="try">[\s\S]*?<\/ul>/g, ''); };
-      body = '<p class="flowhint">The full text of the module, for reference. You do not need it to complete the cases.</p>' + m.sections.map(function (x) { return '<section class="sec" id="' + m.id + '-' + x.id + '"><h2>' + x.title + '</h2>' + strip(x.html) + '</section>'; }).join('');
+      body = '<p class="flowhint">Short reference notes for this module, to revise from or look things up. You do not need them to complete the cases.</p>' + m.sections.map(function (x) { return '<section class="sec" id="' + m.id + '-' + x.id + '"><h2>' + x.title + '</h2>' + strip(x.html) + '</section>'; }).join('');
     }
     h += '<div class="step" id="' + m.id + '-st-' + s.key + '" data-si="' + i + '"' + (i ? ' hidden' : '') + '>' + body + nav(i) + '</div>';
   });

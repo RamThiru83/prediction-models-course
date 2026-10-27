@@ -81,190 +81,97 @@ registerModule({
   ],
   sections: [
     {
-      id: 's1',
-      title: 'Why predict: prognosis and decisions',
+      id: 'n1',
+      title: 'Why predict: estimation first',
       html: `
-<p>Nearly every medical action is taken to improve prognosis. A screening programme tries to find disease earlier, a diagnostic test tries to identify a treatable condition, and a therapy tries to change the course of disease. Each is worthwhile only if the benefit to the individual exceeds the side-effects, harms and costs. Deciding this for an individual needs an estimate of that individual's risk.</p>
-<h3>Decisions need probabilities</h3>
-<p>Doctors have always made probability judgements, often informally. With explicit, evidence-based probabilities, the doctor and patient can weigh risks and benefits together ("shared decision-making"). A <b>clinical prediction model</b> supplies these probabilities. It combines a limited number of patient, disease or treatment characteristics (typically between 2 and 20 predictors) to estimate the probability of a diagnostic or prognostic outcome. Other names include prediction rule, prognostic model, risk score and nomogram.</p>
-<h3>Estimation first, testing second</h3>
-<p>Two kinds of question can be asked of the same data.</p>
-<ul>
-<li><b>Estimation:</b> what is the risk of preterm birth for this woman? How accurate is the estimate?</li>
-<li><b>Hypothesis testing:</b> is maternal haemoglobin associated with preterm birth? Is the association still present after adjusting for age and parity?</li>
-</ul>
-<p>The book treats prediction primarily as an estimation problem. This changes how data are analysed. In an aetiological study, adjustment for confounders is the central concern, and causal effect estimates are made in terms of risk difference, risk ratio, odds ratio, etc. In a prediction study the aim is accurate absolute risks for new patients, so a predictor is kept for its contribution to those risks. Many papers announce a new "prognostic factor", but the prognostic value of a new marker has to be shown <b>in addition to</b> already known and easily measured predictors. For example, a new genetic marker needs to improve predictions over age, parity and history before it is called useful.</p>
-<div class="callout key"><b>Key idea</b><p>A prediction model is judged by the quality of the risks it gives to patients not used to build it. The same data that show an association do not show that the model predicts well.</p></div>
-<h3>Types of prediction model</h3>
-<p>Statistical models for prediction fall into regression models, classification methods (for example classification trees) and neural networks. This course concentrates on regression models, the most widely used in medicine, assuming a modest number of candidate predictors (the book considers fewer than about 25) and that subject-matter knowledge from clinicians and earlier studies is available. Settings with thousands of candidate predictors (genomics, proteomics) are outside this scope. Prediction modelling on medical images is also out of scope.</p>
+<p>Most medical actions aim to improve prognosis, and each is worthwhile only if its benefit to the individual outweighs its harms and costs. That judgement needs the individual's risk. A prediction model combines a few patient characteristics (typically 2 to 20 predictors) into that risk, so that clinicians and patients can weigh the options together.</p>
+<p>The book treats prediction primarily as an <b>estimation</b> problem (what is this woman's risk of preterm birth?), not a testing problem (is haemoglobin associated with preterm birth?). In an aetiological study, adjustment for confounders is the central concern, and causal effects are expressed as risk differences, risk ratios or odds ratios. In a prediction study, a predictor is kept for what it adds to the risks. A new marker is useful only if it improves predictions over predictors already known and easy to measure, such as age, parity and obstetric history.</p>
+<p>The course covers regression models with a modest number of candidate predictors (the book considers fewer than about 25) and assumes that clinical knowledge is available. Settings with thousands of candidate predictors (genomics, proteomics) are out of scope, and so is prediction modelling on medical images.</p>
 <p class="src">Source: Ch. 1, §1.1-1.2</p>`
     },
     {
-      id: 's2',
+      id: 'n2',
       title: 'Where prediction models are used',
       html: `
-<p>The book groups applications into public health, clinical practice and research. This section covers the first two; research uses are described later, in "Prediction models in research". The examples quoted from the book are labelled; the maternal and child health (MCH) examples are synthetic illustrations.</p>
-<h3>Public health: targeting preventive interventions</h3>
-<p>Models predict who will develop disease in the future, so that screening, prevention or chemoprophylaxis can be offered to people at relatively high risk. A key requirement is <b>calibration</b>: among 100 people given a 10% predicted risk, about 10 should have the outcome.</p>
-<div class="callout book"><b>Book example</b>
-<p>The Gail breast-cancer model was built from a case-control sample of 2,852 women who developed breast cancer and 3,146 controls from a cohort of 280,000 women screened over 5 years. Its predictors were age at menarche, age at first live birth, number of previous biopsies and number of first-degree relatives with breast cancer, and absolute risk estimates are used for counselling about preventive tamoxifen. The Framingham cardiovascular risk functions underpin policies such as statin treatment for those at high risk.</p></div>
-<div class="callout mch"><b>Illustrative (synthetic)</b>
-<p>A district health team wants to offer extra antenatal contacts to women at high risk of preterm birth. A model using booking-visit information (age, haemoglobin, previous preterm birth) would let the team rank women, and the programme can only cover the 20% at highest predicted risk.</p></div>
-<h3>Clinical practice: diagnostic work-up</h3>
-<p><b>Test ordering.</b> When the probability of disease is very low no further testing is needed; when it is moderate more tests may be useful; when it is high, treat. A model combining history and simple tests can focus the invasive or costly test (the reference standard) on patients with a sufficiently high probability.</p>
-<div class="callout book"><b>Book example</b>
-<p>A rule built on 477 hypertensive patients who underwent renal angiography uses age, sex, atherosclerotic vascular disease, recent onset of hypertension, smoking, body mass index, an abdominal bruit, serum creatinine and cholesterol to estimate the probability of renal artery stenosis, in order to select who needs the invasive angiography.</p></div>
-<p><b>Starting treatment.</b> A treatment threshold (Section 3) turns the probability into an action. With one test still to perform, two thresholds apply: a lower one between "no treatment" and "do more testing", and a higher one between "more testing" and "treat". The book illustrates this with the Wells rule for deep venous thrombosis, in which a pretest probability category decides whether a D-dimer test alone or ultrasound plus D-dimer is required.</p>
-<h3>Clinical practice: therapeutic decisions</h3>
-<ul>
-<li><b>Intensity of treatment:</b> more aggressive treatment only for patients whose risk is high enough that the expected benefit exceeds the harm (Section 3).</li>
-<li><b>Delaying treatment:</b> favourable predictions can support watchful waiting, and reassure patients about their chances.</li>
-<li><b>Surgical decision-making:</b> short-term surgical risk weighed against long-term risk without surgery, for example age- and valve-specific predictions used for replacement of a risky heart valve.</li>
-<li><b>Cost-effectiveness:</b> if the relative benefit of a treatment is constant, the absolute benefit grows with baseline risk, so treating only higher-risk patients is more cost-effective.</li>
-</ul>
-<div class="callout book"><b>Book example</b>
-<p>A model for spontaneous pregnancy within a year among subfertile couples uses the woman's age, duration of subfertility, primary or secondary infertility, sperm motility and referral status. Each predictor gives points that are summed. A couple with a 35-year-old woman (7 points), 2 years of subfertility (3 points), secondary infertility (0), normal motility (0) and second-line referral (0) scores 10, corresponding to a 42% chance of a pregnancy ending in a live birth within a year. Low chances (below about 20%) argue against waiting; favourable chances (above 40%) argue for waiting.</p></div>
+<table class="data">
+<tr><th>Use</th><th>What the model does</th><th>In the course story</th></tr>
+<tr><td>Public health</td><td>Finds people at high risk for screening or prevention; calibration matters most</td><td>Extra antenatal contacts for the 20% at highest risk</td></tr>
+<tr><td>Diagnostic work-up</td><td>Decides who needs a costly or invasive test, using one or two probability thresholds</td><td>Who needs a further assessment after booking</td></tr>
+<tr><td>Treatment decisions</td><td>Matches the intensity of treatment to the risk, or supports watchful waiting</td><td>Who receives a preventive treatment</td></tr>
+<tr><td>Research</td><td>Selects and stratifies trial patients, adjusts analyses, compares providers</td><td>A prevention trial; comparing clinics</td></tr>
+</table>
+<p>Book examples: the Gail model gives absolute risks of breast cancer for counselling about preventive tamoxifen; the Framingham functions support statin policies for people at high cardiovascular risk. When a treatment has a constant relative benefit, its absolute benefit grows with baseline risk, so treating higher-risk patients is also more cost-effective.</p>
 <p class="src">Source: Ch. 2, §2.1-2.3</p>`
     },
     {
-      id: 's3',
-      title: 'From a risk to a decision: treatment thresholds',
+      id: 'n3',
+      title: 'From a risk to a decision',
       html: `
-<p>A predicted risk is not yet a decision. To act we need a <b>threshold</b>: the probability above which treatment (or further testing) is preferred. The book defines the treatment threshold as the probability at which the expected benefit of treating equals the expected benefit of not treating. Below it, no treatment is preferred; above it, treatment.</p>
-<h3>Diagnostic threshold</h3>
-<p>The threshold depends on how bad a false-positive treatment (treating someone who does not have the disease) is compared with a false-negative decision (withholding treatment from someone who has it). Write <b>harm</b> for the net loss from treating a person without disease and <b>benefit</b> for the net gain from treating a person with disease.</p>
-<div class="formula">threshold odds = harm / benefit        threshold probability = harm / (harm + benefit)</div>
-<p>If a false-negative decision is 100 times worse than a false-positive, the harm : benefit ratio is 1 : 100 and the threshold is 1 / 101, about 1% (the book's illustration). If the two errors were equally bad, the threshold would be 50%.</p>
-<h3>Prognostic threshold: intensity of treatment</h3>
-<p>Suppose a treatment lowers the risk of a bad outcome by a constant <b>relative</b> amount (relative risk RR) in every patient, and causes a constant <b>absolute</b> harm H (for example an excess risk of a side-effect, as a probability). For a patient whose risk without treatment is r:</p>
-<div class="formula">absolute benefit = (1 − RR) × r        treat if (1 − RR) × r &gt; H, i.e. r &gt; H / (1 − RR)</div>
-<p>The benefit grows with the patient's risk while the harm stays constant, so there is a break-even risk. This is why risk prediction matters: the model finds the patients whose r is above the break-even point.</p>
-<div class="callout eg"><b>Worked example (Illustrative, synthetic)</b>
-<p>A preventive treatment given in pregnancy halves the risk of an adverse outcome (RR = 0.5) but carries an absolute harm of 3%.</p>
-<ol>
-<li>Break-even risk = 0.03 / (1 − 0.5) = 0.06, or 6%.</li>
-<li>A woman at 4% risk: benefit = 0.5 × 0.04 = 2.0%, which is less than 3%, net = −1.0%. Do not treat.</li>
-<li>A woman at 10% risk: benefit = 0.5 × 0.10 = 5.0%, net = +2.0%. Treat.</li>
-<li>Number treated to prevent one event: 1 / 0.02 = 50 at 4% risk, but 1 / 0.05 = 20 at 10% risk.</li>
-</ol>
-<p>Treating everyone would help the high-risk women but harm those below 6%. A prediction model whose risks are accurate near 6% tells us who falls on which side.</p></div>
-<div class="callout warn"><b>The threshold is a clinical choice</b>
-<p>The threshold comes from the consequences of decisions and from patient values, not from statistics. A threshold of 50% (which classifies a patient as "positive" when the model gives more than 50%) assumes both errors are equally bad, which is seldom true. The book returns to this when discussing clinical usefulness (Module 12).</p></div>
-<p class="src">Source: Ch. 2, §2.3.3, §2.3.5-2.3.6 (threshold concept and benefit-harm balance); the formulas follow from the definitions given</p>`
+<p>The <b>treatment threshold</b> is the risk at which treating and not treating are equally good. Below it, do not treat; above it, treat.</p>
+<div class="formula">threshold = harm / (harm + benefit)        constant RR and absolute harm H: treat if r &gt; H / (1 − RR)</div>
+<p>If missing a case is 100 times worse than treating someone unnecessarily, the threshold is 1 / 101, about 1% (the book's illustration). If both errors were equally bad it would be 50%, which is why a 50% cut-off is seldom right.</p>
+<p><b>In the course story.</b> A preventive treatment halves the risk of preterm birth (RR 0.5) and has an absolute harm of 3%. The break-even risk is 0.03 / 0.5 = 6%. A woman at 10% gains 5% − 3% = 2% net, and 20 such women must be treated to prevent one preterm birth (1 / 0.05); a woman at 4% loses 1% net.</p>
+<p>The threshold comes from the consequences of decisions and from patient values, not from statistics. Module 12 returns to it.</p>
+<p class="src">Source: Ch. 2, §2.3.3, §2.3.5-2.3.6</p>`
     },
     {
-      id: 's4',
+      id: 'n4',
       title: 'Prediction models in research',
       html: `
-<p>Prediction models also serve medical research. The book discusses four uses.</p>
-<h3>Inclusion and stratification in a randomised trial</h3>
-<p>Inclusion and exclusion criteria are usually applied separately (age below 65 and at least one reactive pupil, say). A prediction model can replace several criteria with one predicted risk, giving a more refined selection. <b>Stratification</b> (randomising within prognostic subgroups) keeps the arms balanced on the main prognostic factors, and a model can summarise many such factors.</p>
-<div class="callout book"><b>Book example</b>
-<p>In 7,143 patients with moderate or severe traumatic brain injury, 6-month mortality exceeded 50% for those aged 65 or over and for those with non-reacting pupils. A simple age-and-pupils logistic model could keep patients whose predicted mortality was below 50% (age limit 30 years without pupil reaction and 76 years with at least one reacting pupil), which is more efficient than a blanket cut at age 65.</p></div>
-<h3>Covariate adjustment in a randomised trial</h3>
-<p>Randomisation removes systematic confounding but baseline characteristics still predict outcome, and chance imbalance between arms can occur. Adjusting the treatment comparison for strongly prognostic covariates has advantages. The book contrasts two types of model:</p>
+<p><b>Trials.</b> One predicted risk can replace several separate inclusion criteria, and can summarise prognosis for stratified randomisation. Adjusting the treatment effect for strongly prognostic baseline covariates changes the analysis as follows:</p>
 <table class="data">
 <tr><th>Model</th><th>Effect estimate</th><th>Standard error</th><th>Power</th></tr>
-<tr><td>Linear regression (continuous outcome)</td><td>Identical when the covariates are perfectly balanced</td><td>Decreases</td><td>Increases</td></tr>
-<tr><td>Logistic or Cox regression</td><td>Further from zero (OR further from 1)</td><td>Increases</td><td>Increases</td></tr>
+<tr><td>Linear regression</td><td>Unchanged if groups are balanced</td><td>Falls</td><td>Rises</td></tr>
+<tr><td>Logistic or Cox regression</td><td>Moves further from zero</td><td>Rises</td><td>Rises</td></tr>
 </table>
-<p>In logistic regression the adjusted effect is not the same as the unadjusted effect even when the groups are balanced. The standard error also increases, but the estimate grows more than the SE, so the power to detect a treatment effect is larger. The gain in power depends on how strongly the covariates predict the outcome. For a continuous outcome the sample size can be multiplied by about 1 − r², where r is the correlation between covariate and outcome. For binary outcomes the book reports sample-size reductions slightly below 1 − R² (Nagelkerke R²).</p>
-<table class="data">
-<tr><th>Book example</th><th>R² of covariates</th><th>Reduction in sample size</th></tr>
-<tr><td>Acute MI, 30-day mortality: age only</td><td>13%</td><td>12%</td></tr>
-<tr><td>Acute MI: 17 predictors</td><td>25%</td><td>19%</td></tr>
-<tr><td>TBI, 6-month mortality: 3 predictors</td><td>30%</td><td>25%</td></tr>
-<tr><td>TBI: 7 predictors</td><td>40%</td><td>30%</td></tr>
-</table>
-<h3>Observational studies: confounding and propensity scores</h3>
-<p>When treatments are compared without randomisation, patients with a certain characteristic may be more likely to receive a certain treatment (indication bias), and if that characteristic also affects outcome the comparison is confounded. Regression can adjust for the observed confounders. When the outcome is rare, a regression with many confounders is unreliable, and the <b>propensity score</b> offers an alternative: a logistic model predicts the probability of receiving the treatment from the confounders (without the outcome), and the score is used for matching, stratification or adjustment. It can only account for observed characteristics.</p>
-<h3>Case-mix adjustment and provider profiling</h3>
-<p>Hospitals receive different kinds of patients, so raw outcome rates cannot be compared fairly. A prediction model for the expected outcome given patient characteristics (case-mix) allows hospitals to be compared after accounting for patient severity. The book illustrates this with a claims-based model of 30-day mortality after acute MI.</p>
-<div class="callout mch"><b>Illustrative (synthetic)</b>
-<p>A state wants to compare institutional neonatal mortality across hospitals. A referral hospital receives more very low birth weight babies than a district hospital. A model with birth weight, gestational age and maternal factors gives each hospital an expected mortality from its own case-mix, and observed and expected mortality can be compared.</p></div>
+<p>The gain grows with how strongly the covariates predict the outcome. Book examples: covariate sets with R² of 13%, 25%, 30% and 40% gave sample-size reductions of 12%, 19%, 25% and 30%.</p>
+<p><b>Observational studies.</b> Without randomisation, regression adjusts for observed confounders. When the outcome is rare, a <b>propensity score</b> (the predicted probability of receiving the treatment, from the confounders) can be used for matching, stratification or adjustment. Neither handles unobserved confounders.</p>
+<p><b>Comparing providers.</b> Clinics see different women, so raw rates mislead. A case-mix model gives each clinic an expected rate, and observed can be compared with expected.</p>
 <p class="src">Source: Ch. 2, §2.4</p>`
     },
     {
-      id: 's5',
-      title: 'Statistical modelling for prediction: uncertainty and sample size',
+      id: 'n5',
+      title: 'Uncertainty and sample size',
       html: `
-<h3>Model uncertainty</h3>
-<p>Standard statistical theory assumes the model was fixed before looking at the data. In practice we examine the data and adapt the model: we drop weak predictors, add nonlinear terms, and combine categories. The 95% confidence intervals, p-values and coefficients that result are then too optimistic, because they ignore that the structure was chosen from the data. The book calls this <b>model uncertainty</b>. The bootstrap (Primer, Section 5) can study it by repeating the whole modelling process in resampled data.</p>
-<h3>Sample size: events, not patients</h3>
-<p>The <b>effective sample size</b> is the number of events (for a binary outcome, the smaller group). With incidence 0.1%, a study of 10,000 patients has only 10 events, and these 10 determine what can be learned. Four consequences of small samples follow in the book:</p>
-<ol>
-<li>Model uncertainty can be large and predictions unreliable.</li>
-<li>Large samples allow automatic procedures such as stepwise selection with p &lt; 0.05 and reliable checking of model assumptions. In practice samples are small: in a review of 31 prognostic models in traumatic brain injury, 22 were based on fewer than 500 patients.</li>
-<li>Small samples force stronger assumptions (for example that a continuous predictor has a linear effect and that predictors do not interact), because there is no power to test them, so prior knowledge becomes more important.</li>
-<li>The ambition of the question must match the sample. Asking "which predictors matter most?" is harder than asking "what are the predictions given this set of predictors?".</li>
-</ol>
+<p><b>Model uncertainty.</b> When the model is shaped by looking at the data (dropping weak predictors, adding non-linear terms, merging categories), the usual confidence intervals and p-values are too optimistic. The bootstrap can repeat the whole modelling process to show this.</p>
+<p><b>Events, not patients.</b> The effective sample size is the number of events. Small samples make predictions unreliable, prevent checking of assumptions, and force reliance on prior knowledge. The more of the model that has to be learned from the data, the more events are needed:</p>
 <table class="data">
-<tr><th>Predictors known?</th><th>Functional form known?</th><th>Coefficients known?</th><th>Approach</th><th>Sample size needed</th></tr>
-<tr><td>No</td><td>No</td><td>No</td><td>Development from scratch</td><td>Very large</td></tr>
-<tr><td>Yes</td><td>No</td><td>No</td><td>Specify transformations or interactions</td><td>Large</td></tr>
-<tr><td>Yes</td><td>Yes</td><td>No</td><td>Estimate regression coefficients</td><td>Modest</td></tr>
-<tr><td>Yes</td><td>Yes</td><td>Yes</td><td>Validation and updating</td><td>Modest</td></tr>
+<tr><th>Already known</th><th>What the data must supply</th><th>Sample size</th></tr>
+<tr><td>Nothing</td><td>Predictors, their form and coefficients</td><td>Very large</td></tr>
+<tr><td>Predictors</td><td>Form (transformations, interactions) and coefficients</td><td>Large</td></tr>
+<tr><td>Predictors and form</td><td>Coefficients</td><td>Modest</td></tr>
+<tr><td>The whole model</td><td>Validation and updating</td><td>Modest</td></tr>
 </table>
-<p>The more of the model that has to be learned from the data, the more data are needed. Module 2 gives rules of thumb for the number of events required.</p>
-<div class="callout book"><b>Book example</b>
-<p>The GUSTO-I trial in acute myocardial infarction (40,830 patients, 2,850 deaths within 30 days) is the book's main teaching dataset. With so many deaths overfitting is not a concern, but in small subsets of the data it is, which is why the book uses subsets to teach the concepts.</p></div>
-<p class="src">Source: Ch. 1, §1.2.1-1.2.2, Table 1.1, §1.3.4</p>`
+<p>Module 2 gives rules of thumb for the number of events.</p>
+<p class="src">Source: Ch. 1, §1.2.1-1.2.2, §1.3.4</p>`
     },
     {
-      id: 's6',
-      title: 'The seven-step roadmap',
+      id: 'n6',
+      title: 'Define the problem, then follow the seven steps',
       html: `
-<p>The core of the course follows a checklist of seven modelling steps, preceded by a general definition of the problem. The same sequence structures the whole course. Each step lists the question it answers and the module in this course that teaches it.</p>
+<p><b>Step 0: define the problem</b> in a sentence or two each, before looking at data.</p>
 <table class="data">
-<tr><th>Step</th><th>Question answered</th><th>Module</th></tr>
-<tr><td>0. Preliminaries</td><td>What is the research question, intended application, outcome, set of candidate predictors, study design, statistical model and sample size?</td><td>1, 2, 3</td></tr>
-<tr><td>1. Data inspection</td><td>How are predictors defined and distributed? How much is missing, and how should missing values be handled?</td><td>5</td></tr>
-<tr><td>2. Coding of predictors</td><td>How should categorical and continuous predictors enter the model? Are extreme values errors?</td><td>6, 7</td></tr>
-<tr><td>3. Model specification</td><td>Which predictors to include? Are effects additive and linear?</td><td>8, 9</td></tr>
-<tr><td>4. Model estimation</td><td>How are coefficients estimated so as to limit overfitting (shrinkage, penalisation)?</td><td>10</td></tr>
-<tr><td>5. Model performance</td><td>How good are the predictions: calibration, discrimination, clinical usefulness?</td><td>11, 12</td></tr>
-<tr><td>6. Model validation</td><td>Is the performance reproducible in the same population (internal) and in other settings (external)?</td><td>13, 14</td></tr>
-<tr><td>7. Model presentation</td><td>In what form can the model be used in practice (formula, score chart, nomogram, decision rule)?</td><td>15</td></tr>
+<tr><th>Item</th><th>In the course story</th></tr>
+<tr><td>Research question</td><td>Probability of preterm birth (before 37 weeks) in women booking at the clinic</td></tr>
+<tr><td>Intended application</td><td>Midwives at booking decide who receives extra visits</td></tr>
+<tr><td>Outcome</td><td>Gestational age at delivery by the best available dating</td></tr>
+<tr><td>Predictors</td><td>Only those known at booking: age, BMI, haemoglobin, parity, history, hypertension, tobacco</td></tr>
+<tr><td>Design and model</td><td>Prospective cohort; logistic regression</td></tr>
+<tr><td>Sample size</td><td>Number of preterm births (Module 2)</td></tr>
 </table>
-<h3>Two kinds of validity</h3>
-<ul>
-<li><b>Internal validity</b> is reproducibility within the population from which the development sample came. It is threatened by overfitting. Internal validation statistically tests whether specification and estimation problems have distorted the performance (see Module 13, for example the bootstrap).</li>
-<li><b>External validity</b> (generalisability or transportability) concerns other settings: a different hospital, a more recent period, a different mix of patients. Performance may be lower there because the settings truly differ. External validity cannot be expected without internal validity (Module 14).</li>
-</ul>
-<h3>Why order matters</h3>
-<p>Choices made early limit what is possible later. A predictor that is poorly measured at step 1 cannot be repaired at step 4. Coefficients cannot be trusted if predictors were selected using the outcome and no step accounted for it. Performance claims in step 5 are only credible if step 6 checks them in new data. Treat the roadmap as a way of keeping the entire process pre-specified, so that each decision can be justified, replayed and, in later modules, repeated inside a bootstrap loop.</p>
-<div class="callout key"><b>Key idea</b><p>Overfitting is a central problem at every step. Each decision that is tuned to the data (dropping a predictor, choosing a cut-point, adding a transformation) makes performance in the data look better than it will be in new patients.</p></div>
+<p>A predictor recorded after the moment of prediction (number of antenatal visits, mode of delivery) makes the model unusable, however well it predicts in the data.</p>
+<table class="data">
+<tr><th>Step</th><th>Question</th><th>Module</th></tr>
+<tr><td>1. Data inspection</td><td>How are predictors distributed; how much is missing?</td><td>5</td></tr>
+<tr><td>2. Coding</td><td>How should predictors enter the model?</td><td>6, 7</td></tr>
+<tr><td>3. Specification</td><td>Which predictors; are effects additive and linear?</td><td>8, 9</td></tr>
+<tr><td>4. Estimation</td><td>How to limit overfitting (shrinkage, penalisation)?</td><td>10</td></tr>
+<tr><td>5. Performance</td><td>Calibration, discrimination, clinical usefulness</td><td>11, 12</td></tr>
+<tr><td>6. Validation</td><td>Internal, then external</td><td>13, 14</td></tr>
+<tr><td>7. Presentation</td><td>Formula, score chart, nomogram</td><td>15</td></tr>
+</table>
+<p><b>Internal validity</b> is reproducibility in the population the data came from, threatened by overfitting. <b>External validity</b> is performance in other settings. The first is a precondition for the second. Every decision tuned to the data makes performance look better than it will be, so keep the plan pre-specified.</p>
 <p class="src">Source: Ch. 1, §1.3.2-1.3.3; Part II checklist</p>`
-    },
-    {
-      id: 's7',
-      title: 'Defining the prediction problem before looking at data',
-      html: `
-<p>Step 0 deserves time because errors here cannot be corrected by statistics. The book's checklist begins with seven general items: the research question, the intended application, the outcome, the predictors, the study design, the statistical model and the sample size. Each is a question you should be able to answer in one or two sentences before analysing data.</p>
-<table class="data">
-<tr><th>Item</th><th>Ask yourself</th><th>MCH example (synthetic)</th></tr>
-<tr><td>Research question</td><td>Which outcome, in whom, over what time?</td><td>Probability of preterm birth (&lt; 37 weeks) in women booking at an antenatal clinic.</td></tr>
-<tr><td>Intended application</td><td>Who will use the prediction, at what moment, to decide what?</td><td>Midwives at booking, to decide who receives extra visits.</td></tr>
-<tr><td>Outcome</td><td>How is it defined and measured, and by whom?</td><td>Gestational age at delivery by the best available dating method.</td></tr>
-<tr><td>Predictors</td><td>Which are known at the moment of prediction, reliably measured and affordable?</td><td>Age, BMI, haemoglobin, parity, obstetric history, hypertension, tobacco use.</td></tr>
-<tr><td>Study design</td><td>Cohort, trial data, registry, cross-sectional?</td><td>Prospective antenatal cohort in district hospital.</td></tr>
-<tr><td>Statistical model</td><td>Binary logistic, survival, polytomous?</td><td>Logistic regression for the binary outcome.</td></tr>
-<tr><td>Sample size</td><td>How many events and how many candidate predictors?</td><td>Module 2.</td></tr>
-</table>
-<h3>Look at the course datasets</h3>
-<p>The course uses synthetic datasets. <b>ptb_dev</b> is a synthetic cohort of antenatal-clinic women with the outcome preterm birth; it is a prognostic design because the outcome is observed later in pregnancy. <b>sepsis</b> is a synthetic cross-sectional newborn-unit dataset with outcome neonatal sepsis; it is a diagnostic design.</p>
-<div data-widget="datasetCard" data-set="ptb_dev"></div>
-<ul class="try">
-<li>Read the codebook. For each column, decide whether the information would be known at the first antenatal visit.</li>
-<li>Note the number of women and the number of preterm births shown in the summary. These counts matter for Module 2.</li>
-</ul>
-<div data-widget="datasetCard" data-set="sepsis"></div>
-<ul class="try">
-<li>Compare the sepsis codebook with ptb_dev: which predictors are signs at the bedside and which require a laboratory test?</li>
-</ul>
-<div class="callout warn"><b>Critical: a model can only use what is known at the time of prediction</b>
-<p>If the model is meant for use at booking, any predictor that is only recorded later (number of antenatal visits over the whole pregnancy, mode of delivery) makes the model unusable in practice, however well it predicts in the data.</p></div>
-<p class="src">Source: Ch. 1, §1.3.2; Part II checklist</p>`
     }
   ],
   keyPoints: [
