@@ -17,12 +17,13 @@ registerModule({
   format: 'cases',
   essentials: `
 <ul>
-<li>Prediction is first an <b>estimation</b> problem: the aim is accurate absolute risks for new patients. A new marker earns its place only if it improves on predictors that are already known and easy to measure.</li>
-<li>A <b>diagnostic</b> model estimates whether a condition is present now (cross-sectional data); a <b>prognostic</b> model estimates a future outcome (a cohort followed over time).</li>
-<li>A risk becomes a decision through a <b>threshold</b>: threshold = harm / (harm + benefit). For a treatment with a constant relative risk RR and an absolute harm H, treat if the risk r &gt; H / (1 − RR). The threshold is a clinical choice, not a statistical one.</li>
-<li>The <b>effective sample size</b> is the number of events. The more of a model that must be learned from the data, the more events are needed.</li>
-<li>Models also serve research: selecting and stratifying trial patients, adjusting trial analyses, propensity scores, and comparing hospitals after accounting for case-mix.</li>
-<li>The <b>seven steps</b>: data inspection, coding of predictors, model specification, estimation, performance, validation, presentation. They are preceded by defining the problem, and only predictors known at the moment of prediction may be used.</li>
+<li>A prediction model gives a number: the <b>chance</b> that something will happen to a person. Its main job is to get that number right for new people. The book calls this <b>estimation</b>.</li>
+<li>A new test or marker is worth adding only if it makes the chances more accurate than the simple information we already have, such as age and past pregnancies.</li>
+<li><b>Prognostic</b> means predicting something that will happen later (will this woman deliver early?). <b>Diagnostic</b> means finding out whether something is present now.</li>
+<li>To act on a chance you need a <b>threshold</b>: the chance above which treating does more good than harm. It comes from weighing benefits against harms, not from statistics.</li>
+<li>What limits a study is the number of people who had the outcome (the <b>events</b>), not the total number of people.</li>
+<li>Models also help research: they make trials more sensitive and make comparisons between clinics fairer.</li>
+<li>Building a model follows <b>seven steps</b>: check the data, decide how each predictor enters the model, choose the predictors, fit the model, measure how good it is, test it on new people, and present it so that others can use it. Before step 1, write down the question, and use only information that is available when the prediction is made.</li>
 </ul>`,
   story: 'Throughout the course you follow the maternity team of a district hospital as it works on one problem: preterm birth. The hospital and its data are fictional and synthetic. In this module the team plans its own model to predict preterm birth at the booking visit. You follow the project from defining the problem, to using the predicted risks for a treatment decision, to research uses, and finally to a review by the research committee. You do not need the primer for this story.',
   cases: [
@@ -32,9 +33,10 @@ registerModule({
       aim: 'define a prediction problem and choose predictors that are known at the moment of prediction.',
       minutes: 12,
       need: `
-<p>Before any analysis, define the problem in one or two sentences each: the research question, the intended application (who uses the risk, when, to decide what), the outcome, the predictors, the study design, the statistical model and the sample size.</p>
-<p>A model can only use what is known at the moment of prediction. A predictor recorded later in pregnancy makes a booking-visit model unusable, however well it predicts in the data. A <b>prognostic</b> design follows women forward to the outcome; a <b>diagnostic</b> design measures predictors and the condition at the same time.</p>`,
-      scenario: `<p>The team wants to offer extra antenatal contacts to the women most at risk of preterm birth, deciding at the booking visit. It has a synthetic cohort to work with: women recorded at booking and followed to delivery (ptb_dev).</p>`,
+<p>Before touching any data, write down the problem in plain sentences. Who is the model for? When will it be used, and what will be decided with it? What exactly is the outcome, and how will it be measured? Which information (the <b>predictors</b>) will be available at that moment? What kind of study will provide the data, and how many women had the outcome?</p>
+<p>The most important rule: a model can only use information that is known <b>at the moment of prediction</b>. Our model is used at the first antenatal visit, so anything recorded later in pregnancy, such as the number of later visits, cannot be a predictor, however well it seems to predict.</p>
+<p>This model is <b>prognostic</b>: it looks forward, from the first visit to the birth. A <b>diagnostic</b> model asks about the present, for example whether a woman is in labour right now.</p>`,
+      scenario: `<p>The team wants to offer extra antenatal visits to the women most likely to deliver early. The decision will be made at each woman's first (booking) visit. To build the model, the team has records of 2,000 women, collected at booking and followed until the birth (the ptb_dev dataset).</p>`,
       widgets: `<div data-widget="datasetCard" data-set="ptb_dev"></div>`,
       tasks: [0, 1],
       takeaway: 'Fix the question, the moment of prediction and the outcome before touching the data; a predictor not known at that moment cannot be used.'
@@ -45,8 +47,17 @@ registerModule({
       aim: 'turn predicted risks into treatment decisions with a threshold.',
       minutes: 12,
       need: `
-<p>The treatment threshold is the risk at which treating and not treating are equally good. If <b>harm</b> is the net loss from treating someone who would not have the outcome and <b>benefit</b> the net gain from treating someone who would, threshold = harm / (harm + benefit).</p>
-<p>For a treatment that lowers risk by a constant relative amount (RR) and causes a constant absolute harm H, the benefit for a woman at risk r is (1 − RR) × r, so treat if r &gt; H / (1 − RR). Example: RR 0.5 and H 3% give a break-even risk of 0.03 / 0.5 = 6%. A woman at 10% gains 5% − 3% = 2%; a woman at 4% loses 1%.</p>`,
+<p>Every treatment has two sides. It can prevent the bad outcome, and it can cause harm: side-effects, cost, worry. Whether a woman should be treated depends on how likely she is to have the bad outcome in the first place.</p>
+<p>Think of an umbrella. If the chance of rain is high, carrying it is worth the bother; if the chance is tiny, it is not. Somewhere in between is the chance at which it makes no difference either way. That chance is the <b>threshold</b>.</p>
+<p><b>Working it out.</b> Suppose a treatment halves each woman's risk of preterm birth, and causes a side-effect in 3 of every 100 women treated. Assume that side-effect matters about as much as a preterm birth.</p>
+<ul>
+<li>A woman with a 10% risk: out of 100 such women, treatment cuts preterm births from 10 to 5, so it prevents 5. It causes 3 side-effects. Net gain: 2 per 100. <b>Treat.</b></li>
+<li>A woman with a 4% risk: treatment cuts preterm births from 4 to 2, preventing 2, but still causes 3 side-effects. Net loss: 1 per 100. <b>Do not treat.</b></li>
+<li>Break-even: half of her risk must equal 3%, so the threshold is a risk of <b>6%</b>.</li>
+</ul>
+<p><b>Number needed to treat</b> is how many women must be treated to prevent one preterm birth: 100 ÷ (number prevented per 100). At a 10% risk that is 100 ÷ 5 = 20.</p>
+<p><b>The same idea as formulas.</b> If the treatment keeps a fraction RR of the risk (here RR = 0.5) and causes harm H (here 3%), treat when the risk r is above H ÷ (1 − RR); here 0.03 ÷ 0.5 = 6%. More generally, threshold = harm ÷ (harm + benefit): if missing a case is 9 times worse than treating someone unnecessarily, the threshold is 1 ÷ (1 + 9) = 10%.</p>
+<p>The threshold is a judgement about what matters to women and clinicians. Statistics only tell us each woman's risk.</p>`,
       scenario: `<p>The team's model will also guide a preventive treatment in pregnancy that lowers the risk of preterm birth but has side-effects of its own. The team must decide whom to treat.</p>`,
       widgets: '',
       tasks: [2, 3],
@@ -58,9 +69,10 @@ registerModule({
       aim: 'see how prediction models support research: adjusting a trial analysis and comparing clinics fairly.',
       minutes: 12,
       need: `
-<p>In a randomised trial analysed with logistic regression, adjusting for strongly prognostic baseline covariates moves the treatment effect further from zero and increases its standard error, yet still increases power, because the estimate grows more than the standard error. With linear regression and balanced groups, the estimate is unchanged and the standard error falls.</p>
-<p>Clinics and hospitals see different women, so raw outcome rates cannot be compared. A model gives each one an <b>expected</b> rate from its own case-mix, and observed can be compared with expected. Models can also select or stratify trial patients, and a <b>propensity score</b> can adjust for observed confounders without randomisation.</p>`,
-      scenario: `<p>The team is planning a randomised trial of a preterm birth prevention programme, and the state asks it to help compare preterm birth rates between antenatal clinics.</p>`,
+<p><b>Trials.</b> In a trial, women are split at random into two groups, and one group gets the programme. Even so, some women start at higher risk than others, and this adds noise to the comparison. If the analysis takes each woman's starting risk into account (it <b>adjusts</b> for strong predictors such as a previous preterm birth), the comparison becomes sharper. The trial can then detect a real effect with fewer women: it has more <b>power</b>.</p>
+<p>With the usual method for yes/no outcomes (logistic regression), the adjusted effect also looks somewhat larger and its uncertainty (the <b>standard error</b>) grows a little, but the power still goes up. For a measured outcome such as birth weight (linear regression), the effect stays the same and the uncertainty shrinks.</p>
+<p><b>Comparing clinics.</b> A clinic that sees many high-risk women will have more preterm births even if its care is excellent. A fair comparison asks how many preterm births we would <b>expect</b>, given the women this clinic sees. The model supplies that expected number. Then divide observed by expected: above 1 means more than expected, below 1 means fewer.</p>`,
+      scenario: `<p>The team is planning a trial of a programme to prevent preterm birth. Separately, the state asks the team to help compare preterm birth rates between antenatal clinics.</p>`,
       widgets: '',
       tasks: [4, 5],
       takeaway: 'Prognostic adjustment makes trials more powerful, and case-mix models make comparisons between clinics fairer, but only for what the model measures.'
@@ -71,9 +83,18 @@ registerModule({
       aim: 'check a modelling plan against the seven steps and spot problems that cannot be repaired later.',
       minutes: 14,
       need: `
-<p>The seven steps, in order: (1) data inspection, including missing values; (2) coding of predictors; (3) model specification: which predictors, and whether effects are additive and linear; (4) estimation, limiting overfitting with shrinkage or penalisation; (5) performance: calibration, discrimination, clinical usefulness; (6) validation: internal (same population) and external (other settings); (7) presentation as a formula, score chart or nomogram.</p>
-<p>Each choice tuned to the data makes performance look better than it will be in new patients, so the plan should be fixed in advance. Internal validity is a precondition for external validity.</p>`,
-      scenario: `<p>The team's modelling plan goes to the research committee, together with a proposal from another group for a different preterm birth model. You are asked to review both.</p>`,
+<p>Building a model is done in seven steps, in this order:</p>
+<ol>
+<li><b>Check the data:</b> what each predictor looks like, and how much is missing.</li>
+<li><b>Code the predictors:</b> decide how each one enters the model, for example age in years or in groups.</li>
+<li><b>Choose the model:</b> which predictors to include, and whether their effects simply add up.</li>
+<li><b>Fit the model:</b> estimate the numbers in it, taking care not to fit the noise in this particular sample.</li>
+<li><b>Measure performance:</b> are the predicted chances right, and does the model separate women who will and will not deliver early?</li>
+<li><b>Validate:</b> first check it on the same population (<b>internal validation</b>), then on women from other places or times (<b>external validation</b>).</li>
+<li><b>Present it</b> in a form people can use, such as a formula or a score chart.</li>
+</ol>
+<p>Every choice made by looking at the data makes the model look better than it will be on new women. So the plan should be written down before the analysis starts.</p>`,
+      scenario: `<p>The team's plan goes to the research committee. Another group has also sent in a proposal for a different preterm birth model. You are asked to review both.</p>`,
       widgets: '',
       tasks: [6, 7],
       takeaway: 'Pre-specify the steps, validate internally before externally, and treat predictors that are unavailable at the moment of prediction as a fatal flaw.'
@@ -249,9 +270,9 @@ registerModule({
       level: 'Create',
       scenario: `<p>Write the district team's problem definition before any data are analysed.</p>`,
       questions: [
-        '<b>(a)</b> In one sentence each, state the research question, the intended application, the outcome definition and the study design.',
-        '<b>(b)</b> List five candidate predictors that would be known at the booking visit, and two that would tempt an analyst but are not known then.',
-        '<b>(c)</b> Which statistical model fits this outcome, and what number from the data must you check before deciding how many predictors to consider?'
+        '<b>(a)</b> Write one sentence for each: the research question, how the model will be used, how the outcome is defined, and the type of study.',
+        '<b>(b)</b> List five possible predictors that are known at the first (booking) visit. Then list two that look useful but are only known later.',
+        '<b>(c)</b> The outcome is yes or no. Which statistical model fits it? Before deciding how many predictors to try, which number from the data must you check?'
       ],
       answer: `<p><b>(a)</b> <b>Research question:</b> the probability of preterm birth (before 37 completed weeks) in women booking at the district antenatal clinic. <b>Intended application:</b> midwives at the booking visit use the predicted risk to decide who is offered extra antenatal contacts. <b>Outcome:</b> gestational age at delivery below 37 weeks, dated by the best available method (early ultrasound where possible), recorded at delivery. <b>Design:</b> a prospective cohort of women followed from booking to delivery, a prognostic design.</p>
 <p><b>(b)</b> Known at booking: maternal age, BMI, haemoglobin, parity, previous preterm birth, chronic hypertension, tobacco use. Not known at booking: number of antenatal visits over the pregnancy, mode of delivery, birth weight.</p>
@@ -314,10 +335,10 @@ registerModule({
       id: 't4',
       title: 'Adjusting a trial for prognosis',
       level: 'Apply',
-      scenario: `<p>The prevention trial will randomise 2,000 women and analyse preterm birth with logistic regression. The statistician proposes adjusting the treatment effect for previous preterm birth and cervical length, which are strongly prognostic; randomisation is expected to balance them between arms.</p>`,
+      scenario: `<p>The prevention trial will split 2,000 women at random into two groups (arms) and analyse preterm birth with logistic regression. Two things strongly predict preterm birth: a previous preterm birth and a short cervix. The statistician wants to adjust the treatment effect for both. Because the groups are formed at random, both should be about equally common in each arm.</p>`,
       questions: [
-        '<b>(a)</b> Compared with the unadjusted analysis, what happens to the estimated treatment odds ratio, its standard error and the power?',
-        '<b>(b)</b> A colleague says the adjusted odds ratio must be wrong because it differs from the unadjusted one although the arms are balanced. How do you reply?',
+        '<b>(a)</b> Compared with the analysis without adjustment, what happens to the treatment odds ratio, its standard error and the power?',
+        '<b>(b)</b> A colleague says the adjusted odds ratio must be wrong: the arms are balanced, so why does it differ from the unadjusted one? How do you reply?',
         '<b>(c)</b> How would the answer to (a) differ if the outcome were birth weight analysed with linear regression?'
       ],
       answer: `<p><b>(a)</b> The adjusted odds ratio moves further from 1, its standard error increases, and power increases, because the estimate grows more than its standard error. The gain is larger when the covariates predict the outcome strongly; the book reports sample-size reductions of roughly 12% to 30% for covariate sets with R² of 13% to 40%.</p>
@@ -340,7 +361,17 @@ registerModule({
       id: 't6',
       title: 'Put the plan in order',
       level: 'Understand',
-      scenario: `<p>A team lists its planned activities in no particular order: (i) test the model in a second state; (ii) decide how to handle missing haemoglobin values; (iii) estimate coefficients with shrinkage; (iv) present the model as a score chart; (v) decide whether age has a linear effect; (vi) decide whether to keep BMI continuous or group it; (vii) estimate the c statistic and a calibration plot; (viii) estimate optimism with the bootstrap.</p>`,
+      scenario: `<p>A team lists its planned activities in no particular order:</p>
+<ol type="i">
+<li>Test the model in a second state.</li>
+<li>Decide what to do about missing haemoglobin values.</li>
+<li>Estimate the coefficients with shrinkage (a way of not fitting the noise).</li>
+<li>Present the model as a score chart.</li>
+<li>Decide whether the effect of age is a straight line.</li>
+<li>Decide whether to keep BMI as a number or put it into groups.</li>
+<li>Work out the c statistic and draw a calibration plot.</li>
+<li>Estimate optimism with the bootstrap.</li>
+</ol>`,
       questions: [
         '<b>(a)</b> Assign each activity to its step (1 to 7) and put them in order.',
         '<b>(b)</b> Why must (viii) come before (i)?'
@@ -352,7 +383,10 @@ registerModule({
       id: 't7',
       title: 'Critique another preterm birth model proposal',
       level: 'Evaluate',
-      scenario: `<p>Illustrative (synthetic). Another group proposes a model to identify, at the booking visit, women at high risk of preterm birth so that primary health centres can offer a prevention package. They use data from a completed randomised trial of a progesterone regimen in three tertiary hospitals, which excluded women with a multiple pregnancy or a previous preterm birth. Candidate predictors: maternal age, parity, haemoglobin, BMI, cervical length measured at 24 weeks, number of antenatal visits, mode of delivery and birth weight. Preterm birth is defined from the woman's recalled last menstrual period, recorded at delivery. The authors plan to report p-values for each predictor and a c statistic, to classify women as high risk when predicted risk exceeds 50%, and to deploy the model after this analysis.</p>`,
+      scenario: `<p>Illustrative (synthetic). Another group wants a model to pick out, at the first antenatal visit, women at high risk of preterm birth. Primary health centres would then offer them a prevention package.</p>
+<p>The group will use data from a finished trial of progesterone in three large hospitals. That trial left out women carrying twins or triplets and women who had a previous preterm birth.</p>
+<p>Candidate predictors: maternal age, number of previous births, haemoglobin, BMI, cervical length measured at 24 weeks, number of antenatal visits, mode of delivery and birth weight.</p>
+<p>Preterm birth is worked out from the date of the last period, as the woman remembers it, recorded at delivery. The group plans to report a p-value for each predictor and a c statistic, to call a woman high risk when her predicted risk is above 50%, and to start using the model straight after this analysis.</p>`,
       questions: [
         '<b>(a)</b> Identify the problems in the match between intended use and data, point by point.',
         '<b>(b)</b> Comment on the outcome definition and on the number of events.',

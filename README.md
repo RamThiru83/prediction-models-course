@@ -36,6 +36,15 @@ A daily scheduled task on the instructor's computer runs steps 2 to 4 and report
 
 Learner data (progress, notes, answers) stay in Supabase and are never copied to GitHub.
 
+## Writing level
+
+The course starts at a high-school reading level and becomes more technical module by module.
+
+- Primer and Module 1: aim for grade 8 or below (Flesch-Kincaid) in essentials, "What you need", scenarios and tasks. Short sentences, everyday words, one idea per sentence. Explain each technical term in plain words the first time it appears, and show a worked example with counts per 100 before any formula.
+- Modules 2 to 7: grade 9 to 10. Terms introduced earlier can be used without re-explaining.
+- Modules 8 to 15: grade 10 to 12. Formulas may come first, but each still gets a plain-language reading and a worked example.
+- Reference notes may be denser than the cases, but keep the book's content and numbers unchanged at every level.
+
 ## Data and privacy
 The Supabase publishable key in the page is public by design; row-level security protects data. Learners can read and change only their own rows; instructors can read all learner progress. Learner data are for teaching only. Using them for research needs ethics approval and separate consent.
 

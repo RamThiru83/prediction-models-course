@@ -46,7 +46,8 @@ registerModule({
       need: `
 <p><b>Sensitivity:</b> of those with the outcome, the share who test positive. <b>Specificity:</b> of those without it, the share who test negative. <b>PPV:</b> of those who test positive, the share who have the outcome; <b>NPV</b> is the same for negatives.</p>
 <p>Work in counts. Out of 1000 women in whom 14% will deliver within 7 days: 140 will, and 85% of them (119) test positive; 860 will not, and 30% of them (258) also test positive. PPV = 119 / 377 = 32%.</p>`,
-      scenario: `<p>Women who arrive at the labour ward with contractions before 37 weeks are checked with a bedside test that predicts delivery within 7 days (illustrative values: sensitivity 85%, specificity 70%). The team wants to know what a result means in its own unit, where 14% of the women tested deliver within 7 days, and in the regional referral unit it sends women to, where 40% do.</p>`,
+      scenario: `<p>Some women come to the labour ward with contractions before 37 weeks. The team uses a quick bedside test to predict which of them will deliver within 7 days (illustrative values: sensitivity 85%, specificity 70%).</p>
+<p>In the team's own unit, 14% of the women tested deliver within 7 days. In the regional referral unit, where the team sends women, 40% do. What does a test result mean in each place?</p>`,
       widgets: `<div data-widget="bayes2x2"></div>`,
       tasks: [3, 4],
       takeaway: 'Sensitivity and specificity belong to the test; what a result means for a woman also depends on how common the outcome is where the test is used.'
@@ -57,9 +58,10 @@ registerModule({
       aim: 'judge whether a figure differs from chance, and see why the number of events matters.',
       minutes: 10,
       need: `
-<p>A figure from a sample is an estimate; another sample would give a different one, and small samples swing more. With a true risk of 12%, samples of 50 women range from about 3% to 21%, and samples of 1000 from about 10% to 14%.</p>
-<p>For a yes/no outcome, the information sits in the <b>number of events</b>, not the number of patients. The <b>bootstrap</b> imitates new samples by drawing patients from your own data with replacement: some appear twice, others not at all (about 63% of them appear).</p>`,
-      scenario: `<p>The district manager compares the preterm birth rates of the team's clinics with the district rate of 12%, and is also offered two cohorts for building a better model.</p>`,
+<p>Any number worked out from a sample is only an estimate. Another sample would give a slightly different number, and small samples swing much more than large ones. If the true risk is 12%, samples of 50 women can show anything from about 3% to 21%; samples of 1000 women stay between about 10% and 14%.</p>
+<p>For a yes/no outcome, what counts is the <b>number of events</b> (here, preterm births), not the number of women.</p>
+<p>The <b>bootstrap</b> is a way to see this uncertainty using only your own data. Pick women at random from your records, putting each one back after picking, until you have a new sample of the same size. Some women are picked twice and others not at all (about 63% of them appear). Repeat this many times and see how much the result changes.</p>`,
+      scenario: `<p>The district manager compares the preterm birth rates of different clinics with the district rate of 12%. She is also offered two sets of records for building a better model.</p>`,
       widgets: `<div data-widget="samplingDemo"></div>`,
       tasks: [5, 6],
       takeaway: 'Small samples mislead; before reading meaning into a figure, ask how much it would vary by chance, and count the events.'
@@ -70,9 +72,13 @@ registerModule({
       aim: 'calculate a c statistic, check calibration, and explain why a model looks worse in new patients.',
       minutes: 10,
       need: `
-<p>A model always looks better on the patients used to build it (<b>apparent</b> performance). The excess is <b>optimism</b>; a model with a lot of it is <b>overfitted</b>, and its risks tend to be too extreme in new patients: too high for high-risk patients, too low for low-risk ones.</p>
-<p><b>c statistic:</b> take every pair of one event and one non-event; c is the share of pairs in which the event has the higher predicted risk. 0.5 is a coin toss, 1 is perfect. <b>Calibration</b> compares predicted with observed risk: if the model says 20%, about 20% should have the outcome.</p>`,
-      scenario: `<p>Before using their booking model routinely, the team tries it on women in a second hospital.</p>`,
+<p>A model always looks better on the women it was built from. This is its <b>apparent</b> performance, and the difference from new women is called <b>optimism</b>. A model with a lot of optimism is <b>overfitted</b>: it has learned the quirks of its own sample. On new women its risks are too extreme, too high for high-risk women and too low for low-risk women.</p>
+<p>Two questions tell you whether a model works:</p>
+<ul>
+<li><b>Does it rank women correctly?</b> Take one woman who delivered early and one who did not. The <b>c statistic</b> is how often the model gives the higher risk to the woman who delivered early. 0.5 is no better than tossing a coin; 1 is perfect.</li>
+<li><b>Are the risks the right size?</b> This is <b>calibration</b>. If the model says 20% for a group of women, about 20 in every 100 of them should deliver early.</li>
+</ul>`,
+      scenario: `<p>The team's model worked well on the women it was built from. Before using it every day, the team tries it on women in a second hospital.</p>`,
       widgets: '',
       tasks: [7, 8],
       takeaway: 'Judge a model on patients it was not built on, and ask both questions: does it rank patients correctly, and are its risks the right size?'
