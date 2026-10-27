@@ -254,16 +254,33 @@ App.pageModule = function (m) {
   var lk = App.lockInfo(m); if (lk && !App.blocking) return { html: '<p class="eyebrow">' + m.part + '</p><h1>' + m.title + '</h1><div class="callout warn"><b>Not available yet</b><p>' + lk + ' Your instructor releases modules in sequence.</p></div><div class="pager"><span><a class="btn" href="#home">← Course home</a></span><span></span></div>' };
   var h = '<p class="eyebrow">' + m.part + (m.num === 0 ? '' : ' · ' + (typeof m.num === 'number' ? 'Module ' + m.num : m.num)) + '</p><h1>' + m.title + '</h1><p class="lede">' + m.summary + '</p>' +
     '<div class="meta"><span><b>Source</b> ' + m.book + '</span><span><b>Study time</b> about ' + m.minutes + ' minutes</span></div>' +
-    '<div class="callout key"><b>After this module you can</b><ul>' + m.objectives.map(function (o) { return '<li>' + o + '</li>'; }).join('') + '</ul></div>';
-  var taskHtml = function (t, i) { return '<div class="task" data-ti="' + i + '"><h3>Task ' + (i + 1) + '. ' + t.title + ' <span class="lvl">' + t.level + '</span></h3>' + t.scenario + t.questions.map(function (q) { return '<p>' + q + '</p>'; }).join('') + '</div>'; };
+    (m.format === 'cases' ? '<div class="goals"><b>After this module you can</b><ul>' + m.objectives.map(function (o) { return '<li>' + o + '</li>'; }).join('') + '</ul></div>'
+      : '<div class="callout key"><b>After this module you can</b><ul>' + m.objectives.map(function (o) { return '<li>' + o + '</li>'; }).join('') + '</ul></div>');
+  var taskHtml = function (t, i) { return '<div class="task" data-ti="' + i + '" id="' + m.id + '-task-' + i + '"><h3>Task ' + (i + 1) + '. ' + t.title + ' <span class="lvl">' + t.level + '</span></h3>' + t.scenario + t.questions.map(function (q) { return '<p>' + q + '</p>'; }).join('') +
+    (m.format === 'cases' ? '<p class="tolink"><a href="#" data-goto="' + m.id + '-ans-' + i + '">Check your answer</a> (worked answers are at the end of the page)</p>' : '') + '</div>'; };
   if (m.format === 'cases') {
-    /* case-led layout: essentials, then cases with their tasks, quiz, answers at the end, full notes collapsed */
+    /* case-led layout. Colour code: learn (essentials, what you need), practise (tasks), check (quiz), answers. */
+    var ncase = m.cases.length, ntask = m.tasks.length, cmin = m.cases.reduce(function (a, c) { return a + (c.minutes || 10); }, 0);
+    h += '<div class="flow" role="navigation" aria-label="How to work through this module">' +
+      '<button type="button" class="fl learn" data-goto="' + m.id + '-ess"><b>The essentials</b><span>5 min</span></button>' +
+      '<button type="button" class="fl practise" data-goto="' + m.id + '-cases"><b>' + ncase + ' cases, ' + ntask + ' tasks</b><span>about ' + cmin + ' min</span></button>' +
+      '<button type="button" class="fl check" data-goto="' + m.id + '-quiz"><b>Check yourself</b><span>' + m.quiz.length + ' questions</span></button>' +
+      '<button type="button" class="fl answers" data-goto="' + m.id + '-answers"><b>Worked answers</b><span>compare yours</span></button></div>' +
+      '<p class="flowhint">Read the essentials, then work through the cases in order. In each case, read what you need, then the situation, try the simulator, and write your answer to each task in its box before checking the worked answer.</p>';
     h += '<section class="sec essentials" id="' + m.id + '-ess"><h2>The essentials</h2>' + m.essentials + '</section>';
+    if (m.story) h += '<div class="story" id="' + m.id + '-cases"><b>The story in this module</b><p>' + m.story + '</p></div>';
     m.cases.forEach(function (c, k) {
-      h += '<section class="sec case" id="' + m.id + '-' + c.id + '"><h2>Case ' + (k + 1) + '. ' + c.title + '</h2>' +
-        c.html.replace(/\[\[task:(\d+)\]\]/g, function (_, n) { return taskHtml(m.tasks[+n], +n); }) + '</section>';
+      h += '<section class="sec case" id="' + m.id + '-' + c.id + '"><details class="ccard"' + (k === 0 ? ' open' : '') + '><summary>' +
+        '<span class="cnum">Case ' + (k + 1) + ' of ' + ncase + '</span><span class="ctitle">' + c.title + '</span>' +
+        '<span class="caim">In this case you will ' + c.aim + '</span><span class="cfoot">' + c.tasks.length + ' tasks · about ' + (c.minutes || 10) + ' min</span></summary><div class="cbody">' +
+        '<div class="need"><b>What you need</b>' + c.need + '</div>' +
+        '<div class="situation"><b>The situation</b>' + c.scenario + '</div>' + (c.widgets || '') +
+        '<div class="turn"><b class="turnh">Your turn</b>' + c.tasks.map(function (n) { return taskHtml(m.tasks[n], n); }).join('') + '</div>' +
+        '<div class="takeaway"><b>Take-away</b><p>' + c.takeaway + '</p></div>' +
+        (k < ncase - 1 ? '<p class="nextc"><button type="button" class="btn" data-next="' + m.id + '-' + m.cases[k + 1].id + '">Next: Case ' + (k + 2) + '. ' + m.cases[k + 1].title + '</button></p>' : '') +
+        '</div></details></section>';
     });
-    h += '<section class="sec"><h2>Check yourself</h2><p>Answer each question to see the explanation. Wrong answers are explained too.</p><div id="quizbox">' + App.quizHtml(m) + '</div></section>';
+    h += '<section class="sec quizsec" id="' + m.id + '-quiz"><h2>Check yourself</h2><p>Answer each question to see the explanation. Wrong answers are explained too.</p><div id="quizbox">' + App.quizHtml(m) + '</div></section>';
   } else {
   m.sections.forEach(function (s) { h += '<section class="sec" id="' + m.id + '-' + s.id + '"><h2>' + s.title + '</h2>' + s.html + '</section>'; });
   h += '<section class="sec"><h2>Key points</h2><ul class="kp">' + m.keyPoints.map(function (k) { return '<li>' + k + '</li>'; }).join('') + '</ul></section>';
@@ -272,8 +289,8 @@ App.pageModule = function (m) {
   m.tasks.forEach(function (t, i) { h += taskHtml(t, i); });
   h += '</section>';
   }
-  h += '<section class="sec"><h2>Worked answers</h2>' + (m.format === 'cases' ? '<p>Open an answer only after you have written your own.</p>' : '');
-  m.tasks.forEach(function (t, i) { h += '<details class="ans"><summary>Task ' + (i + 1) + '. ' + t.title + '</summary><div>' + t.answer + '</div></details>'; });
+  h += '<section class="sec' + (m.format === 'cases' ? ' anssec" id="' + m.id + '-answers' : '') + '"><h2>Worked answers</h2>' + (m.format === 'cases' ? '<p>Open an answer only after you have written your own.</p>' : '');
+  m.tasks.forEach(function (t, i) { h += '<details class="ans" id="' + m.id + '-ans-' + i + '"><summary>Task ' + (i + 1) + '. ' + t.title + '</summary><div>' + t.answer + (m.format === 'cases' ? '<p class="tolink"><a href="#" data-goto="' + m.id + '-task-' + i + '">Back to Task ' + (i + 1) + '</a></p>' : '') + '</div></details>'; });
   h += '</section>';
   if (m.format === 'cases' && m.sections && m.sections.length) {
     var strip = function (x) { return x.replace(/<div data-widget="[^"]*"[^>]*><\/div>/g, '<p class="muted">The simulator for this part is in the cases above.</p>').replace(/<ul class="try">[\s\S]*?<\/ul>/g, ''); };
@@ -285,6 +302,15 @@ App.pageModule = function (m) {
   h += '<div class="pager"><span>' + (prev ? '<a class="btn" href="#' + prev.id + '">← ' + prev.title + '</a>' : '') + '</span><span>' + (next ? '<a class="btn" href="#' + next.id + '">' + next.title + ' →</a>' : '') + '</span></div>';
   return { html: h, after: function (root) {
     App.wireQuiz(root.querySelector('#quizbox'), m);
+    root.addEventListener('click', function (e) {
+      var g = e.target.closest('[data-goto],[data-next]'); if (!g) return;
+      e.preventDefault();
+      var el = document.getElementById(g.getAttribute('data-goto') || g.getAttribute('data-next')); if (!el) return;
+      var d = el.tagName === 'DETAILS' ? el : el.querySelector('details.ccard') || el.closest('details');
+      if (d) d.open = true; var host = el.closest('details.ccard'); if (host) host.open = true;
+      if (g.hasAttribute('data-next')) { var cur = g.closest('details.ccard'); if (cur) cur.open = false; }
+      el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    });
     var b = root.querySelector('#markdone'); b.onclick = function () { if (App.prog.done[m.id]) delete App.prog.done[m.id]; else App.prog.done[m.id] = true; App.prog.dt[m.id] = Date.now(); App.save(); App.markNav(); b.textContent = App.prog.done[m.id] ? 'Marked complete (click to undo)' : 'Mark this module complete'; };
   } };
 };

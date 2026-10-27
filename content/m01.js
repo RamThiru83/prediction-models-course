@@ -7,12 +7,12 @@ registerModule({
   minutes: 60,
   summary: 'Why and where prediction models are used, how a risk estimate turns into a decision, and the seven steps that structure the development and validation of a model.',
   objectives: [
-    'Distinguish diagnostic from prognostic prediction and prediction from causal explanation.',
-    'Calculate a treatment threshold from the relative benefit and the absolute harm of a treatment.',
-    'Explain why the number of events, not the number of patients, is the effective sample size.',
-    'Describe the effect of covariate adjustment on treatment-effect estimates in randomised trials with logistic regression.',
-    'List the seven modelling steps in order and state what each one decides.',
-    'Define a prediction problem (population, outcome, predictors, intended use) before analysing any data.'
+    'Tell diagnostic from prognostic models',
+    'Define a prediction problem first',
+    'Turn a risk into a treatment decision',
+    'Count events, not patients',
+    'Name four research uses of models',
+    'Put the seven modelling steps in order'
   ],
   format: 'cases',
   essentials: `
@@ -24,53 +24,59 @@ registerModule({
 <li>Models also serve research: selecting and stratifying trial patients, adjusting trial analyses, propensity scores, and comparing hospitals after accounting for case-mix.</li>
 <li>The <b>seven steps</b>: data inspection, coding of predictors, model specification, estimation, performance, validation, presentation. They are preceded by defining the problem, and only predictors known at the moment of prediction may be used.</li>
 </ul>`,
+  story: 'The same district maternity team (fictional, with synthetic data) now plans its own booking-visit model for preterm birth. You follow the project from defining the problem, to using the risks for a treatment decision, to research uses, and finally to a review by the research committee.',
   cases: [
     {
       id: 'c1',
       title: 'Extra antenatal visits for the women most at risk',
-      html: `
-<p class="scenario">Illustrative (synthetic). A district health team wants to offer extra antenatal contacts to the women most at risk of preterm birth, deciding at the booking visit. It has two synthetic datasets to work with: an antenatal cohort (ptb_dev) and a newborn-unit dataset (sepsis).</p>
-<div class="need"><b>What you need</b>
+      aim: 'define a prediction problem and choose predictors that are known at the moment of prediction.',
+      minutes: 12,
+      need: `
 <p>Before any analysis, define the problem in one or two sentences each: the research question, the intended application (who uses the risk, when, to decide what), the outcome, the predictors, the study design, the statistical model and the sample size.</p>
-<p>A model can only use what is known at the moment of prediction. A predictor recorded later in pregnancy makes a booking-visit model unusable, however well it predicts in the data. A <b>prognostic</b> design follows women forward to the outcome; a <b>diagnostic</b> design measures predictors and the condition at the same time.</p></div>
-<div data-widget="datasetCard" data-set="ptb_dev"></div>
-<div data-widget="datasetCard" data-set="sepsis"></div>
-[[task:0]]
-[[task:1]]`
+<p>A model can only use what is known at the moment of prediction. A predictor recorded later in pregnancy makes a booking-visit model unusable, however well it predicts in the data. A <b>prognostic</b> design follows women forward to the outcome; a <b>diagnostic</b> design measures predictors and the condition at the same time.</p>`,
+      scenario: `<p>The team wants to offer extra antenatal contacts to the women most at risk of preterm birth, deciding at the booking visit. It has two synthetic datasets to work with: an antenatal cohort (ptb_dev) and a newborn-unit dataset (sepsis).</p>`,
+      widgets: `<div data-widget="datasetCard" data-set="ptb_dev"></div><div data-widget="datasetCard" data-set="sepsis"></div>`,
+      tasks: [0, 1],
+      takeaway: 'Fix the question, the moment of prediction and the outcome before touching the data; a predictor not known at that moment cannot be used.'
     },
     {
       id: 'c2',
       title: 'Who should get the preventive treatment?',
-      html: `
-<p class="scenario">Illustrative (synthetic). A preventive treatment in pregnancy lowers the risk of an adverse outcome but has side-effects of its own. The booking-visit model gives each woman a predicted risk. The team must decide whom to treat.</p>
-<div class="need"><b>What you need</b>
+      aim: 'turn predicted risks into treatment decisions with a threshold.',
+      minutes: 12,
+      need: `
 <p>The treatment threshold is the risk at which treating and not treating are equally good. If <b>harm</b> is the net loss from treating someone who would not have the outcome and <b>benefit</b> the net gain from treating someone who would, threshold = harm / (harm + benefit).</p>
-<p>For a treatment that lowers risk by a constant relative amount (RR) and causes a constant absolute harm H, the benefit for a woman at risk r is (1 − RR) × r, so treat if r &gt; H / (1 − RR). Example: RR 0.5 and H 3% give a break-even risk of 0.03 / 0.5 = 6%. A woman at 10% gains 5% − 3% = 2%; a woman at 4% loses 1%.</p></div>
-[[task:2]]
-[[task:3]]`
+<p>For a treatment that lowers risk by a constant relative amount (RR) and causes a constant absolute harm H, the benefit for a woman at risk r is (1 − RR) × r, so treat if r &gt; H / (1 − RR). Example: RR 0.5 and H 3% give a break-even risk of 0.03 / 0.5 = 6%. A woman at 10% gains 5% − 3% = 2%; a woman at 4% loses 1%.</p>`,
+      scenario: `<p>The team's model will also guide a preventive treatment in pregnancy that lowers the risk of an adverse outcome but has side-effects of its own. The team must decide whom to treat.</p>`,
+      widgets: '',
+      tasks: [2, 3],
+      takeaway: 'A threshold comes from the balance of harms and benefits, not from statistics, and the model must be well calibrated near it.'
     },
     {
       id: 'c3',
       title: 'A trial and a hospital comparison',
-      html: `
-<p class="scenario">Illustrative (synthetic). The same team is planning a randomised trial of a preterm birth prevention programme, and the state wants to compare neonatal mortality between hospitals.</p>
-<div class="need"><b>What you need</b>
-<p>In research, a prediction model can replace several separate inclusion criteria with one predicted risk, and summarise prognosis for stratified randomisation.</p>
-<p>In a randomised trial analysed with logistic regression, adjusting for strongly prognostic baseline covariates moves the treatment effect further from zero, increases its standard error, and still increases power, because the estimate grows more than the standard error. For a continuous outcome analysed with linear regression, the estimate is unchanged when groups are balanced, and the standard error falls.</p>
-<p>Hospitals receive different patients, so raw outcome rates cannot be compared. A model gives each hospital an <b>expected</b> rate from its own case-mix, and observed can then be compared with expected. Without randomisation, a <b>propensity score</b> (the predicted probability of receiving a treatment) can adjust for observed confounders.</p></div>
-[[task:4]]
-[[task:5]]`
+      aim: 'see how prediction models support research: adjusting a trial analysis and comparing hospitals fairly.',
+      minutes: 12,
+      need: `
+<p>In a randomised trial analysed with logistic regression, adjusting for strongly prognostic baseline covariates moves the treatment effect further from zero and increases its standard error, yet still increases power, because the estimate grows more than the standard error. With linear regression and balanced groups, the estimate is unchanged and the standard error falls.</p>
+<p>Hospitals receive different patients, so raw outcome rates cannot be compared. A model gives each hospital an <b>expected</b> rate from its own case-mix, and observed can be compared with expected. Models can also select or stratify trial patients, and a <b>propensity score</b> can adjust for observed confounders without randomisation.</p>`,
+      scenario: `<p>The team is planning a randomised trial of a preterm birth prevention programme, and the state asks it to help compare neonatal mortality between hospitals.</p>`,
+      widgets: '',
+      tasks: [4, 5],
+      takeaway: 'Prognostic adjustment makes trials more powerful, and case-mix models make hospital comparisons fairer, but only for what the model measures.'
     },
     {
       id: 'c4',
       title: 'A model proposal under review',
-      html: `
-<p class="scenario">Illustrative (synthetic). You are asked to review two things for a research committee: a team's modelling plan, and a proposal for a postpartum haemorrhage model.</p>
-<div class="need"><b>What you need</b>
+      aim: 'check a modelling plan against the seven steps and spot problems that cannot be repaired later.',
+      minutes: 14,
+      need: `
 <p>The seven steps, in order: (1) data inspection, including missing values; (2) coding of predictors; (3) model specification: which predictors, and whether effects are additive and linear; (4) estimation, limiting overfitting with shrinkage or penalisation; (5) performance: calibration, discrimination, clinical usefulness; (6) validation: internal (same population) and external (other settings); (7) presentation as a formula, score chart or nomogram.</p>
-<p>Each choice tuned to the data makes performance look better than it will be in new patients, so the plan should be fixed in advance. Internal validity is a precondition for external validity.</p></div>
-[[task:6]]
-[[task:7]]`
+<p>Each choice tuned to the data makes performance look better than it will be in new patients, so the plan should be fixed in advance. Internal validity is a precondition for external validity.</p>`,
+      scenario: `<p>The team's modelling plan goes to the research committee, together with a proposal from another group for a postpartum haemorrhage model. You are asked to review both.</p>`,
+      widgets: '',
+      tasks: [6, 7],
+      takeaway: 'Pre-specify the steps, validate internally before externally, and treat predictors that are unavailable at the moment of prediction as fatal.'
     }
   ],
   sections: [

@@ -4,14 +4,14 @@ registerModule({
   part: 'Primer',
   title: 'Primer: the ideas you need before starting',
   book: 'Ch. 1, 4, 5, 15 (background)',
-  minutes: 45,
+  minutes: 55,
   summary: 'The few ideas the course assumes: risk and odds, how logistic regression turns patient facts into a risk, why results vary between samples, and the two questions asked of every model. Trust me, you will need them!',
   objectives: [
-    'Explain what a prediction model produces and name its outcome and predictors.',
-    'Convert a risk into odds and back.',
-    'Calculate a patient\'s predicted risk from a simple logistic regression equation.',
-    'Explain why an estimate from a small sample is uncertain, and why the number of events matters.',
-    'Describe discrimination and calibration in plain words.'
+    'Convert between risk and odds',
+    'Calculate a risk from a logistic model',
+    'Work out PPV and NPV from counts',
+    'Explain why small samples mislead',
+    'Tell discrimination from calibration'
   ],
   format: 'cases',
   essentials: `
@@ -23,55 +23,59 @@ registerModule({
 <li>Every estimate varies from sample to sample. For a yes/no outcome, the <b>number of events</b> limits what a study can show.</li>
 <li>Judge a model on patients it was not built on, with two questions: does it <b>rank</b> patients correctly (discrimination, the c statistic), and are its risks the <b>right size</b> (calibration)?</li>
 </ul>`,
+  story: 'You follow the maternity team of a district hospital (fictional, with synthetic data) as they start to use predicted risks: first for preterm birth at the booking visit, then a bedside check for newborn sepsis, then the district\'s own figures, and finally a test of their model in a second hospital.',
   cases: [
     {
       id: 'c1',
       title: 'A risk at booking',
-      html: `
-<p class="scenario">Illustrative (synthetic). A district hospital antenatal clinic wants to estimate each woman's risk of preterm birth at her booking visit. The team has a model: lp = −3.0 + 0.8 × chronic_htn + 1.2 × prior_ptb, with each predictor coded 1 if present and 0 if not.</p>
-<div class="need"><b>What you need</b>
+      aim: 'turn a risk into odds and back, and calculate a woman\'s risk from a logistic model.',
+      minutes: 12,
+      need: `
 <p>Odds = risk / (1 − risk), and risk = odds / (1 + odds). A 20% risk is odds of 0.25: one event for every four non-events. For small risks the two are close; for large risks they are not (80% is odds 4).</p>
-<p>The model adds up its score (lp), then turns it into a risk with 1 / (1 + e<sup>−lp</sup>). A score of 0 is a risk of 50%. exp(coefficient) is the odds ratio: how much that predictor multiplies the odds.</p></div>
-<div data-widget="oddsConverter"></div>
-[[task:0]]
-<div data-widget="logisticCurve"></div>
-[[task:1]]
-[[task:2]]`
+<p>A logistic model adds up a score, lp, then turns it into a risk with 1 / (1 + e<sup>−lp</sup>). A score of 0 is a risk of 50%. exp(coefficient) is the odds ratio: how much that predictor multiplies the odds.</p>`,
+      scenario: `<p>The team's antenatal clinic wants each woman's risk of preterm birth at her booking visit. A colleague gives them a simple model: lp = −3.0 + 0.8 × chronic_htn + 1.2 × prior_ptb, with each predictor coded 1 if present and 0 if not.</p>`,
+      widgets: `<div data-widget="oddsConverter"></div><div data-widget="logisticCurve"></div>`,
+      tasks: [0, 1, 2],
+      takeaway: 'A model adds effects on the log-odds scale. Its odds ratios are not risk ratios, and the extra risk from a predictor depends on where a woman starts.'
     },
     {
       id: 'c2',
       title: 'A sepsis check in two units',
-      html: `
-<p class="scenario">Illustrative (synthetic). A bedside check for neonatal sepsis has sensitivity 85% and specificity 70%. It is used in a referral unit, where 40% of the newborns tested have sepsis, and in a community clinic, where 14% do.</p>
-<div class="need"><b>What you need</b>
+      aim: 'work out what a positive or negative test result means, using counts.',
+      minutes: 10,
+      need: `
 <p><b>Sensitivity:</b> of those with the condition, the share who test positive. <b>Specificity:</b> of those without it, the share who test negative. <b>PPV:</b> of those who test positive, the share who have it; <b>NPV</b> is the same for negatives.</p>
-<p>Work in counts. Out of 1000 newborns at 14%: 140 have sepsis, so 85% of 140 = 119 test positive; 860 do not, so 30% of 860 = 258 also test positive. PPV = 119 / 377 = 32%.</p></div>
-<div data-widget="bayes2x2"></div>
-[[task:3]]
-[[task:4]]`
+<p>Work in counts. Out of 1000 newborns at 14%: 140 have sepsis, and 85% of them (119) test positive; 860 do not, and 30% of them (258) also test positive. PPV = 119 / 377 = 32%.</p>`,
+      scenario: `<p>The same hospital's newborn unit uses a bedside check for sepsis with sensitivity 85% and specificity 70%. The team wants to know what a result means in the referral unit they send babies to, where 40% of the newborns tested have sepsis, and in a community clinic, where 14% do.</p>`,
+      widgets: `<div data-widget="bayes2x2"></div>`,
+      tasks: [3, 4],
+      takeaway: 'Sensitivity and specificity belong to the test; what a result means for a patient also depends on how common the condition is where the test is used.'
     },
     {
       id: 'c3',
       title: 'Is this clinic really different?',
-      html: `
-<p class="scenario">Illustrative (synthetic). The district preterm birth rate is 12%. A new clinic and a large hospital report their first figures, and the district manager wants to know which deserve a review.</p>
-<div class="need"><b>What you need</b>
+      aim: 'judge whether a figure differs from chance, and see why the number of events matters.',
+      minutes: 10,
+      need: `
 <p>A figure from a sample is an estimate; another sample would give a different one, and small samples swing more. With a true risk of 12%, samples of 50 women range from about 3% to 21%, and samples of 1000 from about 10% to 14%.</p>
-<p>For a yes/no outcome, the information sits in the <b>number of events</b>, not the number of patients. The <b>bootstrap</b> imitates new samples by drawing patients from your own data with replacement: some appear twice, others not at all (about 63% of them appear).</p></div>
-<div data-widget="samplingDemo"></div>
-[[task:5]]
-[[task:6]]`
+<p>For a yes/no outcome, the information sits in the <b>number of events</b>, not the number of patients. The <b>bootstrap</b> imitates new samples by drawing patients from your own data with replacement: some appear twice, others not at all (about 63% of them appear).</p>`,
+      scenario: `<p>The district manager compares the preterm birth rates of the team's clinics with the district rate of 12%, and is also offered two cohorts for building a better model.</p>`,
+      widgets: `<div data-widget="samplingDemo"></div>`,
+      tasks: [5, 6],
+      takeaway: 'Small samples mislead; before reading meaning into a figure, ask how much it would vary by chance, and count the events.'
     },
     {
       id: 'c4',
       title: 'Does the model work?',
-      html: `
-<p class="scenario">Illustrative (synthetic). A preterm birth model was built in one hospital and is now being tried on women in a second hospital.</p>
-<div class="need"><b>What you need</b>
+      aim: 'calculate a c statistic, check calibration, and explain why a model looks worse in new patients.',
+      minutes: 10,
+      need: `
 <p>A model always looks better on the patients used to build it (<b>apparent</b> performance). The excess is <b>optimism</b>; a model with a lot of it is <b>overfitted</b>, and its risks tend to be too extreme in new patients: too high for high-risk patients, too low for low-risk ones.</p>
-<p><b>c statistic:</b> take every pair of one event and one non-event; c is the share of pairs in which the event has the higher predicted risk. 0.5 is a coin toss, 1 is perfect. <b>Calibration</b> compares predicted with observed risk: if the model says 20%, about 20% should have the outcome.</p></div>
-[[task:7]]
-[[task:8]]`
+<p><b>c statistic:</b> take every pair of one event and one non-event; c is the share of pairs in which the event has the higher predicted risk. 0.5 is a coin toss, 1 is perfect. <b>Calibration</b> compares predicted with observed risk: if the model says 20%, about 20% should have the outcome.</p>`,
+      scenario: `<p>Before using their booking model routinely, the team tries it on women in a second hospital.</p>`,
+      widgets: '',
+      tasks: [7, 8],
+      takeaway: 'Judge a model on patients it was not built on, and ask both questions: does it rank patients correctly, and are its risks the right size?'
     }
   ],
   sections: [

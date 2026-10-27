@@ -12,6 +12,7 @@
   --mch: #0d6b61; --mch-soft: #e2f3f0; --book: #5a4a8a; --book-soft: #eeeaf8; --eg: #3a4660; --eg-soft: #eceff5;
   --hl: #ffe98a; --hl-ink: #161b24;
   --chrome: #F3F2EF; --active: #E7E4DF;
+  --learn: #2C4A7A; --practise: #B85E12; --check: #94701C; --answer: #9A3029;
   --f-body: "Instrument Sans", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
   --f-head: "Instrument Serif", Georgia, "Times New Roman", serif;
   --f-mono: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
@@ -25,6 +26,7 @@
     --mch: #62d1c2; --mch-soft: #10262a; --book: #b9a8f0; --book-soft: #221d36; --eg: #aab7d6; --eg-soft: #1a2030;
     --hl: #6b5a14; --hl-ink: #f3ecd0;
     --chrome: #0C0C0C; --active: #2A2A2A;
+    --learn: #9AAED6; --practise: #F5A04A; --check: #F2C46A; --answer: #EC8B78;
     color-scheme: dark;
   }
 }
@@ -36,6 +38,7 @@
   --mch: #62d1c2; --mch-soft: #10262a; --book: #b9a8f0; --book-soft: #221d36; --eg: #aab7d6; --eg-soft: #1a2030;
   --hl: #6b5a14; --hl-ink: #f3ecd0;
   --chrome: #0C0C0C; --active: #2A2A2A;
+  --learn: #9AAED6; --practise: #F5A04A; --check: #F2C46A; --answer: #EC8B78;
   color-scheme: dark;
 }
 * { box-sizing: border-box; }
@@ -237,6 +240,50 @@ ol.steps { padding-left: 22px; } ol.steps li { margin: 0 0 10px; max-width: 68ch
 details.fullnotes { margin: 30px 0 10px; border-top: 1px solid var(--line); padding-top: 10px; }
 details.fullnotes > summary { cursor: pointer; font-weight: 600; padding: 6px 0; }
 .muted { color: var(--muted); font-size: 14px; }
+
+/* case-led modules v2: colour code learn / practise / check / answers */
+.goals { margin: 18px 0 8px; }
+.goals > b { display: block; font-size: 14px; font-weight: 600; margin-bottom: 8px; }
+.goals ul { list-style: none; padding: 0; margin: 0; display: grid; grid-template-columns: repeat(auto-fill, minmax(190px, 1fr)); gap: 8px; }
+.goals li { background: var(--bg); border-radius: 8px; padding: 8px 12px; font-size: 15px; line-height: 1.35; }
+.flow { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 8px; margin: 22px 0 8px; }
+.fl { text-align: left; border: 0; border-top: 4px solid var(--k); background: color-mix(in srgb, var(--k) 9%, var(--surface)); border-radius: 0 0 10px 10px; padding: 10px 12px; cursor: pointer; color: var(--ink); }
+.fl b { display: block; font-size: 15px; font-weight: 600; } .fl span { font-size: 13px; color: var(--muted); }
+.fl:hover { background: color-mix(in srgb, var(--k) 16%, var(--surface)); }
+.learn { --k: var(--learn); } .practise { --k: var(--practise); } .check { --k: var(--check); } .answers { --k: var(--answer); }
+.flowhint { font-size: 15px; color: var(--muted); max-width: 70ch; margin: 6px 0 20px; }
+.essentials { background: color-mix(in srgb, var(--learn) 8%, var(--surface)); border-radius: 14px; padding: 18px 22px 8px; border-top: 4px solid var(--learn); }
+.story { background: var(--bg); border-radius: 12px; padding: 14px 18px 4px; margin: 26px 0 14px; }
+.story > b { font-size: 14px; font-weight: 600; }
+.case { margin: 0 0 14px; }
+.case > h2 { display: none; }
+details.ccard { background: var(--surface); border: 1px solid var(--line); border-radius: 14px; overflow: hidden; }
+details.ccard > summary { list-style: none; cursor: pointer; display: grid; gap: 2px; padding: 16px 48px 14px 20px; position: relative; background: color-mix(in srgb, var(--practise) 7%, var(--surface)); }
+details.ccard > summary::-webkit-details-marker { display: none; }
+details.ccard > summary::after { content: ""; position: absolute; right: 20px; top: 24px; width: 10px; height: 10px; border-right: 2px solid var(--muted); border-bottom: 2px solid var(--muted); transform: rotate(45deg); transition: transform .15s; }
+details.ccard[open] > summary::after { transform: rotate(225deg); top: 28px; }
+.cnum { font-size: 13px; font-weight: 600; color: var(--practise); }
+.ctitle { font-family: var(--f-head); font-size: 23px; line-height: 1.2; }
+.caim { font-size: 15px; color: var(--ink); }
+.cfoot { font-size: 13px; color: var(--muted); }
+.cbody { padding: 6px 20px 14px; }
+.cbody .need { background: color-mix(in srgb, var(--learn) 8%, var(--surface)); border-left: 0; border-radius: 10px; padding: 12px 16px 4px; margin: 14px 0; }
+.cbody .need > b, .situation > b, .turnh, .takeaway > b { display: block; font-size: 13px; font-weight: 600; margin-bottom: 4px; }
+.cbody .need > b { color: var(--learn); }
+.situation { background: var(--bg); border-radius: 10px; padding: 12px 16px 4px; margin: 14px 0; }
+.situation p { font-size: 16.5px; }
+.turn { background: color-mix(in srgb, var(--practise) 7%, var(--surface)); border-radius: 12px; padding: 12px 12px 4px; margin: 16px 0; }
+.turnh { color: var(--practise); padding: 0 4px; }
+.turn .task { margin: 10px 0 12px; }
+.takeaway { background: color-mix(in srgb, var(--learn) 8%, var(--surface)); border-radius: 10px; padding: 10px 16px 2px; margin: 14px 0 8px; }
+.takeaway > b { color: var(--learn); } .takeaway p { font-weight: 500; }
+.nextc { margin: 10px 0 4px; }
+.tolink { font-size: 14px; color: var(--muted); }
+.quizsec { background: color-mix(in srgb, var(--check) 9%, var(--surface)); border-top: 4px solid var(--check); border-radius: 14px; padding: 16px 20px 6px; margin-top: 28px; }
+.anssec { background: color-mix(in srgb, var(--answer) 6%, var(--surface)); border-top: 4px solid var(--answer); border-radius: 14px; padding: 16px 20px 6px; margin-top: 22px; }
+.anssec details.ans:target, .task:target { outline: 2px solid var(--practise); }
+@media (max-width: 700px) { .flow { grid-template-columns: repeat(2, minmax(0, 1fr)); } .cbody { padding: 4px 12px 12px; } details.ccard > summary { padding: 14px 42px 12px 14px; } .ctitle { font-size: 20px; } }
+.case, .task, details.ans, .sec, .essentials { scroll-margin-top: 72px; }
 
 </style>
 <div class="topbar"><b>CliPr</b><button type="button" class="btn sm" id="menu" aria-label="Open contents">Contents</button></div>
@@ -1113,16 +1160,33 @@ App.pageModule = function (m) {
   var lk = App.lockInfo(m); if (lk && !App.blocking) return { html: '<p class="eyebrow">' + m.part + '</p><h1>' + m.title + '</h1><div class="callout warn"><b>Not available yet</b><p>' + lk + ' Your instructor releases modules in sequence.</p></div><div class="pager"><span><a class="btn" href="#home">← Course home</a></span><span></span></div>' };
   var h = '<p class="eyebrow">' + m.part + (m.num === 0 ? '' : ' · ' + (typeof m.num === 'number' ? 'Module ' + m.num : m.num)) + '</p><h1>' + m.title + '</h1><p class="lede">' + m.summary + '</p>' +
     '<div class="meta"><span><b>Source</b> ' + m.book + '</span><span><b>Study time</b> about ' + m.minutes + ' minutes</span></div>' +
-    '<div class="callout key"><b>After this module you can</b><ul>' + m.objectives.map(function (o) { return '<li>' + o + '</li>'; }).join('') + '</ul></div>';
-  var taskHtml = function (t, i) { return '<div class="task" data-ti="' + i + '"><h3>Task ' + (i + 1) + '. ' + t.title + ' <span class="lvl">' + t.level + '</span></h3>' + t.scenario + t.questions.map(function (q) { return '<p>' + q + '</p>'; }).join('') + '</div>'; };
+    (m.format === 'cases' ? '<div class="goals"><b>After this module you can</b><ul>' + m.objectives.map(function (o) { return '<li>' + o + '</li>'; }).join('') + '</ul></div>'
+      : '<div class="callout key"><b>After this module you can</b><ul>' + m.objectives.map(function (o) { return '<li>' + o + '</li>'; }).join('') + '</ul></div>');
+  var taskHtml = function (t, i) { return '<div class="task" data-ti="' + i + '" id="' + m.id + '-task-' + i + '"><h3>Task ' + (i + 1) + '. ' + t.title + ' <span class="lvl">' + t.level + '</span></h3>' + t.scenario + t.questions.map(function (q) { return '<p>' + q + '</p>'; }).join('') +
+    (m.format === 'cases' ? '<p class="tolink"><a href="#" data-goto="' + m.id + '-ans-' + i + '">Check your answer</a> (worked answers are at the end of the page)</p>' : '') + '</div>'; };
   if (m.format === 'cases') {
-    /* case-led layout: essentials, then cases with their tasks, quiz, answers at the end, full notes collapsed */
+    /* case-led layout. Colour code: learn (essentials, what you need), practise (tasks), check (quiz), answers. */
+    var ncase = m.cases.length, ntask = m.tasks.length, cmin = m.cases.reduce(function (a, c) { return a + (c.minutes || 10); }, 0);
+    h += '<div class="flow" role="navigation" aria-label="How to work through this module">' +
+      '<button type="button" class="fl learn" data-goto="' + m.id + '-ess"><b>The essentials</b><span>5 min</span></button>' +
+      '<button type="button" class="fl practise" data-goto="' + m.id + '-cases"><b>' + ncase + ' cases, ' + ntask + ' tasks</b><span>about ' + cmin + ' min</span></button>' +
+      '<button type="button" class="fl check" data-goto="' + m.id + '-quiz"><b>Check yourself</b><span>' + m.quiz.length + ' questions</span></button>' +
+      '<button type="button" class="fl answers" data-goto="' + m.id + '-answers"><b>Worked answers</b><span>compare yours</span></button></div>' +
+      '<p class="flowhint">Read the essentials, then work through the cases in order. In each case, read what you need, then the situation, try the simulator, and write your answer to each task in its box before checking the worked answer.</p>';
     h += '<section class="sec essentials" id="' + m.id + '-ess"><h2>The essentials</h2>' + m.essentials + '</section>';
+    if (m.story) h += '<div class="story" id="' + m.id + '-cases"><b>The story in this module</b><p>' + m.story + '</p></div>';
     m.cases.forEach(function (c, k) {
-      h += '<section class="sec case" id="' + m.id + '-' + c.id + '"><h2>Case ' + (k + 1) + '. ' + c.title + '</h2>' +
-        c.html.replace(/\[\[task:(\d+)\]\]/g, function (_, n) { return taskHtml(m.tasks[+n], +n); }) + '</section>';
+      h += '<section class="sec case" id="' + m.id + '-' + c.id + '"><details class="ccard"' + (k === 0 ? ' open' : '') + '><summary>' +
+        '<span class="cnum">Case ' + (k + 1) + ' of ' + ncase + '</span><span class="ctitle">' + c.title + '</span>' +
+        '<span class="caim">In this case you will ' + c.aim + '</span><span class="cfoot">' + c.tasks.length + ' tasks · about ' + (c.minutes || 10) + ' min</span></summary><div class="cbody">' +
+        '<div class="need"><b>What you need</b>' + c.need + '</div>' +
+        '<div class="situation"><b>The situation</b>' + c.scenario + '</div>' + (c.widgets || '') +
+        '<div class="turn"><b class="turnh">Your turn</b>' + c.tasks.map(function (n) { return taskHtml(m.tasks[n], n); }).join('') + '</div>' +
+        '<div class="takeaway"><b>Take-away</b><p>' + c.takeaway + '</p></div>' +
+        (k < ncase - 1 ? '<p class="nextc"><button type="button" class="btn" data-next="' + m.id + '-' + m.cases[k + 1].id + '">Next: Case ' + (k + 2) + '. ' + m.cases[k + 1].title + '</button></p>' : '') +
+        '</div></details></section>';
     });
-    h += '<section class="sec"><h2>Check yourself</h2><p>Answer each question to see the explanation. Wrong answers are explained too.</p><div id="quizbox">' + App.quizHtml(m) + '</div></section>';
+    h += '<section class="sec quizsec" id="' + m.id + '-quiz"><h2>Check yourself</h2><p>Answer each question to see the explanation. Wrong answers are explained too.</p><div id="quizbox">' + App.quizHtml(m) + '</div></section>';
   } else {
   m.sections.forEach(function (s) { h += '<section class="sec" id="' + m.id + '-' + s.id + '"><h2>' + s.title + '</h2>' + s.html + '</section>'; });
   h += '<section class="sec"><h2>Key points</h2><ul class="kp">' + m.keyPoints.map(function (k) { return '<li>' + k + '</li>'; }).join('') + '</ul></section>';
@@ -1131,8 +1195,8 @@ App.pageModule = function (m) {
   m.tasks.forEach(function (t, i) { h += taskHtml(t, i); });
   h += '</section>';
   }
-  h += '<section class="sec"><h2>Worked answers</h2>' + (m.format === 'cases' ? '<p>Open an answer only after you have written your own.</p>' : '');
-  m.tasks.forEach(function (t, i) { h += '<details class="ans"><summary>Task ' + (i + 1) + '. ' + t.title + '</summary><div>' + t.answer + '</div></details>'; });
+  h += '<section class="sec' + (m.format === 'cases' ? ' anssec" id="' + m.id + '-answers' : '') + '"><h2>Worked answers</h2>' + (m.format === 'cases' ? '<p>Open an answer only after you have written your own.</p>' : '');
+  m.tasks.forEach(function (t, i) { h += '<details class="ans" id="' + m.id + '-ans-' + i + '"><summary>Task ' + (i + 1) + '. ' + t.title + '</summary><div>' + t.answer + (m.format === 'cases' ? '<p class="tolink"><a href="#" data-goto="' + m.id + '-task-' + i + '">Back to Task ' + (i + 1) + '</a></p>' : '') + '</div></details>'; });
   h += '</section>';
   if (m.format === 'cases' && m.sections && m.sections.length) {
     var strip = function (x) { return x.replace(/<div data-widget="[^"]*"[^>]*><\/div>/g, '<p class="muted">The simulator for this part is in the cases above.</p>').replace(/<ul class="try">[\s\S]*?<\/ul>/g, ''); };
@@ -1144,6 +1208,15 @@ App.pageModule = function (m) {
   h += '<div class="pager"><span>' + (prev ? '<a class="btn" href="#' + prev.id + '">← ' + prev.title + '</a>' : '') + '</span><span>' + (next ? '<a class="btn" href="#' + next.id + '">' + next.title + ' →</a>' : '') + '</span></div>';
   return { html: h, after: function (root) {
     App.wireQuiz(root.querySelector('#quizbox'), m);
+    root.addEventListener('click', function (e) {
+      var g = e.target.closest('[data-goto],[data-next]'); if (!g) return;
+      e.preventDefault();
+      var el = document.getElementById(g.getAttribute('data-goto') || g.getAttribute('data-next')); if (!el) return;
+      var d = el.tagName === 'DETAILS' ? el : el.querySelector('details.ccard') || el.closest('details');
+      if (d) d.open = true; var host = el.closest('details.ccard'); if (host) host.open = true;
+      if (g.hasAttribute('data-next')) { var cur = g.closest('details.ccard'); if (cur) cur.open = false; }
+      el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    });
     var b = root.querySelector('#markdone'); b.onclick = function () { if (App.prog.done[m.id]) delete App.prog.done[m.id]; else App.prog.done[m.id] = true; App.prog.dt[m.id] = Date.now(); App.save(); App.markNav(); b.textContent = App.prog.done[m.id] ? 'Marked complete (click to undo)' : 'Mark this module complete'; };
   } };
 };
@@ -1537,7 +1610,7 @@ function addAnswer(task, m, i) {
   var key = m.id + '|t' + i, P = App.prog, a = P.ans[key];
   var d = document.createElement('div'); d.className = 'myans'; d.setAttribute('data-ak', key);
   d.innerHTML = '<label>Your answer <span class="sv"></span></label><textarea rows="5" maxlength="20000" placeholder="Write your working and answer here before opening the worked answer. It is saved automatically, you can edit it any time, and your instructor can read it."></textarea><div class="fbs"></div>';
-  task.appendChild(d); var ta = d.querySelector('textarea'), sv = d.querySelector('.sv'), tm; ta.value = (a && a.t) || '';
+  var tl = task.querySelector('.tolink'); if (tl) task.appendChild(tl); task.insertBefore(d, tl || null); var ta = d.querySelector('textarea'), sv = d.querySelector('.sv'), tm; ta.value = (a && a.t) || '';
   function fit() { ta.style.height = 'auto'; ta.style.height = Math.max(110, Math.min(420, ta.scrollHeight + 2)) + 'px'; } fit();
   ta.addEventListener('input', function () { fit(); sv.textContent = 'Saving…'; clearTimeout(tm); tm = setTimeout(function () { P.ans[key] = { t: ta.value, at: Date.now() }; App.save(); sv.textContent = App.acct.session ? 'Saved to your account' : 'Saved in this browser'; }, 700); });
   App.showFeedback(d.querySelector('.fbs'), key);
@@ -2652,14 +2725,14 @@ registerModule({
   part: 'Primer',
   title: 'Primer: the ideas you need before starting',
   book: 'Ch. 1, 4, 5, 15 (background)',
-  minutes: 45,
+  minutes: 55,
   summary: 'The few ideas the course assumes: risk and odds, how logistic regression turns patient facts into a risk, why results vary between samples, and the two questions asked of every model. Trust me, you will need them!',
   objectives: [
-    'Explain what a prediction model produces and name its outcome and predictors.',
-    'Convert a risk into odds and back.',
-    'Calculate a patient\'s predicted risk from a simple logistic regression equation.',
-    'Explain why an estimate from a small sample is uncertain, and why the number of events matters.',
-    'Describe discrimination and calibration in plain words.'
+    'Convert between risk and odds',
+    'Calculate a risk from a logistic model',
+    'Work out PPV and NPV from counts',
+    'Explain why small samples mislead',
+    'Tell discrimination from calibration'
   ],
   format: 'cases',
   essentials: `
@@ -2671,55 +2744,59 @@ registerModule({
 <li>Every estimate varies from sample to sample. For a yes/no outcome, the <b>number of events</b> limits what a study can show.</li>
 <li>Judge a model on patients it was not built on, with two questions: does it <b>rank</b> patients correctly (discrimination, the c statistic), and are its risks the <b>right size</b> (calibration)?</li>
 </ul>`,
+  story: 'You follow the maternity team of a district hospital (fictional, with synthetic data) as they start to use predicted risks: first for preterm birth at the booking visit, then a bedside check for newborn sepsis, then the district\'s own figures, and finally a test of their model in a second hospital.',
   cases: [
     {
       id: 'c1',
       title: 'A risk at booking',
-      html: `
-<p class="scenario">Illustrative (synthetic). A district hospital antenatal clinic wants to estimate each woman's risk of preterm birth at her booking visit. The team has a model: lp = −3.0 + 0.8 × chronic_htn + 1.2 × prior_ptb, with each predictor coded 1 if present and 0 if not.</p>
-<div class="need"><b>What you need</b>
+      aim: 'turn a risk into odds and back, and calculate a woman\'s risk from a logistic model.',
+      minutes: 12,
+      need: `
 <p>Odds = risk / (1 − risk), and risk = odds / (1 + odds). A 20% risk is odds of 0.25: one event for every four non-events. For small risks the two are close; for large risks they are not (80% is odds 4).</p>
-<p>The model adds up its score (lp), then turns it into a risk with 1 / (1 + e<sup>−lp</sup>). A score of 0 is a risk of 50%. exp(coefficient) is the odds ratio: how much that predictor multiplies the odds.</p></div>
-<div data-widget="oddsConverter"></div>
-[[task:0]]
-<div data-widget="logisticCurve"></div>
-[[task:1]]
-[[task:2]]`
+<p>A logistic model adds up a score, lp, then turns it into a risk with 1 / (1 + e<sup>−lp</sup>). A score of 0 is a risk of 50%. exp(coefficient) is the odds ratio: how much that predictor multiplies the odds.</p>`,
+      scenario: `<p>The team's antenatal clinic wants each woman's risk of preterm birth at her booking visit. A colleague gives them a simple model: lp = −3.0 + 0.8 × chronic_htn + 1.2 × prior_ptb, with each predictor coded 1 if present and 0 if not.</p>`,
+      widgets: `<div data-widget="oddsConverter"></div><div data-widget="logisticCurve"></div>`,
+      tasks: [0, 1, 2],
+      takeaway: 'A model adds effects on the log-odds scale. Its odds ratios are not risk ratios, and the extra risk from a predictor depends on where a woman starts.'
     },
     {
       id: 'c2',
       title: 'A sepsis check in two units',
-      html: `
-<p class="scenario">Illustrative (synthetic). A bedside check for neonatal sepsis has sensitivity 85% and specificity 70%. It is used in a referral unit, where 40% of the newborns tested have sepsis, and in a community clinic, where 14% do.</p>
-<div class="need"><b>What you need</b>
+      aim: 'work out what a positive or negative test result means, using counts.',
+      minutes: 10,
+      need: `
 <p><b>Sensitivity:</b> of those with the condition, the share who test positive. <b>Specificity:</b> of those without it, the share who test negative. <b>PPV:</b> of those who test positive, the share who have it; <b>NPV</b> is the same for negatives.</p>
-<p>Work in counts. Out of 1000 newborns at 14%: 140 have sepsis, so 85% of 140 = 119 test positive; 860 do not, so 30% of 860 = 258 also test positive. PPV = 119 / 377 = 32%.</p></div>
-<div data-widget="bayes2x2"></div>
-[[task:3]]
-[[task:4]]`
+<p>Work in counts. Out of 1000 newborns at 14%: 140 have sepsis, and 85% of them (119) test positive; 860 do not, and 30% of them (258) also test positive. PPV = 119 / 377 = 32%.</p>`,
+      scenario: `<p>The same hospital's newborn unit uses a bedside check for sepsis with sensitivity 85% and specificity 70%. The team wants to know what a result means in the referral unit they send babies to, where 40% of the newborns tested have sepsis, and in a community clinic, where 14% do.</p>`,
+      widgets: `<div data-widget="bayes2x2"></div>`,
+      tasks: [3, 4],
+      takeaway: 'Sensitivity and specificity belong to the test; what a result means for a patient also depends on how common the condition is where the test is used.'
     },
     {
       id: 'c3',
       title: 'Is this clinic really different?',
-      html: `
-<p class="scenario">Illustrative (synthetic). The district preterm birth rate is 12%. A new clinic and a large hospital report their first figures, and the district manager wants to know which deserve a review.</p>
-<div class="need"><b>What you need</b>
+      aim: 'judge whether a figure differs from chance, and see why the number of events matters.',
+      minutes: 10,
+      need: `
 <p>A figure from a sample is an estimate; another sample would give a different one, and small samples swing more. With a true risk of 12%, samples of 50 women range from about 3% to 21%, and samples of 1000 from about 10% to 14%.</p>
-<p>For a yes/no outcome, the information sits in the <b>number of events</b>, not the number of patients. The <b>bootstrap</b> imitates new samples by drawing patients from your own data with replacement: some appear twice, others not at all (about 63% of them appear).</p></div>
-<div data-widget="samplingDemo"></div>
-[[task:5]]
-[[task:6]]`
+<p>For a yes/no outcome, the information sits in the <b>number of events</b>, not the number of patients. The <b>bootstrap</b> imitates new samples by drawing patients from your own data with replacement: some appear twice, others not at all (about 63% of them appear).</p>`,
+      scenario: `<p>The district manager compares the preterm birth rates of the team's clinics with the district rate of 12%, and is also offered two cohorts for building a better model.</p>`,
+      widgets: `<div data-widget="samplingDemo"></div>`,
+      tasks: [5, 6],
+      takeaway: 'Small samples mislead; before reading meaning into a figure, ask how much it would vary by chance, and count the events.'
     },
     {
       id: 'c4',
       title: 'Does the model work?',
-      html: `
-<p class="scenario">Illustrative (synthetic). A preterm birth model was built in one hospital and is now being tried on women in a second hospital.</p>
-<div class="need"><b>What you need</b>
+      aim: 'calculate a c statistic, check calibration, and explain why a model looks worse in new patients.',
+      minutes: 10,
+      need: `
 <p>A model always looks better on the patients used to build it (<b>apparent</b> performance). The excess is <b>optimism</b>; a model with a lot of it is <b>overfitted</b>, and its risks tend to be too extreme in new patients: too high for high-risk patients, too low for low-risk ones.</p>
-<p><b>c statistic:</b> take every pair of one event and one non-event; c is the share of pairs in which the event has the higher predicted risk. 0.5 is a coin toss, 1 is perfect. <b>Calibration</b> compares predicted with observed risk: if the model says 20%, about 20% should have the outcome.</p></div>
-[[task:7]]
-[[task:8]]`
+<p><b>c statistic:</b> take every pair of one event and one non-event; c is the share of pairs in which the event has the higher predicted risk. 0.5 is a coin toss, 1 is perfect. <b>Calibration</b> compares predicted with observed risk: if the model says 20%, about 20% should have the outcome.</p>`,
+      scenario: `<p>Before using their booking model routinely, the team tries it on women in a second hospital.</p>`,
+      widgets: '',
+      tasks: [7, 8],
+      takeaway: 'Judge a model on patients it was not built on, and ask both questions: does it rank patients correctly, and are its risks the right size?'
     }
   ],
   sections: [
@@ -3068,12 +3145,12 @@ registerModule({
   minutes: 60,
   summary: 'Why and where prediction models are used, how a risk estimate turns into a decision, and the seven steps that structure the development and validation of a model.',
   objectives: [
-    'Distinguish diagnostic from prognostic prediction and prediction from causal explanation.',
-    'Calculate a treatment threshold from the relative benefit and the absolute harm of a treatment.',
-    'Explain why the number of events, not the number of patients, is the effective sample size.',
-    'Describe the effect of covariate adjustment on treatment-effect estimates in randomised trials with logistic regression.',
-    'List the seven modelling steps in order and state what each one decides.',
-    'Define a prediction problem (population, outcome, predictors, intended use) before analysing any data.'
+    'Tell diagnostic from prognostic models',
+    'Define a prediction problem first',
+    'Turn a risk into a treatment decision',
+    'Count events, not patients',
+    'Name four research uses of models',
+    'Put the seven modelling steps in order'
   ],
   format: 'cases',
   essentials: `
@@ -3085,53 +3162,59 @@ registerModule({
 <li>Models also serve research: selecting and stratifying trial patients, adjusting trial analyses, propensity scores, and comparing hospitals after accounting for case-mix.</li>
 <li>The <b>seven steps</b>: data inspection, coding of predictors, model specification, estimation, performance, validation, presentation. They are preceded by defining the problem, and only predictors known at the moment of prediction may be used.</li>
 </ul>`,
+  story: 'The same district maternity team (fictional, with synthetic data) now plans its own booking-visit model for preterm birth. You follow the project from defining the problem, to using the risks for a treatment decision, to research uses, and finally to a review by the research committee.',
   cases: [
     {
       id: 'c1',
       title: 'Extra antenatal visits for the women most at risk',
-      html: `
-<p class="scenario">Illustrative (synthetic). A district health team wants to offer extra antenatal contacts to the women most at risk of preterm birth, deciding at the booking visit. It has two synthetic datasets to work with: an antenatal cohort (ptb_dev) and a newborn-unit dataset (sepsis).</p>
-<div class="need"><b>What you need</b>
+      aim: 'define a prediction problem and choose predictors that are known at the moment of prediction.',
+      minutes: 12,
+      need: `
 <p>Before any analysis, define the problem in one or two sentences each: the research question, the intended application (who uses the risk, when, to decide what), the outcome, the predictors, the study design, the statistical model and the sample size.</p>
-<p>A model can only use what is known at the moment of prediction. A predictor recorded later in pregnancy makes a booking-visit model unusable, however well it predicts in the data. A <b>prognostic</b> design follows women forward to the outcome; a <b>diagnostic</b> design measures predictors and the condition at the same time.</p></div>
-<div data-widget="datasetCard" data-set="ptb_dev"></div>
-<div data-widget="datasetCard" data-set="sepsis"></div>
-[[task:0]]
-[[task:1]]`
+<p>A model can only use what is known at the moment of prediction. A predictor recorded later in pregnancy makes a booking-visit model unusable, however well it predicts in the data. A <b>prognostic</b> design follows women forward to the outcome; a <b>diagnostic</b> design measures predictors and the condition at the same time.</p>`,
+      scenario: `<p>The team wants to offer extra antenatal contacts to the women most at risk of preterm birth, deciding at the booking visit. It has two synthetic datasets to work with: an antenatal cohort (ptb_dev) and a newborn-unit dataset (sepsis).</p>`,
+      widgets: `<div data-widget="datasetCard" data-set="ptb_dev"></div><div data-widget="datasetCard" data-set="sepsis"></div>`,
+      tasks: [0, 1],
+      takeaway: 'Fix the question, the moment of prediction and the outcome before touching the data; a predictor not known at that moment cannot be used.'
     },
     {
       id: 'c2',
       title: 'Who should get the preventive treatment?',
-      html: `
-<p class="scenario">Illustrative (synthetic). A preventive treatment in pregnancy lowers the risk of an adverse outcome but has side-effects of its own. The booking-visit model gives each woman a predicted risk. The team must decide whom to treat.</p>
-<div class="need"><b>What you need</b>
+      aim: 'turn predicted risks into treatment decisions with a threshold.',
+      minutes: 12,
+      need: `
 <p>The treatment threshold is the risk at which treating and not treating are equally good. If <b>harm</b> is the net loss from treating someone who would not have the outcome and <b>benefit</b> the net gain from treating someone who would, threshold = harm / (harm + benefit).</p>
-<p>For a treatment that lowers risk by a constant relative amount (RR) and causes a constant absolute harm H, the benefit for a woman at risk r is (1 − RR) × r, so treat if r &gt; H / (1 − RR). Example: RR 0.5 and H 3% give a break-even risk of 0.03 / 0.5 = 6%. A woman at 10% gains 5% − 3% = 2%; a woman at 4% loses 1%.</p></div>
-[[task:2]]
-[[task:3]]`
+<p>For a treatment that lowers risk by a constant relative amount (RR) and causes a constant absolute harm H, the benefit for a woman at risk r is (1 − RR) × r, so treat if r &gt; H / (1 − RR). Example: RR 0.5 and H 3% give a break-even risk of 0.03 / 0.5 = 6%. A woman at 10% gains 5% − 3% = 2%; a woman at 4% loses 1%.</p>`,
+      scenario: `<p>The team's model will also guide a preventive treatment in pregnancy that lowers the risk of an adverse outcome but has side-effects of its own. The team must decide whom to treat.</p>`,
+      widgets: '',
+      tasks: [2, 3],
+      takeaway: 'A threshold comes from the balance of harms and benefits, not from statistics, and the model must be well calibrated near it.'
     },
     {
       id: 'c3',
       title: 'A trial and a hospital comparison',
-      html: `
-<p class="scenario">Illustrative (synthetic). The same team is planning a randomised trial of a preterm birth prevention programme, and the state wants to compare neonatal mortality between hospitals.</p>
-<div class="need"><b>What you need</b>
-<p>In research, a prediction model can replace several separate inclusion criteria with one predicted risk, and summarise prognosis for stratified randomisation.</p>
-<p>In a randomised trial analysed with logistic regression, adjusting for strongly prognostic baseline covariates moves the treatment effect further from zero, increases its standard error, and still increases power, because the estimate grows more than the standard error. For a continuous outcome analysed with linear regression, the estimate is unchanged when groups are balanced, and the standard error falls.</p>
-<p>Hospitals receive different patients, so raw outcome rates cannot be compared. A model gives each hospital an <b>expected</b> rate from its own case-mix, and observed can then be compared with expected. Without randomisation, a <b>propensity score</b> (the predicted probability of receiving a treatment) can adjust for observed confounders.</p></div>
-[[task:4]]
-[[task:5]]`
+      aim: 'see how prediction models support research: adjusting a trial analysis and comparing hospitals fairly.',
+      minutes: 12,
+      need: `
+<p>In a randomised trial analysed with logistic regression, adjusting for strongly prognostic baseline covariates moves the treatment effect further from zero and increases its standard error, yet still increases power, because the estimate grows more than the standard error. With linear regression and balanced groups, the estimate is unchanged and the standard error falls.</p>
+<p>Hospitals receive different patients, so raw outcome rates cannot be compared. A model gives each hospital an <b>expected</b> rate from its own case-mix, and observed can be compared with expected. Models can also select or stratify trial patients, and a <b>propensity score</b> can adjust for observed confounders without randomisation.</p>`,
+      scenario: `<p>The team is planning a randomised trial of a preterm birth prevention programme, and the state asks it to help compare neonatal mortality between hospitals.</p>`,
+      widgets: '',
+      tasks: [4, 5],
+      takeaway: 'Prognostic adjustment makes trials more powerful, and case-mix models make hospital comparisons fairer, but only for what the model measures.'
     },
     {
       id: 'c4',
       title: 'A model proposal under review',
-      html: `
-<p class="scenario">Illustrative (synthetic). You are asked to review two things for a research committee: a team's modelling plan, and a proposal for a postpartum haemorrhage model.</p>
-<div class="need"><b>What you need</b>
+      aim: 'check a modelling plan against the seven steps and spot problems that cannot be repaired later.',
+      minutes: 14,
+      need: `
 <p>The seven steps, in order: (1) data inspection, including missing values; (2) coding of predictors; (3) model specification: which predictors, and whether effects are additive and linear; (4) estimation, limiting overfitting with shrinkage or penalisation; (5) performance: calibration, discrimination, clinical usefulness; (6) validation: internal (same population) and external (other settings); (7) presentation as a formula, score chart or nomogram.</p>
-<p>Each choice tuned to the data makes performance look better than it will be in new patients, so the plan should be fixed in advance. Internal validity is a precondition for external validity.</p></div>
-[[task:6]]
-[[task:7]]`
+<p>Each choice tuned to the data makes performance look better than it will be in new patients, so the plan should be fixed in advance. Internal validity is a precondition for external validity.</p>`,
+      scenario: `<p>The team's modelling plan goes to the research committee, together with a proposal from another group for a postpartum haemorrhage model. You are asked to review both.</p>`,
+      widgets: '',
+      tasks: [6, 7],
+      takeaway: 'Pre-specify the steps, validate internally before externally, and treat predictors that are unavailable at the moment of prediction as fatal.'
     }
   ],
   sections: [

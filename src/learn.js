@@ -125,7 +125,7 @@ function addAnswer(task, m, i) {
   var key = m.id + '|t' + i, P = App.prog, a = P.ans[key];
   var d = document.createElement('div'); d.className = 'myans'; d.setAttribute('data-ak', key);
   d.innerHTML = '<label>Your answer <span class="sv"></span></label><textarea rows="5" maxlength="20000" placeholder="Write your working and answer here before opening the worked answer. It is saved automatically, you can edit it any time, and your instructor can read it."></textarea><div class="fbs"></div>';
-  task.appendChild(d); var ta = d.querySelector('textarea'), sv = d.querySelector('.sv'), tm; ta.value = (a && a.t) || '';
+  var tl = task.querySelector('.tolink'); if (tl) task.appendChild(tl); task.insertBefore(d, tl || null); var ta = d.querySelector('textarea'), sv = d.querySelector('.sv'), tm; ta.value = (a && a.t) || '';
   function fit() { ta.style.height = 'auto'; ta.style.height = Math.max(110, Math.min(420, ta.scrollHeight + 2)) + 'px'; } fit();
   ta.addEventListener('input', function () { fit(); sv.textContent = 'Saving…'; clearTimeout(tm); tm = setTimeout(function () { P.ans[key] = { t: ta.value, at: Date.now() }; App.save(); sv.textContent = App.acct.session ? 'Saved to your account' : 'Saved in this browser'; }, 700); });
   App.showFeedback(d.querySelector('.fbs'), key);
