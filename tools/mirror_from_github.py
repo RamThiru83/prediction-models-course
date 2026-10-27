@@ -67,7 +67,12 @@ def main(folder, mac_wins=False):
     # short while after a push, which would make a just-pushed file look "changed on GitHub" and pull back the old copy.
     url = ZIP_URL
     try:
-        head = subprocess.run(["curl", "-fsSL", "-H", "Accept: application/vnd.github.sha", API + "/commits/main"],
+        import time
+        hdr = ["-H", "Accept: application/vnd.github.sha", "-H", "Cache-Control: no-cache"]
+        tp = os.path.join(folder, "sync", "github-token.txt")
+        if os.path.exists(tp):  # an authenticated request is not served from the shared API cache
+            hdr += ["-H", "Authorization: Bearer " + open(tp).read().strip()]
+        head = subprocess.run(["curl", "-fsSL"] + hdr + [API + "/commits/main?nocache=%d" % time.time()],
                               capture_output=True, check=True, timeout=60).stdout.decode().strip()
         if re.fullmatch(r"[0-9a-f]{40}", head):
             url = "https://codeload.github.com/%s/zip/%s" % (REPO, head)
