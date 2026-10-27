@@ -23,7 +23,7 @@ registerModule({
 <li>Every estimate varies from sample to sample. For a yes/no outcome, the <b>number of events</b> limits what a study can show.</li>
 <li>Judge a model on patients it was not built on, with two questions: does it <b>rank</b> patients correctly (discrimination, the c statistic), and are its risks the <b>right size</b> (calibration)?</li>
 </ul>`,
-  story: 'Throughout the course you follow the maternity team of a district hospital. The hospital and its data are fictional and synthetic. It runs an antenatal clinic, where women book early in pregnancy, and a newborn unit, and it sends its sickest babies to a regional referral unit. In this primer the team starts to use predicted risks: for preterm birth at the booking visit, for a bedside sepsis check in newborns, for the district\'s own figures, and finally to test its model in a second hospital.',
+  story: 'Throughout the course you follow the maternity team of a district hospital as it works on one problem: preterm birth. The hospital and its data are fictional and synthetic. In this primer the team starts to use predicted risks of preterm birth: at the booking visit, for women who arrive with threatened preterm labour, in the district\'s own figures, and in a second hospital.',
   cases: [
     {
       id: 'c1',
@@ -40,16 +40,16 @@ registerModule({
     },
     {
       id: 'c2',
-      title: 'A sepsis check in two units',
+      title: 'A bedside test for threatened preterm labour',
       aim: 'work out what a positive or negative test result means, using counts.',
       minutes: 10,
       need: `
-<p><b>Sensitivity:</b> of those with the condition, the share who test positive. <b>Specificity:</b> of those without it, the share who test negative. <b>PPV:</b> of those who test positive, the share who have it; <b>NPV</b> is the same for negatives.</p>
-<p>Work in counts. Out of 1000 newborns at 14%: 140 have sepsis, and 85% of them (119) test positive; 860 do not, and 30% of them (258) also test positive. PPV = 119 / 377 = 32%.</p>`,
-      scenario: `<p>The same hospital's newborn unit uses a bedside check for sepsis with sensitivity 85% and specificity 70%. The team wants to know what a result means in the referral unit they send babies to, where 40% of the newborns tested have sepsis, and in a community clinic, where 14% do.</p>`,
+<p><b>Sensitivity:</b> of those with the outcome, the share who test positive. <b>Specificity:</b> of those without it, the share who test negative. <b>PPV:</b> of those who test positive, the share who have the outcome; <b>NPV</b> is the same for negatives.</p>
+<p>Work in counts. Out of 1000 women in whom 14% will deliver within 7 days: 140 will, and 85% of them (119) test positive; 860 will not, and 30% of them (258) also test positive. PPV = 119 / 377 = 32%.</p>`,
+      scenario: `<p>Women who arrive at the labour ward with contractions before 37 weeks are checked with a bedside test that predicts delivery within 7 days (illustrative values: sensitivity 85%, specificity 70%). The team wants to know what a result means in its own unit, where 14% of the women tested deliver within 7 days, and in the regional referral unit it sends women to, where 40% do.</p>`,
       widgets: `<div data-widget="bayes2x2"></div>`,
       tasks: [3, 4],
-      takeaway: 'Sensitivity and specificity belong to the test; what a result means for a patient also depends on how common the condition is where the test is used.'
+      takeaway: 'Sensitivity and specificity belong to the test; what a result means for a woman also depends on how common the outcome is where the test is used.'
     },
     {
       id: 'c3',
@@ -335,27 +335,27 @@ registerModule({
       id: 't3',
       title: 'The same test in two settings',
       level: 'Apply',
-      scenario: `<p>Use the sepsis check in the case: sensitivity 85%, specificity 70%.</p>`,
+      scenario: `<p>Use the bedside test in the case: sensitivity 85%, specificity 70%, for delivery within 7 days.</p>`,
       questions: [
         '<b>(a)</b> Before calculating, guess in which setting a positive result is more likely to be a true positive.',
-        '<b>(b)</b> For 1000 newborns in each setting, calculate the PPV and NPV. Check your answers with the widget above.',
+        '<b>(b)</b> For 1000 women tested in each unit, calculate the PPV and NPV. Check your answers with the widget above.',
         '<b>(c)</b> In two sentences, explain why the same test means different things in the two settings.'
       ],
-      answer: `<p><b>(a)</b> In the referral unit, where sepsis is more common.</p>
-<p><b>(b)</b> Community clinic (14%): 119 true and 258 false positives, PPV 32%; 602 true and 21 false negatives, NPV 97%. Referral unit (40%): 340 true positives (85% of 400) and 180 false positives (30% of 600), PPV 65%; 420 true negatives and 60 false negatives, NPV 87.5%.</p>
-<p><b>(c)</b> Sensitivity and specificity are the same in both places, but how many patients have the condition before testing differs. When the condition is common, positives are more often real and negatives less reassuring.</p>`
+      answer: `<p><b>(a)</b> In the referral unit, where delivery within 7 days is more common.</p>
+<p><b>(b)</b> The team's own unit (14%): 119 true and 258 false positives, PPV 32%; 602 true and 21 false negatives, NPV 97%. Referral unit (40%): 340 true positives (85% of 400) and 180 false positives (30% of 600), PPV 65%; 420 true negatives and 60 false negatives, NPV 87.5%.</p>
+<p><b>(c)</b> Sensitivity and specificity are the same in both units, but how many women will deliver soon before testing differs. When the outcome is common, positives are more often real and negatives less reassuring.</p>`
     },
     {
       id: 't4',
-      title: 'A negative check in the referral unit',
+      title: 'A negative test in the referral unit',
       level: 'Evaluate',
-      scenario: `<p>In the referral unit, a newborn with a suspected infection has a negative bedside check. A trainee proposes to withhold antibiotics.</p>`,
+      scenario: `<p>In the referral unit, a woman at 31 weeks with contractions has a negative bedside test. A trainee proposes to send her home without antenatal corticosteroids.</p>`,
       questions: [
-        '<b>(a)</b> Using Task 4, what is this newborn\'s chance of sepsis after the negative result?',
-        '<b>(b)</b> Missing sepsis is far worse than giving antibiotics to a newborn who does not need them. Would you accept the trainee\'s proposal? Would your answer be the same in the community clinic?'
+        '<b>(a)</b> Using Task 4, what is this woman\'s chance of delivering within 7 days after the negative result?',
+        '<b>(b)</b> Missing a woman who will deliver within 7 days is judged far worse than giving corticosteroids that turn out not to be needed. Would you accept the trainee\'s proposal? Would your answer be the same in the team\'s own unit?'
       ],
-      answer: `<p><b>(a)</b> 60 of the 480 negatives have sepsis: 12.5%, about one in eight.</p>
-<p><b>(b)</b> No. When missing a case is much worse than unnecessary treatment, the risk at which treatment stops being worthwhile is low, and one in eight is far above it. In the community clinic the risk after a negative check is 3.4%, so the decision is closer and depends on how much worse a missed case is judged to be. Module 1 turns this judgement into a treatment threshold.</p>`
+      answer: `<p><b>(a)</b> 60 of the 480 women with a negative test deliver within 7 days: 12.5%, about one in eight.</p>
+<p><b>(b)</b> No. When missing a case is much worse than unnecessary treatment, the risk at which treatment stops being worthwhile is low, and one in eight is far above it. In the team's own unit the risk after a negative test is 3.4%, so the decision is closer and depends on how much worse a missed case is judged to be. Module 1 turns this judgement into a treatment threshold.</p>`
     },
     {
       id: 't5',

@@ -250,9 +250,99 @@ App.pageRef = function (id) { var r = App.refs[id]; return { html: '<p class="ey
   var s = root.querySelector('#gsearch'); if (!s) return;
   s.addEventListener('input', function () { var q = s.value.toLowerCase(); Array.prototype.forEach.call(root.querySelectorAll('#refbody > p'), function (p) { p.hidden = q && p.textContent.toLowerCase().indexOf(q) < 0; }); });
 } }; };
+/* ===== case-led module shown as steps: Essentials, Case 1..n, Check yourself, Worked answers, Full notes ===== */
+App.pageCaseModule = function (m, prev, next) {
+  var ncase = m.cases.length, P = App.prog;
+  var taskHtml = function (t, i) { return '<div class="task" data-ti="' + i + '" id="' + m.id + '-task-' + i + '"><h3>Task ' + (i + 1) + '. ' + t.title + ' <span class="lvl">' + t.level + '</span></h3>' + t.scenario + t.questions.map(function (q) { return '<p>' + q + '</p>'; }).join('') +
+    '<p class="tolink"><a href="#" data-goto="' + m.id + '-ans-' + i + '">Check your answer</a> (opens the worked answer)</p></div>'; };
+  var steps = [{ key: 'ess', label: 'Essentials', sub: '5 min', cls: 'learn' }];
+  m.cases.forEach(function (c, k) { steps.push({ key: c.id, label: 'Case ' + (k + 1), sub: c.tasks.length + ' tasks', cls: 'practise', title: c.title, tasks: c.tasks }); });
+  steps.push({ key: 'quiz', label: 'Quiz', sub: m.quiz.length + ' questions', cls: 'check' });
+  steps.push({ key: 'answers', label: 'Answers', sub: 'worked', cls: 'answers' });
+  var hasNotes = m.sections && m.sections.length;
+  if (hasNotes) steps.push({ key: 'notes', label: 'Notes', sub: 'optional', cls: 'notes' });
+  var stepTitle = function (s) { return s.title ? s.label + '. ' + s.title : ({ Quiz: 'Check yourself', Answers: 'Worked answers', Notes: 'Full notes' }[s.label] || s.label); };
+  var h = '<p class="eyebrow">' + m.part + (m.num === 0 ? '' : ' · ' + (typeof m.num === 'number' ? 'Module ' + m.num : m.num)) + '</p><h1>' + m.title + '</h1>';
+  h += '<nav class="stepbar" aria-label="Steps in this module">' + steps.map(function (s, i) {
+    return '<button type="button" class="stp ' + s.cls + '" data-step="' + i + '" aria-controls="' + m.id + '-st-' + s.key + '"><span class="stl">' + s.label + '</span><span class="sts">' + s.sub + '</span><span class="tick" aria-hidden="true"></span></button>'; }).join('') + '</nav>';
+  var nav = function (i) {
+    var a = steps[i - 1], b = steps[i + 1];
+    return '<div class="stepnav">' + (a ? '<button type="button" class="btn" data-step="' + (i - 1) + '">← ' + stepTitle(a) + '</button>' : '<span></span>') +
+      (b ? '<button type="button" class="btn pri" data-step="' + (i + 1) + '">Next: ' + stepTitle(b) + ' →</button>' : '<span></span>') + '</div>';
+  };
+  var storyBox = function (open) { return m.story ? '<details class="story"' + (open ? ' open' : '') + '><summary>The story in this module</summary><p>' + m.story + '</p></details>' : ''; };
+  steps.forEach(function (s, i) {
+    var body = '';
+    if (s.key === 'ess') {
+      body = '<p class="lede">' + m.summary + '</p><div class="meta"><span><b>Source</b> ' + m.book + '</span><span><b>Study time</b> about ' + m.minutes + ' minutes</span></div>' +
+        '<div class="goals"><b>After this module you can</b><ul>' + m.objectives.map(function (o) { return '<li>' + o + '</li>'; }).join('') + '</ul></div>' +
+        '<p class="flowhint">Work through the steps in the bar above, one at a time. Start with the essentials, then do each case: read what you need and the situation, try the simulator, and write your answer to each task before checking the worked answer. Finish with the quiz.</p>' +
+        '<section class="sec essentials" id="' + m.id + '-ess"><h2>The essentials</h2>' + m.essentials + '</section>' + storyBox(true);
+    } else if (s.tasks) {
+      var c = m.cases[i - 1];
+      body = storyBox(i === 1) + '<section class="sec case" id="' + m.id + '-' + c.id + '"><div class="ccard"><div class="chead">' +
+        '<span class="cnum">Case ' + i + ' of ' + ncase + '</span><h2 class="ctitle">' + c.title + '</h2>' +
+        '<span class="caim">In this case you will ' + c.aim + '</span><span class="cfoot">' + c.tasks.length + ' tasks · about ' + (c.minutes || 10) + ' min</span></div><div class="cbody">' +
+        '<div class="need"><b>What you need</b>' + c.need + '</div>' +
+        '<div class="situation"><b>The situation</b>' + c.scenario + '</div>' + (c.widgets || '') +
+        '<div class="turn"><b class="turnh">Your turn</b>' + c.tasks.map(function (n) { return taskHtml(m.tasks[n], n); }).join('') + '</div>' +
+        '<div class="takeaway"><b>Take-away</b><p>' + c.takeaway + '</p></div></div></div></section>';
+    } else if (s.key === 'quiz') {
+      body = '<section class="sec quizsec" id="' + m.id + '-quiz"><h2>Check yourself</h2><p>Answer each question to see the explanation. Wrong answers are explained too.</p><div id="quizbox">' + App.quizHtml(m) + '</div></section>';
+    } else if (s.key === 'answers') {
+      body = '<section class="sec anssec" id="' + m.id + '-answers"><h2>Worked answers</h2><p>Open an answer only after you have written your own.</p>' +
+        m.tasks.map(function (t, k) { return '<details class="ans" id="' + m.id + '-ans-' + k + '"><summary>Task ' + (k + 1) + '. ' + t.title + '</summary><div>' + t.answer + '<p class="tolink"><a href="#" data-goto="' + m.id + '-task-' + k + '">Back to Task ' + (k + 1) + '</a></p></div></details>'; }).join('') + '</section>' +
+        '<div class="callout key"><b>Finished?</b><p><button type="button" class="btn pri" id="markdone">' + (P.done[m.id] ? 'Marked complete (click to undo)' : 'Mark this module complete') + '</button></p></div>';
+    } else if (s.key === 'notes') {
+      var strip = function (x) { return x.replace(/<div data-widget="[^"]*"[^>]*><\/div>/g, '<p class="muted">The simulator for this part is in the cases.</p>').replace(/<ul class="try">[\s\S]*?<\/ul>/g, ''); };
+      body = '<p class="flowhint">The full text of the module, for reference. You do not need it to complete the cases.</p>' + m.sections.map(function (x) { return '<section class="sec" id="' + m.id + '-' + x.id + '"><h2>' + x.title + '</h2>' + strip(x.html) + '</section>'; }).join('');
+    }
+    h += '<div class="step" id="' + m.id + '-st-' + s.key + '" data-si="' + i + '"' + (i ? ' hidden' : '') + '>' + body + nav(i) + '</div>';
+  });
+  h += '<div class="pager"><span>' + (prev ? '<a class="btn" href="#' + prev.id + '">← ' + prev.title + '</a>' : '') + '</span><span>' + (next ? '<a class="btn" href="#' + next.id + '">' + next.title + ' →</a>' : '') + '</span></div>';
+  return { html: h, after: function (root) {
+    App.wireQuiz(root.querySelector('#quizbox'), m);
+    var key = 'pmc.step.' + m.id, cur = 0;
+    var bar = root.querySelectorAll('.stp'), panes = root.querySelectorAll('.step');
+    function show(i, scroll) {
+      i = Math.max(0, Math.min(steps.length - 1, i)); cur = i;
+      Array.prototype.forEach.call(panes, function (p, k) { p.hidden = k !== i; });
+      Array.prototype.forEach.call(bar, function (b, k) { b.classList.toggle('on', k === i); if (k === i) b.setAttribute('aria-current', 'step'); else b.removeAttribute('aria-current'); });
+      try { localStorage.setItem(key, String(i)); if (i > 0) localStorage.setItem('pmc.ess.' + m.id, '1'); } catch (e) {}
+      marks && marks();
+      if (scroll !== false) root.querySelector('.stepbar').scrollIntoView({ block: 'start' });
+    }
+    function marks() {
+      steps.forEach(function (s, i) {
+        var done = false;
+        if (s.tasks) done = s.tasks.every(function (n) { var ta = root.querySelector('#' + m.id + '-task-' + n + ' textarea'), a = P.ans[m.id + '|t' + n]; return ta ? !!ta.value.trim() : !!(a && a.t && a.t.trim()); });
+        else if (s.key === 'quiz') { var q = P.quiz[m.id] || []; done = m.quiz.every(function (_, k) { return q[k] !== undefined && q[k] !== null; }); }
+        else if (s.key === 'ess') { try { done = localStorage.getItem('pmc.ess.' + m.id) === '1'; } catch (e) { done = cur > 0; } }
+        bar[i].classList.toggle('done', done); bar[i].setAttribute('aria-label', s.label + (done ? ', done' : ''));
+      });
+    }
+    root.addEventListener('click', function (e) {
+      var st = e.target.closest('[data-step]');
+      if (st) { e.preventDefault(); show(+st.getAttribute('data-step')); return; }
+      var g = e.target.closest('[data-goto]'); if (!g) return;
+      e.preventDefault();
+      var el = document.getElementById(g.getAttribute('data-goto')); if (!el) return;
+      var pane = el.closest('.step'); if (pane) show(+pane.getAttribute('data-si'), false);
+      if (el.tagName === 'DETAILS') el.open = true;
+      el.scrollIntoView({ block: 'start' });
+    });
+    root.addEventListener('input', function () { setTimeout(marks, 50); });
+    root.addEventListener('click', function () { setTimeout(marks, 50); });
+    var saved = 0; try { saved = +localStorage.getItem(key) || 0; } catch (e) {}
+    show(saved, false); marks();
+    var b = root.querySelector('#markdone'); b.onclick = function () { if (P.done[m.id]) delete P.done[m.id]; else P.done[m.id] = true; P.dt[m.id] = Date.now(); App.save(); App.markNav(); b.textContent = P.done[m.id] ? 'Marked complete (click to undo)' : 'Mark this module complete'; };
+  } };
+};
+
 App.pageModule = function (m) {
   var all = App.mods_sorted(), idx = all.indexOf(m), prev = all[idx - 1], next = all[idx + 1];
   var lk = App.lockInfo(m); if (lk && !App.blocking) return { html: '<p class="eyebrow">' + m.part + '</p><h1>' + m.title + '</h1><div class="callout warn"><b>Not available yet</b><p>' + lk + ' Your instructor releases modules in sequence.</p></div><div class="pager"><span><a class="btn" href="#home">← Course home</a></span><span></span></div>' };
+  if (m.format === 'cases') return App.pageCaseModule(m, prev, next);
   var h = '<p class="eyebrow">' + m.part + (m.num === 0 ? '' : ' · ' + (typeof m.num === 'number' ? 'Module ' + m.num : m.num)) + '</p><h1>' + m.title + '</h1><p class="lede">' + m.summary + '</p>' +
     '<div class="meta"><span><b>Source</b> ' + m.book + '</span><span><b>Study time</b> about ' + m.minutes + ' minutes</span></div>' +
     (m.format === 'cases' ? '<div class="goals"><b>After this module you can</b><ul>' + m.objectives.map(function (o) { return '<li>' + o + '</li>'; }).join('') + '</ul></div>'
