@@ -44,7 +44,7 @@ registerModule({
       aim: 'work out what a positive or negative test result means, using counts.',
       minutes: 10,
       need: `
-<p><b>Sensitivity:</b> of those with the outcome, the share who test positive. <b>Specificity:</b> of those without it, the share who test negative. <b>PPV:</b> of those who test positive, the share who have the outcome; <b>NPV</b> is the same for negatives.</p>
+<p><b>Sensitivity:</b> of those with the outcome, the proportion who test positive. <b>Specificity:</b> of those without it, the proportion who test negative. <b>PPV:</b> of those who test positive, the proportion who have the outcome; <b>NPV</b> is the same for those who test negative.</p>
 <p>Work in counts. Out of 1000 women in whom 14% will deliver within 7 days: 140 will, and 85% of them (119) test positive; 860 will not, and 30% of them (258) also test positive. PPV = 119 / 377 = 32%.</p>`,
       scenario: `<p>Some women come to the labour ward with contractions before 37 weeks. The team uses a quick bedside test to predict which of them will deliver within 7 days (illustrative values: sensitivity 85%, specificity 70%).</p>
 <p>In the team's own unit, 14% of the women tested deliver within 7 days. In the regional referral unit, where the team sends women, 40% do. What does a test result mean in each place?</p>`,
@@ -201,13 +201,13 @@ registerModule({
       why: 'Risk = 1 / (1 + e^0.7) = 1 / 3.01 = 0.33. A risk of 50% needs lp = 0. 67% comes from getting the sign wrong.'
     },
     {
-      q: 'Of 1000 women, 50 have the condition. A test has sensitivity 90% and specificity 80%. What share of positive results are true positives?',
+      q: 'Of 1000 women, 50 have the condition. A test has sensitivity 90% and specificity 80%. What proportion of positive results are true positives?',
       options: ['90%', '80%', '19%', '5%'],
       answer: 2,
       why: 'True positives = 90% of 50 = 45. False positives = 20% of 950 = 190. PPV = 45 / (45 + 190) = 19%. 90% is the sensitivity, not the PPV. When a condition is uncommon, most positives are false alarms.'
     },
     {
-      q: 'In a bootstrap sample drawn with replacement from 1000 patients, about what share of the original patients appear at least once?',
+      q: 'In a bootstrap sample drawn with replacement from 1000 patients, about what proportion of the original patients appear at least once?',
       options: ['37%', '63%', '50%', '100%'],
       answer: 1,
       why: 'About 63% appear and 37% are left out, because some patients are drawn more than once. 100% would only happen if patients were not put back after each draw.'

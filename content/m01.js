@@ -25,7 +25,7 @@ registerModule({
 <li>Models also help research: they make trials more sensitive and make comparisons between clinics fairer.</li>
 <li>Building a model follows <b>seven steps</b>: check the data, decide how each predictor enters the model, choose the predictors, fit the model, measure how good it is, test it on new people, and present it so that others can use it. Before step 1, write down the question, and use only information that is available when the prediction is made.</li>
 </ul>`,
-  story: 'Throughout the course you follow the maternity team of a district hospital as it works on one problem: preterm birth. The hospital and its data are fictional and synthetic. In this module the team plans its own model to predict preterm birth at the booking visit. You follow the project from defining the problem, to using the predicted risks for a treatment decision, to research uses, and finally to a review by the research committee. You do not need the primer for this story.',
+  story: 'Throughout the course, you follow the maternal and child health research team at a district hospital as it works on one problem: preterm birth. The hospital and its data are fictional and synthetic. In this module, the team plans its own model to predict preterm birth at the booking visit. You follow the project from defining the problem to using the predicted risks to inform a treatment decision to research uses, and finally to a review by the research committee. You do not need the primer for this story.',
   cases: [
     {
       id: 'c1',
