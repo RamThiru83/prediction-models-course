@@ -43,7 +43,7 @@ registerModule({
 <p><b>Saving money with a case-control sample.</b> Suppose an expensive test cannot be done in every woman. You can do it in all the women who had the outcome (the <b>cases</b>) and in a random share of the others (the <b>controls</b>). The model's coefficients (the effects of the predictors) are still correct. But the sample has far more cases than real life, so every predicted risk comes out too high.</p>
 <p>The fix is simple. If you kept a fraction f of the controls, the odds in the sample are 1 ÷ f times too high. So subtract ln(1 ÷ f) from the intercept. For example, keeping 5% of controls (f = 0.05) means subtracting ln(20) = 3.0.</p>`,
       scenario: `<p>Several offers of data reach the team. The hospital has records of 5,000 deliveries from 2019 to 2023. Six clinics are willing to enrol women at booking from next month. A research group can share data from a finished trial of iron tablets in pregnancy. The state runs a birth registry. Separately, the team is curious about a costly blood marker for very early birth (before 32 weeks).</p>`,
-      widgets: `<div data-widget="datasetCard" data-set="ptb_dev"></div>`,
+      widgets: '',
       tasks: [0, 1],
       takeaway: 'A planned, prospective cohort is the best source for a prognostic model; with case-control sampling the effects are fine but the intercept must be corrected before giving risks.'
     },
