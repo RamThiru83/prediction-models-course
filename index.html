@@ -1173,7 +1173,7 @@ App.pageHome = function () {
   var h = '<p class="eyebrow">Self-study course for clinical researchers</p><h1>Developing and validating clinical prediction models</h1>' +
     '<p class="lede">How to build a model that estimates an individual patient’s risk, show whether it works, and judge whether it is useful, taught with maternal and child health examples and data you can analyse in the browser.</p>' +
     '<div class="callout key"><b>How the course works</b><p>Each module teaches one stage of model development or validation from first principles: the idea, the formula, a worked example, and the pitfalls. Interactive simulators let you see the effect of sample size, missing data, selection and shrinkage rather than take it on trust. Each module ends with a quiz, three case tasks, and worked answers placed at the end so that you attempt the tasks first.</p></div>' +
-    '<p>The method follows the framework in E. W. Steyerberg, <i>Clinical Prediction Models</i> (2009), chapters 1 to 19 (development and validation). The course is self-contained: no other text is needed. Model updating and the book’s case studies are outside its scope.</p>' +
+    '<p>The method follows the framework in E. W. Steyerberg, <i>Clinical Prediction Models</i> (2009), chapters 1 to 19 (development and validation). Model updating and the book’s case studies are outside its scope.</p>' +
     '<p>All datasets are <b>synthetic</b>. They describe no real person and were generated from known rules, so you can check what an analysis should recover.</p>';
   h += '<div class="prog" aria-hidden="true"><i style="width:' + (100 * done / mods.length).toFixed(0) + '%"></i></div><p class="num" style="color:var(--muted);font-size:14px">' + done + ' of ' + mods.length + ' modules marked complete (stored in this browser only).</p>';
   h += '<h3>Start where you are</h3><div class="home-grid">';
@@ -3299,13 +3299,13 @@ registerModule({
   format: 'cases',
   essentials: `
 <ul>
-<li>A prediction model gives a number: the <b>chance</b> that something will happen to a person. Its main job is to get that number right for new people. The book calls this <b>estimation</b>.</li>
+<li>A prediction model gives a number: the <b>chance (or probability)</b>&nbsp;that something will happen to a person. Its main job is to get that number right for new people. This is called&nbsp;<b>estimation</b>.</li>
 <li>A new test or marker is worth adding only if it makes the chances more accurate than the simple information we already have, such as age and past pregnancies.</li>
 <li><b>Prognostic</b> means predicting something that will happen later (will this woman deliver early?). <b>Diagnostic</b> means finding out whether something is present now.</li>
-<li>To act on a chance you need a <b>threshold</b>: the chance above which treating does more good than harm. It comes from weighing benefits against harms, not from statistics.</li>
+<li>To act on a probability, you need a <b>threshold</b>: the cut-off above which treating does more good than harm. It comes from weighing benefits against harms, not from statistics.</li>
 <li>What limits a study is the number of people who had the outcome (the <b>events</b>), not the total number of people.</li>
 <li>Models also help research: they make trials more sensitive and make comparisons between clinics fairer.</li>
-<li>Building a model follows <b>seven steps</b>: check the data, decide how each predictor enters the model, choose the predictors, fit the model, measure how good it is, test it on new people, and present it so that others can use it. Before step 1, write down the question, and use only information that is available when the prediction is made.</li>
+<li>Building a model follows <b>seven steps</b>: check the data, decide how each predictor enters the model, choose the predictors, fit the model, measure how good it is, test it on new people, and present it so that others can use it. <b>Before step 1, write down the question</b>, and use only information that is available when the prediction is made.</li>
 </ul>`,
   story: 'Throughout the course, you follow the maternal and child health research team at a district hospital as it works on one problem: preterm birth. The hospital and its data are fictional and synthetic. In this module, the team plans its own model to predict preterm birth at the booking visit. You follow the project from defining the problem to using the predicted risks to inform a treatment decision to research uses, and finally to a review by the research committee. You do not need the primer for this story.',
   cases: [
@@ -3732,7 +3732,7 @@ registerModule({
 <li><b>A registry</b> covers a whole area and is large, but holds only a few details about each woman.</li>
 </ul>
 <p><b>Saving money with a case-control sample.</b> Suppose an expensive test cannot be done in every woman. You can do it in all the women who had the outcome (the <b>cases</b>) and in a random share of the others (the <b>controls</b>). The model's coefficients (the effects of the predictors) are still correct. But the sample has far more cases than real life, so every predicted risk comes out too high.</p>
-<p>The fix is simple. If you kept a fraction f of the controls, the odds in the sample are 1 ÷ f times too high. So subtract ln(1 ÷ f) from the intercept. For example, keeping 5% of controls (f = 0.05) means subtracting ln(20) = 3.0.</p>`,
+<p>This can be fixed by changing the intercept. The intercept is the model’s starting value on the log-odds scale, before any predictor is added. Let f be the share of non-cases you tested: the number of controls sampled divided by the total number of non-cases in the cohort from which the controls were sampled. Because every case was kept, but only this share of non-cases was, the odds of the outcome in your sample are 1 ÷ f times higher than in the whole cohort. On the log-odds scale, that is a fixed shift of ln(1 ÷ f). So subtract ln(1 ÷ f) from the intercept and leave the other coefficients as they are. For example, if a cohort has 9,800 non-cases and you test 490 of them, f = 0.05. The sample odds are then 20 times too high, so you subtract ln(20) ≈ 3.0 from the intercept.</p>`,
       scenario: `<p>Several offers of data reach the team. The hospital has records of 5,000 deliveries from 2019 to 2023. Six clinics are willing to enrol women at booking from next month. A research group can share data from a finished trial of iron tablets in pregnancy. The state runs a birth registry. Separately, the team is curious about a costly blood marker for very early birth (before 32 weeks).</p>`,
       widgets: '',
       tasks: [0, 1],
