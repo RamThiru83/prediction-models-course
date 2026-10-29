@@ -201,10 +201,11 @@ App.wireQuiz = function (root, mod) {
 /* ===== pages ===== */
 App.mods_sorted = function () { return App.order.map(function (id) { return App.byId[id]; }).filter(Boolean); };
 App.MARK = '<svg class="mark" viewBox="0 0 64 64" aria-hidden="true"><rect width="64" height="64" rx="15" fill="#9A3029"/><path d="M10 48 H54" stroke="#fff" stroke-opacity=".5" stroke-width="4" stroke-linecap="round"/><path d="M10 18 L40 48" stroke="#F2B84B" stroke-width="5" stroke-linecap="round"/><path d="M10 18 C 24 9, 38 14, 45 30 C 48 38, 50 44, 54 48" fill="none" stroke="#fff" stroke-width="6.5" stroke-linecap="round"/><circle cx="10" cy="18" r="4.5" fill="#F08A24"/></svg>';
+App.INSTRUCTOR = '<p class="instr"><span>Course instructor</span><b>Dr Ramachandran Thiruvengadam</b><span>Associate Professor, Maternal and Child Health, <span class="nw">BRIC-THSTI</span></span></p>';
 App.LOGO = '<a class="inst-logo" href="https://thsti.res.in" target="_blank" rel="noopener"><img alt="BRIC-THSTI" src="data:image/png;base64,__LOGO__"></a>';
 App.modLabel = function (m) { return m.num === 0 ? 'P' : (typeof m.num === 'number' ? String(m.num) : 'C'); };
 App.buildNav = function () {
-  var h = '<a class="brand" href="#home">' + App.MARK + '<span class="tx"><b>CliPr</b><span>Clinical prediction models</span></span></a><p class="themerow"><button type="button" class="btn sm themebtn"></button></p>' + App.chipHtml() + '<nav class="nav">';
+  var h = '<a class="brand" href="#home">' + App.MARK + '<span class="tx"><b>CliPr</b><span>Clinical prediction models</span></span></a>' + App.LOGO + App.INSTRUCTOR + '<p class="themerow"><button type="button" class="btn sm themebtn"></button></p>' + App.chipHtml() + '<nav class="nav">';
   h += '<a href="#home" data-p="home"><span class="n"></span><span>Start here</span><span></span></a>';
   h += '<a href="#howto" data-p="howto"><span class="n"></span><span>How to use this course</span><span></span></a>';
   var parts = {}, order = [];
@@ -220,7 +221,7 @@ App.buildNav = function () {
   if (App.acct.isInstructor()) h += '<a href="#dashboard" data-p="dashboard"><span class="n"></span><span>Class dashboard</span><span></span></a>';
   [['glossary', 'Glossary'], ['formulas', 'Formula sheet'], ['steps', 'Seven-step checklist'], ['map', 'Chapter map']].forEach(function (r) { if (App.refs[r[0]]) h += '<a href="#' + r[0] + '" data-p="' + r[0] + '"><span class="n"></span><span>' + r[1] + '</span><span></span></a>'; });
   h += '<a href="#about" data-p="about"><span class="n"></span><span>About this course</span><span></span></a></nav>';
-  document.getElementById('rail').innerHTML = h + App.LOGO;
+  document.getElementById('rail').innerHTML = h;
   App.theme.label();
 };
 App.markNav = function () {
@@ -253,6 +254,7 @@ App.pageHome = function () {
 App.pageAbout = function () {
   return { html: '<p class="eyebrow">About</p><h1>About this course</h1>' +
     '<h3>Purpose and audience</h3><p>The course is for MSc and PhD clinical researchers who will develop, validate or critically appraise a prediction model. It assumes you know basic epidemiology and what a regression model is. The primer covers the rest.</p>' +
+    '<h3>Course instructor</h3><p>Dr Ramachandran Thiruvengadam, MD, DCH, PhD, Associate Professor, Maternal and Child Health Programme, BRIC-Translational Health Science and Technology Institute (BRIC-THSTI), Faridabad.</p>' +
     '<h3>Source and scope</h3><p>The principles taught here are those of E. W. Steyerberg, <i>Clinical Prediction Models: A Practical Approach to Development, Validation, and Updating</i> (Springer, 2009), chapters 1 to 19. Updating a model for a new setting (chapters 20 and 21) and the book’s case studies (chapters 22 to 24) are not covered. Exercises and tasks draw on wider experience, but the methodological principles stay within the book. Numbers quoted from the book’s own examples are labelled <b>Book example</b>. Maternal and child health illustrations are labelled <b>Illustrative (synthetic)</b>.</p>' +
     '<h3>Synthetic data</h3><p>Every dataset is simulated in your browser from stated rules. No participant data are used anywhere. The generating rules are revealed in the answers so that you can see how well an analysis recovers the truth. Because the data are simulated, effect sizes and performance figures show how methods behave and must not be read as clinical findings.</p>' +
     '<h3>Interactive elements</h3><p>Simulators run in your browser. Results vary with the random seed and, in some tools, differ slightly between runs. Heavier tools run in short steps with a progress bar. Without an account, your quiz answers, notes and module completion marks stay in this browser. With an account (join code from your instructor) they follow you across devices, and your instructor can see your progress, notes and answers.</p>' +
