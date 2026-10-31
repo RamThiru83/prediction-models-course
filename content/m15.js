@@ -4,196 +4,209 @@ registerModule({
   part: 'Validation',
   title: 'Presentation formats: formula, nomogram, score chart',
   book: 'Ch. 18',
-  minutes: 65,
+  minutes: 70,
   summary: 'How to present a validated model so that users can calculate correct absolute risks: the regression formula, confidence intervals for predictions, nomograms, score charts, tables and decision rules, and what each format costs in accuracy.',
   objectives: [
-    'Distinguish a clinical prediction model from a clinical decision rule.',
-    'Calculate a predicted probability from a published logistic regression formula, including the intercept, coding and units.',
-    'Calculate a confidence interval for a predicted probability from the covariance matrix.',
-    'Construct a score chart from regression coefficients, including continuous predictors, and convert a total score back to a probability.',
-    'Explain why scores must be based on regression coefficients and why dividing by the smallest coefficient or using odds ratios is wrong.',
-    'Evaluate the loss of discrimination when continuous predictors are categorised or predictions are tabulated.'
+    'Tell a prediction model from a rule',
+    'Calculate a risk from a published formula',
+    'Put a confidence interval on a risk',
+    'Build a score chart from coefficients',
+    'Avoid odds ratios as score points',
+    'Judge what simplification costs'
+  ],
+  format: 'cases',
+  reading: [
+    { cite: "Collins GS, Moons KGM, Dhiman P, et al. (2024). TRIPOD+AI statement: updated guidance for reporting clinical prediction models that use regression or machine learning methods. BMJ 385:e078378.", url: "https://doi.org/10.1136/bmj-2023-078378", note: "The current reporting guideline, which replaces TRIPOD 2015 and should be used when writing up a prediction model." },
+    { cite: "Moons KGM, Altman DG, Reitsma JB, et al. (2015). Transparent Reporting of a multivariable prediction model for Individual Prognosis or Diagnosis (TRIPOD): explanation and elaboration. Annals of Internal Medicine 162:W1-W73.", url: "https://doi.org/10.7326/M14-0698", note: "Explains each reporting item with examples, which helps in understanding the intent behind the newer TRIPOD+AI checklist." },
+    { cite: "Sullivan LM, Massaro JM, D'Agostino RB Sr (2004). Presentation of multivariate data for clinical use: the Framingham Study risk score functions. Statistics in Medicine 23:1631-1660.", url: "https://doi.org/10.1002/sim.1742", note: "Shows how regression coefficients are turned into integer point scores and risk tables." },
+    { cite: "Iasonos A, Schrag D, Raj GV, Panageas KS (2008). How to build and interpret a nomogram for cancer prognosis. Journal of Clinical Oncology 26:1364-1370.", url: "https://doi.org/10.1200/JCO.2007.12.9791", note: "A clear tutorial on constructing and reading a nomogram, with the caveats on its use." },
+    { cite: "Han X, Zhang Q, Ke Y, et al. (2025). Development and external validation of a nomogram for predicting spontaneous preterm birth in singleton pregnancies with a short cervix. American Journal of Obstetrics & Gynecology MFM 8:101859.", url: "https://doi.org/10.1016/j.ajogmf.2025.101859", note: "A recent preterm birth example that develops a nomogram and reports discrimination, calibration, Brier score and decision curves in a prospective external cohort." }
+  ],
+  essentials: `
+<ul>
+<li>A table of odds ratios is not a prediction model. To give an absolute risk you also need the <b>intercept</b>, and the exact coding and units of every predictor.</li>
+<li>A <b>prediction model</b> gives a risk and leaves the action to the clinician and the woman. A <b>decision rule</b> adds a threshold and an action, which needs clinical judgement about harms and benefits.</li>
+<li>A formula is used in two steps: add up the linear predictor, then turn it into a risk with 1 ÷ (1 + e<sup>−lp</sup>). After shrinking coefficients, re-estimate the intercept.</li>
+<li>A confidence interval for a predicted risk shows random error only. It says nothing about miscalibration in a new setting.</li>
+<li>A <b>nomogram</b> draws the formula as scales. A <b>score chart</b> gives rounded points. Points must be proportional to the regression coefficients, never to odds ratios.</li>
+<li>Rounding points costs little. Cutting continuous predictors into groups, or reducing the model to a table, costs more discrimination.</li>
+<li>Whatever format is offered, publish the full formula, so that others can validate and update the model.</li>
+</ul>`,
+  story: 'Throughout the course you follow the maternity team of a district hospital as it works on one problem: preterm birth. The hospital and its data are fictional and synthetic. The team has a validated booking-visit model. Now it must hand the model to the people who will use it: midwives with a printed antenatal card, doctors with the hospital computer system, and other researchers who want to test it. In this module it chooses how to present the model, and checks what each format costs. You do not need the earlier modules for this story.',
+  defs: {
+    'decision rule': 'A recommendation for action, made from a prediction model by adding a risk threshold.',
+    'intercept': 'The starting value of the linear predictor, for a woman with every predictor at zero or at its reference value.',
+    'centring': 'Subtracting a fixed value (such as the mean) from a predictor before multiplying by its coefficient.',
+    'nomogram': 'A chart with one scale per predictor; points read from each scale are added and read off as a risk.',
+    'score chart': 'A table of rounded points for each predictor, with a way to turn the total score into a risk.',
+    'common denominator': 'One value of log-odds chosen to equal one point, so all coefficients are divided by the same number.',
+    'confidence interval': 'A range for the true average risk of women like this one, reflecting random error in the coefficients.',
+    'prediction interval': 'A range for an individual outcome; for a measured outcome it stays wide however large the sample.',
+    'covariance matrix': 'A table of the variances of the coefficients and how their errors move together.'
+  },
+  explainers: [
+    {
+      id: 'points',
+      title: 'From coefficients to points to a risk',
+      scenes: [
+        { svg: EX.svg((function () { var c = [['Previous preterm birth', 1.5], ['Chronic hypertension', 0.9], ['Bacteriuria', 0.7], ['Tobacco use', 0.6]], s = EX.text(40, 34, 'Coefficients (change in log-odds) from the formula', { size: 'm', bold: true }); c.forEach(function (r, i) { var y = 70 + i * 50; s += EX.text(40, y + 20, r[0], { d: 0.2 * i }) + EX.rect(230, y, r[1] * 150, 28, { role: 'pred', op: 0.55, grow: true, d: 0.3 + 0.2 * i }) + EX.text(240 + r[1] * 150, y + 20, r[1].toFixed(1), { d: 0.6 + 0.2 * i }); }); return s; })()),
+          say: 'Start from the formula. Each yes or no predictor has a coefficient: the change in log-odds it adds. A previous preterm birth adds 1.5, chronic hypertension 0.9, bacteriuria 0.7 and tobacco use 0.6.' },
+        { svg: EX.svg((function () { var c = [['Previous preterm birth', 1.5, '5'], ['Chronic hypertension', 0.9, '3'], ['Bacteriuria', 0.7, '2.33, so 2'], ['Tobacco use', 0.6, '2']], s = EX.text(40, 34, 'Divide by a common denominator: 1 point = 0.3', { size: 'm', bold: true }); c.forEach(function (r, i) { var y = 70 + i * 50; s += EX.text(40, y + 20, r[0]) + EX.rect(230, y, r[1] * 150, 28, { role: 'pred', op: 0.25 }) + EX.text(240 + r[1] * 150, y + 20, r[2] + ' points', { bold: true, d: 0.4 + 0.3 * i }); }); s += EX.text(40, 285, 'Hb: 1 point per g/dL below 11. BMI: 1 point per 5 below 22.', { size: 's', d: 1.8 }); return s; })()),
+          say: 'Choose one value of log-odds to equal one point, here 0.3, and divide every coefficient by it. A previous preterm birth earns 5 points. Bacteriuria earns 2.33, rounded to 2. Haemoglobin and B M I earn points for each step below a reference value.' },
+        { svg: EX.svg(EX.text(40, 34, 'A woman: tobacco use, Hb 9 g/dL, BMI 19', { size: 'm', bold: true }) + EX.rect(60, 90, 120, 40, { role: 'pred', op: 0.5, grow: true, d: 0.3 }) + EX.text(120, 115, 'Tobacco 2', { anchor: 'middle', d: 0.5 }) + EX.rect(185, 90, 120, 40, { role: 'pred', op: 0.5, grow: true, d: 0.9 }) + EX.text(245, 115, 'Hb 2', { anchor: 'middle', d: 1.1 }) + EX.rect(310, 90, 36, 40, { role: 'pred', op: 0.5, grow: true, d: 1.5 }) + EX.text(328, 150, 'BMI 0.6', { anchor: 'middle', d: 1.7 }) + EX.text(40, 210, 'Total score = 2 + 2 + 0.6 = 4.6 points', { size: 'l', bold: true, d: 2.2 })),
+          say: 'Now score a woman. She uses tobacco, so 2 points. Her haemoglobin is 9, two grams below 11, so 2 more. Her B M I is 19, three units below 22, which gives 0.6. Her total is 4.6 points.' },
+        { svg: EX.svg((function () { var B = EX.box({ l: 80, t: 50, w: 420, h: 170, xlim: [-2, 14], ylim: [0, 0.8], xticks: [0, 4, 8, 12], yticks: [0, 0.4, 0.8], yfmt: function (v) { return Math.round(v * 100) + '%'; }, xlabel: 'Total score', ylabel: 'Risk' }), f = function (sc) { return 1 / (1 + Math.exp(-(-2.3 + 0.3 * sc))); }, s = EX.text(40, 30, 'Risk = 1 ÷ (1 + e^−(−2.3 + 0.3 × score))', { size: 'm', bold: true }) + B.s; s += EX.curve(B, f, -2, 14, { role: 'pred', d: 0.4 }) + EX.pts(B, [[4.6, f(4.6)]], { r: 6, d: 1.4 }) + EX.text(B.X(4.6) + 12, B.Y(f(4.6)) - 8, '4.6 points: 28.5%', { bold: true, d: 1.6 }); return s; })()),
+          say: 'The score is turned back into a risk. A logistic model fitted to the score gives the intercept, minus 2.3, and 0.3 log-odds per point. At 4.6 points her risk is 28.5 per cent: about 29 in 100 women like her deliver early.' },
+        { svg: EX.svg((function () { var B = EX.box({ l: 80, t: 50, w: 420, h: 170, xlim: [-2, 14], ylim: [0, 0.8], xticks: [0, 4, 8, 12], yticks: [0, 0.4, 0.8], yfmt: function (v) { return Math.round(v * 100) + '%'; }, xlabel: 'Total score', ylabel: 'Risk' }), f = function (sc) { return 1 / (1 + Math.exp(-(-2.3 + 0.3 * sc))); }, s = EX.text(40, 30, 'Rounding bacteriuria from 2.33 to 2 points', { size: 'm', bold: true }) + B.s; s += EX.curve(B, f, -2, 14, { role: 'pred', draw: false }) + EX.pts(B, [[7.63, f(7.63)]], { r: 5, role: 'obs', d: 0.5 }) + EX.pts(B, [[7.3, f(7.3)]], { r: 5, role: 'pred', d: 1.0 }) + EX.gaps(B, [[7.46, f(7.3), f(7.63)]], { d: 1.5 }) + EX.text(B.X(7.6) + 14, B.Y(0.5) - 6, 'Formula 49.8%', { size: 's', d: 0.7 }) + EX.text(B.X(7.6) + 14, B.Y(0.5) + 26, 'Score 47.3%', { size: 's', d: 1.2 }); return s; })()),
+          say: 'Rounding costs a little. For a woman with a previous preterm birth and bacteriuria, the formula gives 49.8 per cent. Her rounded score gives 47.3 per cent. The red gap is the error from dropping one third of a point.' },
+        { svg: EX.svg(EX.text(40, 40, 'Why odds ratios cannot be points', { size: 'l', bold: true }) + EX.text(40, 90, 'Odds ratios: 4.5, 2.5, 2.0, 1.8', { d: 0.5 }) + EX.text(40, 120, 'A predictor with no effect (odds ratio 1.0) would earn 1 point', { d: 1.1 }) + EX.text(40, 150, 'A protective factor (odds ratio 0.5) would still add points', { d: 1.7 }) + EX.text(40, 200, 'The model adds log-odds, so points must follow coefficients', { bold: true, d: 2.4 }) + EX.text(40, 240, 'Always publish the full formula as well', { d: 3.0 })),
+          say: 'Never use odds ratios as points. A predictor with no effect has an odds ratio of 1, and would still earn a point. A protective factor would add points. The model adds log-odds, so points must follow the coefficients.' }
+      ]
+    }
+  ],
+  cases: [
+    {
+      id: 'c1',
+      title: 'From odds ratios to an absolute risk',
+      aim: 'tell a prediction model from a decision rule, and calculate a risk from a published formula.',
+      minutes: 15,
+      need: `
+<p>Papers often give a table of odds ratios. That is <b>not enough</b> to calculate a woman's risk. You also need the <b>intercept</b> (for a survival model, the baseline hazard). A model that cannot give a risk for a new woman has not really been presented.</p>
+<p>A <b>prediction model</b> gives an absolute risk, and leaves the action to the clinician and the woman. A <b>decision rule</b> recommends an action, such as "refer if the risk is above 20%". It is made from a model by adding a threshold, which needs clinical input about harms and benefits.</p>
+<p><b>Using a formula takes two steps.</b> (1) Add up the linear predictor: lp = intercept + each coefficient × the woman's value. (2) Turn it into a risk: risk = 1 ÷ (1 + e<sup>−lp</sup>).</p>
+<p>The coding must be exact. Yes/no predictors are coded 1 = yes, 0 = no. Categories need a stated reference group. Continuous predictors need units (g/dL or g/L) and any transformation. If a predictor was <b>centred</b>, the user must subtract the centring value first.</p>
+<p><b>Worked example</b> (Illustrative, synthetic). lp = −2.3 + 1.5 × previous preterm birth + 0.9 × chronic hypertension + 0.6 × tobacco + 0.7 × bacteriuria − 0.3 × (Hb − 11) − 0.06 × (BMI − 22). A woman uses tobacco, has Hb 9 g/dL and BMI 19: lp = −2.3 + 0.6 − 0.3 × (−2) − 0.06 × (−3) = −2.3 + 0.6 + 0.6 + 0.18 = −0.92. Risk = 1 ÷ (1 + e<sup>0.92</sup>) = 1 ÷ 3.51 = 28.5%: about 28 or 29 in 100 such women.</p>
+<p><b>Shrinkage.</b> If the coefficients are shrunk after internal validation, the intercept must be re-estimated, so that the average predicted risk equals the observed rate in the development data.</p>`,
+      scenario: `<p>Two requests reach the team. A neighbouring district wants to use a preterm birth model it found in a journal, but the paper gives only a table of odds ratios. The district programme officer asks the team for "a simple rule for whom to refer".</p>`,
+      widgets: '',
+      tasks: [0, 1],
+      takeaway: 'An absolute risk needs the intercept, exact coding and units; a decision rule is a model plus a threshold chosen on clinical grounds.'
+    },
+    {
+      id: 'c2',
+      title: 'How sure is a predicted risk?',
+      aim: 'calculate a confidence interval for a predicted risk, and see what it leaves out.',
+      minutes: 15,
+      need: `
+<p>A <b>confidence interval</b> shows uncertainty about the <i>average</i> risk of women like this one. It shrinks as the sample grows. For a measured outcome, a <b>prediction interval</b> shows where an <i>individual's</i> value may fall, and it stays wide however large the sample. A chart of cervical length by week of pregnancy from thousands of women has a narrow band around the average, but single women still vary widely.</p>
+<p>For a yes/no outcome the predicted risk already expresses the uncertainty for the individual. A risk of 35% means she will either deliver early or not.</p>
+<p><b>Calculation.</b> The standard error of the linear predictor comes from the <b>covariance matrix</b> V of the coefficients. For a woman with predictor values x (with a 1 for the intercept), SE(lp) = √(x<sup>T</sup> V x). Build the interval on the lp scale, then turn each limit into a risk, so the interval is not symmetric.</p>
+<p><b>Worked example</b> (Illustrative, synthetic). A model with an intercept a and one predictor, previous preterm birth (b), has a = −2.1 and b = 1.5. For a woman without a previous preterm birth, x = (1, 0), so lp = −2.1 and SE(lp) = √var(a) = √0.0057 = 0.075. Her risk is 10.9%, with 95% interval 1 ÷ (1 + e<sup>2.25</sup>) to 1 ÷ (1 + e<sup>1.95</sup>) = 9.6% to 12.4%.</p>
+<p><b>What it leaves out.</b> Total error is random plus systematic error. The interval shows only random error, and is valid only if the predictions have no systematic bias. Miscalibration in a new setting is not shown. Be wary when a large sample gives narrow intervals; wide intervals from a small sample are a useful warning. For decisions the point estimate still matters most.</p>`,
+      scenario: `<p>The hospital computer system will show each woman's risk on screen. The obstetricians ask for an interval next to it. The referral hospital, where the model underestimated risk, asks whether a narrow interval means the risk is right for its women too.</p>`,
+      widgets: '',
+      tasks: [2, 3],
+      takeaway: 'A confidence interval for a risk reflects random error only; it is no protection against miscalibration in a new setting.'
+    },
+    {
+      id: 'c3',
+      title: 'Nomograms and score charts',
+      aim: 'build a score chart from regression coefficients and see what rounding and grouping cost.',
+      minutes: 20,
+      need: `
+<p>A <b>nomogram</b> draws the formula. Each predictor has a scale. You read the points for each of the woman's values, add them, and read the total down to a risk scale. The length of each line shows how much the predictor matters across its usual range. Nomograms can show interactions and non-linear terms, but they look complex at first sight, and reading errors add up.</p>
+<p>A <b>score chart</b> gives rounded points per predictor, and a small table to turn the total into a risk. It is built in four steps.</p>
+<ol>
+<li><b>Round the coefficients</b> of yes/no predictors, using a <b>common denominator</b>. Multiplying by 10 and rounding is simple; smaller multipliers often work as well.</li>
+<li><b>Score continuous predictors</b>: choose a sensible reference value that scores 0 (age 0 rarely is), find the values that score 1, 2 and so on, and interpolate between them.</li>
+<li><b>Estimate the multiplier</b>: fit a logistic model with the total score as the only predictor, and multiply its coefficient by any shrinkage factor.</li>
+<li><b>Estimate the intercept</b> with the shrunk score as an offset, and show the conversion from score to risk.</li>
+</ol>
+<p>Do not divide every coefficient by the smallest one: that rests all the points on one uncertain estimate. Never use odds ratios as points.</p>
+<p><b>Worked example</b>. With 1 point = 0.3 log-odds, previous preterm birth (1.5) earns 5 points and tobacco (0.6) earns 2. The woman in Case 1 scores 2 + 2 + 0.6 = 4.6. With lp = −2.3 + 0.3 × score, her risk is 28.5%, as from the formula.</p>
+<div data-explainer="points"></div>`,
+      scenario: `<p>The midwives want a printed antenatal card with a score they can add by hand. The team's statistician builds it from the formula in Case 1, and also tries the course's score chart builder on a model fitted to ptb_dev.</p>`,
+      widgets: `<div data-widget="scoreChartBuilder" data-try="Leave the continuous predictors categorised and move the points per log-odds from 4 down to 1, watching the c statistic of the points score fall below the full model."></div>`,
+      tasks: [4, 5],
+      takeaway: 'Score points must follow the coefficients through a common denominator; rounding them costs little, but the conversion back to risk must be published.'
+    },
+    {
+      id: 'c4',
+      title: 'Tables, rules and what to publish',
+      aim: 'weigh the cost of simplified formats and decision rules, and decide what must be published.',
+      minutes: 15,
+      need: `
+<p>A <b>table of predictions</b> shows the risk for combinations of predictor values. It is very easy to use, and advice can be attached to each cell. The price is that continuous predictors are cut into groups and risks are averaged within each cell.</p>
+<p><b>Book example</b> (testicular cancer model). The c statistic was 0.839 for the formula and the nomogram, 0.838 for the score chart with continuous predictors, 0.808 when the continuous predictors were grouped, and 0.773 for a simple table. Rounding cost almost nothing; grouping and tabulating cost much more.</p>
+<p>Decision rules come in several forms: a <b>tree</b> of yes/no splits (easy, but unstable with limited data); a <b>score chart rule</b> with heavily rounded points, such as one point per risk factor (easy to remember, but less accurate, especially in calibration); <b>risk groups</b> (stable, but cut-offs often follow the spread of risk, not decision reasoning); and a <b>meta-model</b>, a simple tree that copies a complex model's decisions.</p>
+<p><b>Book example</b> (minor head injury rule). It had 100% sensitivity in its development data. In bootstrap validation the average was 96%, and only 56% of bootstrap samples reached 100%. A rule needs its own validation.</p>
+<p><b>Minimum reporting.</b> Whatever the format: the intercept and all coefficients (after shrinkage, intercept re-estimated); coding, units, transformations, centring values and spline knots; the outcome and its time horizon; and, for a score chart, the points, interpolation rules and the score-to-risk conversion.</p>`,
+      scenario: `<p>A neighbouring hospital has published a "preterm risk score" and the district wants to adopt it. At the same time the team must decide how its own model will reach midwives, doctors and other researchers.</p>`,
+      widgets: '',
+      tasks: [6, 7],
+      takeaway: 'Every simplification of a model has a price in accuracy; offer the format the user needs, and always publish the full formula beside it.'
+    }
   ],
   sections: [
     {
-      id: 's1',
-      title: 'Prediction models and decision rules',
+      id: 'n1',
+      title: 'Prediction models, decision rules and formats',
       html: `
-<p>Epidemiological papers usually present tables of odds ratios with confidence intervals. Such a table is <b>not sufficient</b> to calculate an absolute risk: that requires the model intercept (for logistic and linear models) or the baseline hazard (for survival models). A prediction model that cannot be used to calculate risks for a new patient has not been presented.</p>
-<h3>Two kinds of product</h3>
-<ul>
-<li>A <b>clinical prediction model</b> gives an estimate of absolute risk from a combination of patient characteristics. For a good model the predictions span a wide range. Interpretation and action are left to the clinician and the patient.</li>
-<li>A <b>clinical decision rule</b> recommends a course of action for a combination of characteristics. It needs more subject-matter input, especially on the choice of a risk threshold (see the module on clinical usefulness). Some argue that presenting a model as a decision rule eases its wide application, citing rules such as the Ottawa rules for ankle, knee and head injuries.</li>
-</ul>
-<p>A decision rule is derived from a prediction model by adding a threshold; the two are not synonymous.</p>
-<h3>Formats</h3>
+<p>A table of odds ratios with confidence intervals does not allow absolute risk to be calculated: that requires the intercept (logistic, linear) or the baseline hazard (survival). A <b>clinical prediction model</b> gives absolute risk; for a good model predictions span a wide range. A <b>clinical decision rule</b> recommends an action and needs subject-matter input, especially on the threshold. Some argue that decision rules ease wide application (for example the Ottawa ankle, knee and head rules). The two are not synonymous.</p>
 <table class="data">
-<thead><tr><th>Format</th><th>Accuracy of predictions</th><th>Advantages</th><th>Disadvantages</th></tr></thead>
-<tbody>
-<tr><td colspan="4"><b>Prediction models</b></td></tr>
-<tr><td>Regression formula</td><td>Exact</td><td>Simple; follows directly from the analysis; can be computerised</td><td>Leaves the calculation to the user; confidence intervals hard to compute by hand</td></tr>
-<tr><td>Spreadsheet or program</td><td>Exact, with exact 95% CI</td><td>Familiar software; easy to distribute</td><td>User must obtain and learn the file or program</td></tr>
-<tr><td>Nomogram</td><td>Quite exact, approximate CI</td><td>Graphical, handles interactions</td><td>Difficult to understand at first sight</td></tr>
+<tr><th>Format</th><th>Accuracy</th><th>Advantages</th><th>Disadvantages</th></tr>
+<tr><td>Regression formula</td><td>Exact</td><td>Simple; can be computerised</td><td>Calculation left to the user; CI hard by hand</td></tr>
+<tr><td>Spreadsheet or software</td><td>Exact, with exact 95% CI</td><td>Familiar; easy to distribute</td><td>User must obtain and learn it</td></tr>
+<tr><td>Nomogram</td><td>Quite exact, approximate CI</td><td>Graphical; handles interactions</td><td>Hard to understand at first sight</td></tr>
 <tr><td>Score chart</td><td>Approximate</td><td>Easy to understand</td><td>Approximate predictions</td></tr>
-<tr><td>Table of predictions</td><td>Averaged over categories</td><td>Very easy to use</td><td>Continuous predictors must be categorised</td></tr>
-<tr><td colspan="4"><b>Decision rules</b></td></tr>
-<tr><td>Regression tree</td><td>Large groups</td><td>Very easy to use</td><td>Unstable with limited data; categorises predictors</td></tr>
+<tr><td>Table of predictions</td><td>Averaged over categories</td><td>Very easy</td><td>Continuous predictors categorised</td></tr>
+<tr><td>Regression tree (rule)</td><td>Large groups</td><td>Very easy</td><td>Unstable with limited data</td></tr>
 <tr><td>Score chart rule</td><td>Highly rounded</td><td>Can be memorised</td><td>Inaccurate predictions</td></tr>
-<tr><td>Risk groups</td><td>Large groups</td><td>Stable</td><td>Cut-offs based on the distribution of risk, not decision considerations</td></tr>
-<tr><td>Meta-model tree</td><td>Large groups</td><td>Very easy to use</td><td>Captures only the general pattern of the underlying model</td></tr>
-</tbody>
+<tr><td>Risk groups (rule)</td><td>Large groups</td><td>Stable</td><td>Cut-offs follow the risk distribution, not decisions</td></tr>
+<tr><td>Meta-model tree (rule)</td><td>Large groups</td><td>Very easy</td><td>Only the general pattern of the model</td></tr>
 </table>
-<p>Formats differ in medium (paper or electronic), level of detail (rough indications or exact probabilities), whether they show uncertainty, and user-friendliness.</p>
-<p class="src">Source: Ch. 18, §18.1 (Table 18.1)</p>
-`
+<p>Formats differ in medium, detail, display of uncertainty and user-friendliness.</p>
+<p class="src">Source: Ch. 18, §18.1 (Table 18.1)</p>`
     },
     {
-      id: 's2',
+      id: 'n2',
       title: 'The regression formula',
       html: `
-<p>The simplest presentation is the regression formula itself. Calculating a prediction takes two steps.</p>
-<ol>
-<li><b>Linear predictor</b>: multiply each coefficient by the patient's predictor value and add the intercept: lp = β<sub>0</sub> + β<sub>1</sub>x<sub>1</sub> + … + β<sub>k</sub>x<sub>k</sub>.</li>
-<li><b>Transform to the outcome scale</b>: for logistic regression, p = 1/(1 + exp(−lp)). For a Cox model, a baseline survival or hazard function is needed in addition to lp.</li>
-</ol>
-<div class="formula">p = 1 / (1 + exp(−lp))</div>
-<h3>Coding must be explicit</h3>
-<ul>
-<li>Binary predictors: 0/1 coding, so that patients without the characteristic score zero. State which value is 1.</li>
-<li>Categorical predictors: dummy variables with a stated reference category (the most common category, or a clinically natural one).</li>
-<li>Continuous predictors: state the units (mg/dL versus mmol/L, g/dL versus g/L) and any transformation (log, square root, spline).</li>
-<li>If continuous predictors were centred (mean subtracted), state the centring value, which the user must subtract before applying the coefficient.</li>
-</ul>
-<div class="callout eg"><b>Worked example (illustrative, synthetic): gestational diabetes</b><p>The coefficients below equal the true effects used to simulate the course's gestational diabetes data; the intercept and centring values are illustrative.</p>
-<p>lp = −2.2 + 0.05 × (age − 27) + 0.09 × (BMI − 23) + 0.6 × family history of diabetes + 1.3 × previous GDM + 0.06 × (fasting glucose − 85)</p>
-<p>with age in years, BMI in kg/m², fasting plasma glucose in mg/dL, and family history and previous GDM coded 1 = yes, 0 = no.</p>
-<p>Woman aged 31, BMI 27, family history yes, no previous GDM, fasting glucose 92 mg/dL:</p>
-<p>lp = −2.2 + 0.05 × 4 + 0.09 × 4 + 0.6 × 1 + 1.3 × 0 + 0.06 × 7 = −2.2 + 0.20 + 0.36 + 0.60 + 0 + 0.42 = −0.62.</p>
-<p>p = 1/(1 + exp(0.62)) = 1/(1 + 1.859) = 0.350, a predicted risk of 35%.</p>
-<p>If a user entered glucose in mmol/L (92 mg/dL ≈ 5.1 mmol/L) without converting, the glucose term would be 0.06 × (5.1 − 85) = −4.8 and the predicted risk would collapse to under 1%.</p></div>
-<h3>Incorporating shrinkage</h3>
-<p>If internal validation suggested a shrinkage factor, the formula should contain shrunk coefficients. One option is to centre the predictors so that the average linear predictor is zero and multiply the linear predictor by the shrinkage factor. The average prediction then remains roughly correct, but because the logistic transformation is non-linear, a systematic error arises when predictions span a wide range or the shrinkage is strong.</p>
-<div class="callout warn"><b>Pitfall</b><p>Shrinking the coefficients without adjusting the intercept leaves calibration-in-the-large incorrect. The preferred approach is to shrink the coefficients and then <b>re-estimate the intercept</b>, so that the mean predicted risk equals the observed outcome frequency in the development data.</p></div>
-<p>A regression formula is the basis for computerised implementation: spreadsheets, web calculators, hospital information systems and electronic records. A spreadsheet can show the individual prediction with an approximate 95% confidence interval.</p>
-<p class="src">Source: Ch. 18, §18.2.1</p>
-`
+<p>Two steps: lp = β<sub>0</sub> + β<sub>1</sub>x<sub>1</sub> + … + β<sub>k</sub>x<sub>k</sub>; then p = 1 / (1 + exp(−lp)) for logistic regression. A Cox model additionally needs a baseline survival or hazard.</p>
+<p>Coding: binary 0/1 with the meaning of 1 stated; categorical predictors as dummies with a stated reference (the most common or a natural category); continuous predictors with units and transformation (log, square root, spline); centring values if centred.</p>
+<p>Illustrative (synthetic) unit error: in the Case 1 formula, entering Hb as 90 g/L instead of 9.0 g/dL gives −0.3 × (90 − 11) = −23.7 and a risk of practically 0%.</p>
+<p><b>Shrinkage.</b> One option is to centre the predictors so the mean linear predictor is 0 and multiply lp by the shrinkage factor; the average prediction remains roughly correct, but the non-linear logistic transformation gives systematic error when predictions span a wide range or shrinkage is strong. Preferred: shrink the coefficients, then <b>re-estimate the intercept</b> so that the mean predicted risk equals the observed frequency.</p>
+<p>The formula is the basis for spreadsheets, web calculators, hospital information systems and electronic records, which can show an approximate 95% CI.</p>
+<p class="src">Source: Ch. 18, §18.2.1</p>`
     },
     {
-      id: 's3',
+      id: 'n3',
       title: 'Uncertainty around predictions',
       html: `
-<h3>Confidence and prediction intervals</h3>
-<p>For a continuous outcome, a <b>confidence interval</b> describes uncertainty about the <i>average</i> outcome for patients with given characteristics; it becomes very narrow with very large samples. A <b>prediction interval</b> describes where an <i>individual</i> outcome is likely to fall and stays wide however large the sample, because individuals vary. A growth chart of length by age based on thousands of children has a very tight confidence interval around the mean, but individual children still vary widely.</p>
-<p>For a binary outcome, the prediction is already a probability, which expresses the inherent uncertainty for the individual. A predicted risk of 35% with a narrow confidence interval still means that the woman either will or will not develop the outcome. With regression, predictions approach but never reach 0 or 1.</p>
-<h3>When the interval misleads</h3>
-<p>Total uncertainty is the sum of random and systematic error. A confidence interval reflects only random error and is valid only if the predictions have <b>no systematic bias</b>. Miscalibration in a new setting, caused by different predictor coding, missed predictors with different distributions or truly different effects, is a systematic error that no confidence interval shows. Be cautious when a large development sample gives narrow intervals. Conversely, wide intervals from a small data set are a useful warning against over-interpreting predictions. For decisions, the point prediction remains of primary interest: if no better estimate is available, following the model's estimate is the best one can do.</p>
-<h3>Calculation</h3>
-<p>The standard error of a linear predictor comes from the covariance matrix V of the coefficients. For a patient with predictor vector x (with 1 for the intercept):</p>
-<div class="formula">SE(lp) = √(xᵀ V x)</div>
-<div class="callout eg"><b>Worked example</b><p>A model with an intercept and one binary predictor has a = −1.5, b = 0.5, var(a) = 0.04, var(b) = 0.01 and cov(a, b) = −0.005. For a patient with the predictor present, x = (1, 1):</p>
-<p>lp = −1.5 + 0.5 = −1.0; p = 1/(1 + exp(1.0)) = 0.269.</p>
-<p>Var(lp) = var(a) + var(b) + 2 cov(a, b) = 0.04 + 0.01 − 0.010 = 0.040; SE = 0.20.</p>
-<p>95% CI for lp: −1.0 ± 1.96 × 0.20 = −1.392 to −0.608. Transforming each limit: p from 0.199 to 0.353. The interval is calculated on the logit scale and then transformed, so it is not symmetric around 0.269.</p></div>
-<p>Each combination of predictor values has its own SE, even when two patients share the same linear predictor. This is easy in a formula or spreadsheet but awkward in a nomogram or score chart, where the mean or median SE for a given linear predictor value can be shown. If shrinkage was applied, the covariance matrix of the unshrunk model can still be used; a penalised model's own covariance matrix gives slightly smaller SEs.</p>
-<p class="src">Source: Ch. 18, §18.2.2, §18.3.1</p>
-`
+<p>Confidence intervals concern the average outcome for given characteristics and narrow with sample size; prediction intervals concern an individual and stay wide. For a binary outcome the probability already expresses individual uncertainty; regression predictions approach but never reach 0 or 1.</p>
+<p>Total uncertainty = random + systematic error. A CI is valid only without systematic bias; miscalibration from different coding, missed predictors with different distributions or truly different effects is not shown. If no better estimate is available, following the model's estimate is the best one can do.</p>
+<p>SE(lp) = √(x<sup>T</sup>Vx). For an intercept and one binary predictor with the predictor present, var(lp) = var(a) + var(b) + 2cov(a, b). Each combination of predictor values has its own SE, even at the same lp: easy in a formula or spreadsheet; in a nomogram or score chart the mean or median SE for a given lp can be shown. After shrinkage, the unshrunk covariance matrix can still be used; a penalised model's own matrix gives slightly smaller SEs.</p>
+<p class="src">Source: Ch. 18, §18.2.2, §18.3.1</p>`
     },
     {
-      id: 's4',
+      id: 'n4',
       title: 'Nomograms',
       html: `
-<p>A <b>nomogram</b> is a graphical version of the regression formula. It has one horizontal axis per predictor, a <b>points</b> axis at the top (for example 0–10 or 0–100), a <b>total points</b> axis, and a probability axis at the bottom.</p>
-<h3>How it works</h3>
-<ol>
-<li>For each predictor, locate the patient's value and read the corresponding points vertically on the points axis. Points are proportional to the coefficient times the predictor value, rescaled so the predictor with the widest range of effect spans the full points axis.</li>
-<li>Add the points. Total points correspond linearly to the linear predictor.</li>
-<li>Read down from the total points to the probability axis, which applies the logistic transformation.</li>
-</ol>
-<p>A patient-friendly way to express the result is the frequency format: "of 100 women like you, we would expect about 35 to develop gestational diabetes".</p>
-<h3>Advantages</h3>
-<ul>
-<li>The <b>length of each predictor's line</b> shows its relative importance, provided the values on the lines cover the distribution of the predictor in the data.</li>
-<li><b>Interactions</b> can be shown with separate lines, so that only one axis is read per predictor value.</li>
-<li>Non-linear terms and complex models (for example survival models with time-dependent covariates) can be shown, and the final scale can carry approximate confidence intervals or extra outcome scales.</li>
-</ul>
-<h3>Disadvantages</h3>
-<ul>
-<li>Relatively complex at first sight.</li>
-<li>Reading inaccuracy accumulates when many predictors are included, and the translation from total points to probability is read by eye.</li>
-<li>It is not clear whether clinicians prefer nomograms to score charts.</li>
-</ul>
+<p>One axis per predictor, a <b>points</b> axis (0-10 or 0-100), a <b>total points</b> axis and a probability axis. Points are proportional to coefficient × value, rescaled so that the predictor with the widest range of effect spans the points axis; total points are linear in lp; the probability axis applies the logistic transformation. A frequency format helps patients: "of 100 women like you, about 28 would deliver early".</p>
+<p><b>Advantages:</b> line length shows relative importance (if the values cover the predictor's distribution); interactions as separate lines; non-linear terms and complex (for example time-dependent survival) models; approximate CIs or extra outcome scales. <b>Disadvantages:</b> complex at first sight; reading error accumulates with many predictors; no clear evidence that clinicians prefer nomograms to score charts.</p>
 <div class="callout book"><b>Book example</b><p>A nomogram for benign histology after chemotherapy for testicular cancer used six predictors from a penalised logistic model, with a maximum of 10 points per predictor, accepting some loss of accuracy in summing points.</p></div>
-<div class="callout warn"><b>Pitfall</b><p>A model published only as a nomogram with non-linear terms is hard for others to validate, because the formula must be reconstructed from the graph. Publish the full regression formula, with intercept, coding and units, alongside any nomogram.</p></div>
-<p class="src">Source: Ch. 18, §18.2.3, §18.3.2; Ch. 17, §17.3.5</p>
-`
+<div class="callout warn"><b>Pitfall</b><p>A model published only as a nomogram with non-linear terms is hard to validate. Publish the full formula alongside.</p></div>
+<p class="src">Source: Ch. 18, §18.2.3, §18.3.2; Ch. 17, §17.3.5</p>`
     },
     {
-      id: 's5',
+      id: 'n5',
       title: 'Score charts',
       html: `
-<p>A <b>score chart</b> assigns rounded points to each predictor; the user adds the points and converts the total to a probability using a small table or graph.</p>
-<h3>Construction in four steps</h3>
-<ol>
-<li><b>Round the coefficients</b> of binary and categorical predictors. A simple approach is to multiply by 10 and round. Smaller multipliers often still give sufficiently refined predictions. Search for a <b>common denominator</b> across all coefficients.</li>
-<li><b>Score continuous predictors</b>, kept continuous or categorised: choose a sensible reference value that scores 0 (age 0 is rarely sensible), find the values that score +1, +2 and so on given the coefficient and distribution, and add intermediate values (for example +0.5); other values are scored by linear interpolation.</li>
-<li><b>Estimate the multiplication factor</b>: fit a logistic model with the total score as the only predictor. Its coefficient (log-odds per point) undoes the scaling; multiply it by any shrinkage factor.</li>
-<li><b>Estimate the intercept</b> with the shrunk score as an offset, and present the chart with the conversion from total score to probability.</li>
-</ol>
-<div class="callout warn"><b>Pitfall</b><p>Dividing all coefficients by the smallest coefficient of a binary predictor (so that it scores 1) capitalises on the estimate of one coefficient and adds unnecessary uncertainty. Using <b>odds ratios</b> as points is wrong: the linear predictor adds log-odds, so points must be proportional to regression coefficients. With odds ratios, a predictor with no effect (OR 1.0) would earn 1 point, and the relative weights are distorted: ORs of 10 and 1.5 differ 6.7-fold, while their coefficients (2.30 and 0.41) differ 5.7-fold.</p></div>
-<div class="callout eg"><b>Worked example (illustrative, synthetic): a GDM score chart</b><p>Using the formula from the earlier section, 1 point is set to 0.6 log-odds (coefficients multiplied by 10/6). Family history 0.6 → 1 point; previous GDM 1.3 → 2.17, rounded to 2 points. Continuous predictors: age 6 years above 27 = 0.5 point; BMI 26 = 0.5, 30 = 1 (exact values 0.45 and 1.05); fasting glucose 90 = 0.5, 95 = 1, 100 = 1.5 (reference values 27 years, BMI 23 and 85 mg/dL score 0). A refit in the illustrative data gives lp = −2.2 + 0.6 × score.</p>
-<p>The same woman (31 years, BMI 27, family history, glucose 92): age 4/6 × 0.5 = 0.33; BMI between 26 and 30: 0.5 + ¼ × 0.5 = 0.625; glucose between 90 and 95: 0.5 + 2/5 × 0.5 = 0.7; family history 1. Total = 2.66. lp = −2.2 + 0.6 × 2.66 = −0.605; p = 0.353, close to the formula's 0.350. Rounding each item to the nearest half point (total 2.5) gives 0.332.</p></div>
-<div class="callout book"><b>Book example</b><p>For the testicular cancer model, penalised coefficients of the three binary predictors were about 0.8, so multiplying by 10/8 gave each 1 point. LDH (log of the value relative to the upper limit of normal, coefficient 0.88) scored 0 at 1 × normal, 1 point at 2.5 × normal and 2 points at about 6 × normal. Refitting the rescaled predictors gave coefficients around 0.8, confirming the rescaling. The multiplier was 0.86, times shrinkage 0.95 gives 0.81: lp = −1.94 + 0.81 × score. The c statistic was 0.839 with the formula and 0.838 with rounded scores; categorising the continuous predictors reduced it to 0.808.</p></div>
-<div data-widget="scoreChartBuilder"></div>
-<ul class="try">
-<li>With continuous handling, change the points-per-log-odds multiplier from coarse to fine. Compare the c statistic of the points score with that of the full regression model.</li>
-<li>Switch to categorised continuous predictors at the same multiplier. Note how much c falls compared with the continuous version.</li>
-<li>Enter a patient in the form and compare the score-based risk with the risk from the full model.</li>
-</ul>
-<p class="src">Source: Ch. 18, §18.2.4, §18.3.3–18.3.4 (Tables 18.2, 18.4, 18.5)</p>
-`
+<p>Steps: (1) round coefficients with a common denominator (for example × 10); (2) score continuous predictors from a sensible reference value, with values for +1, +2 (and +0.5) and linear interpolation; (3) multiplier = coefficient of the total score in a logistic model, times any shrinkage factor; (4) intercept with the shrunk score as offset.</p>
+<div class="callout warn"><b>Pitfall</b><p>Dividing by the smallest binary coefficient capitalises on one estimate. Odds ratios as points are wrong: OR 1.0 would earn 1 point, and weights are distorted (ORs 10 and 1.5 differ 6.7-fold; their coefficients 2.30 and 0.41 differ 5.7-fold).</p></div>
+<div class="callout book"><b>Book example</b><p>Testicular cancer: three binary penalised coefficients of about 0.8, × 10/8 = 1 point each. LDH (log of value relative to the upper limit of normal, coefficient 0.88): 0 at 1 × normal, 1 at 2.5 × normal, 2 at about 6 × normal. Refitting the rescaled predictors gave coefficients around 0.8. The multiplier (about 0.86) times the shrinkage factor (0.95) gave about 0.81: lp = −1.94 + 0.81 × score. c 0.839 with the formula, 0.838 with rounded scores, 0.808 with categorised predictors.</p></div>
+<p>The course's score chart builder fits its own 9-predictor model to ptb_dev. There, grouping age improves on a straight-line age term, because the true effect of age is U-shaped: a badly specified continuous term can cost more than grouping.</p>
+<p class="src">Source: Ch. 18, §18.2.4, §18.3.3-18.3.4 (Tables 18.2, 18.4, 18.5)</p>`
     },
     {
-      id: 's6',
-      title: 'Tables, risk groups and decision rules',
+      id: 'n6',
+      title: 'Tables, rules and reporting',
       html: `
-<h3>Tables with predictions</h3>
-<p>A table showing risk for combinations of predictor values is very easy to use, and treatment advice can be attached to its cells (for example, colour-coded statin recommendations by smoking, blood pressure, diabetes, cholesterol ratio and sex). The price is categorisation of continuous predictors and averaging within cells.</p>
-<div class="callout book"><b>Book example</b><p>For the testicular cancer model, the c statistic was 0.839 for the formula, nomogram and graphical formats, 0.838 for the score chart with continuous predictors, 0.808 for categorised scores and 0.773 for a simple table (sum of five favourable characteristics against residual mass size).</p></div>
-<h3>Decision rules</h3>
-<ul>
-<li><b>Regression tree</b>: classifies patients into a few groups by a sequence of splits, to which experts can attach treatment advice. Trees are easy to understand but data-hungry and unstable with limited data.</li>
-<li><b>Score chart rule</b>: severely rounded coefficients, for example one point per risk factor or "major" and "minor" factors, with an action above a score. Such rules can be memorised, but predictions are less accurate and calibration in particular suffers.</li>
-<li><b>Risk groups</b>: grouped predictions (for example good, intermediate and poor prognosis) linked to treatment intensity. Group-level predictions are stable, but the cut-offs often follow the distribution of risk rather than decision-analytic reasoning.</li>
-<li><b>Meta-model</b>: a simple model (often a tree) that predicts the classification made by a more complex model, for example "treat" versus "do not treat" at a threshold. It inherits any shrinkage of the underlying model.</li>
-</ul>
-<div class="callout book"><b>Book example: a score chart rule</b><p>A rule for CT scanning after minor head injury recommended CT with at least one of ten major or two of eight minor risk factors, derived from rounded logistic coefficients and categorised predictors. Sensitivity for neurosurgical intervention was 100% in the development data, but bootstrap validation gave an average of 96%, with 100% in only 56% of bootstrap samples. Specificity was 25%.</p></div>
-<div class="callout warn"><b>Pitfall</b><p>A decision rule reported with 100% sensitivity in its development data should not be expected to have 100% sensitivity in new patients. Internal validation of the rule itself is needed.</p></div>
-<div class="callout mch"><b>Illustrative (synthetic)</b><p>A district programme wants a rule for referring women with suspected preeclampsia. Converting a well-calibrated model into "refer if score ≥ 3" requires choosing the threshold from the relative harms of unnecessary referral and missed disease. That is a clinical and programme decision; the rule's sensitivity and specificity should then be validated, not assumed.</p></div>
-<p class="src">Source: Ch. 18, §18.2.5, §18.4 (Tables 18.3, 18.5)</p>
-`
-    },
-    {
-      id: 's7',
-      title: 'Choosing and reporting a format',
-      html: `
-<p>Presentation deserves more attention than it usually receives. Some general points follow from the book.</p>
-<ul>
-<li><b>Match the audience.</b> Some clinical areas are more quantitative than others, and some formats have become standard in particular fields (for example nomograms in prostate cancer). Specific formats can serve specific users: for radiologists, iso-probability curves of risk against pre- and post-treatment mass size were drawn for the testicular cancer model.</li>
-<li><b>Know the cost of simplification.</b> Each step from formula to rounded score chart to categorised chart to table can reduce discrimination. Rounding with continuous predictors costs little (c 0.839 to 0.838 in the book example); categorisation and tabulation cost more (0.808 and 0.773).</li>
-<li><b>Evidence on preference is limited.</b> There is no convincing evidence that one format communicates individual predictions better than another.</li>
-<li><b>Computerised presentation</b> through electronic records and calculators makes complex models easy to apply, and is likely to become more common.</li>
-</ul>
-<h3>Minimum reporting for any format</h3>
-<p>Whatever simplified format is offered, publish the information that allows others to calculate predictions and validate the model:</p>
-<ol>
-<li>The intercept (or baseline survival at stated time points) and all coefficients, after any shrinkage, with the intercept re-estimated.</li>
-<li>Coding of every predictor: 0/1 meaning, reference categories, units, transformations, centring values and spline knot positions.</li>
-<li>The outcome definition and time horizon.</li>
-<li>For score charts: points per predictor, interpolation rules, and the conversion from score to probability (multiplier and intercept).</li>
-</ol>
-<div class="callout key"><b>Key idea</b><p>A presentation format is a translation of the model. It must reproduce the model's absolute risks closely enough for its purpose, and the full formula should remain available, because external validation and updating depend on it.</p></div>
-<p class="src">Source: Ch. 18, §18.2.6, §18.3.5, §18.5</p>
-`
+<p>Tables can carry colour-coded advice (for example statin recommendations by smoking, blood pressure, diabetes, cholesterol ratio and sex). Book example: testicular cancer c 0.839 (formula, nomogram, graphical formats), 0.838 (score chart, continuous), 0.808 (categorised), 0.773 (table: sum of five favourable characteristics against residual mass size).</p>
+<p>A meta-model inherits any shrinkage of the underlying model. Book example: a CT rule after minor head injury (one of ten major or two of eight minor factors, from rounded coefficients and categorised predictors) had 100% sensitivity for neurosurgical intervention at development, 96% on average in bootstrap validation (100% in 56% of samples), and 25% specificity. Illustrative: a referral rule such as "refer if score ≥ 3" needs a threshold chosen from the harms of unnecessary referral and missed preterm birth, and its own validation.</p>
+<p><b>Choosing a format.</b> Match the audience (nomograms are standard in prostate cancer; iso-probability curves of pre- and post-treatment mass size were drawn for radiologists). There is no convincing evidence that one format communicates better. Computerised presentation is likely to grow.</p>
+<p><b>Minimum reporting:</b> intercept (or baseline survival at stated times) and coefficients after shrinkage with re-estimated intercept; coding, reference categories, units, transformations, centring values, knots; outcome definition and horizon; for score charts, points, interpolation rules, multiplier and intercept.</p>
+<p class="src">Source: Ch. 18, §18.2.5-18.2.6, §18.3.5, §18.4-18.5 (Tables 18.3, 18.5)</p>`
     }
   ],
   keyPoints: [
@@ -208,127 +221,199 @@ registerModule({
   ],
   quiz: [
     {
-      q: 'A paper on low birth weight presents only a table of adjusted odds ratios with 95% CIs for six predictors. Can a reader calculate a predicted risk for a new mother?',
+      q: 'A paper on preterm birth gives only a table of adjusted odds ratios, with 95% intervals, for six predictors. Can the team calculate a predicted risk for a new woman?',
       options: [
-        'Yes, by multiplying the odds ratios that apply to her',
-        'Yes, by adding the odds ratios and dividing by six',
-        'Yes, if the overall incidence is also reported',
-        'No, the intercept (and exact coding) is needed to obtain an absolute risk'
+        'Yes, by multiplying the odds ratios that apply to her.',
+        'Yes, by adding the odds ratios and dividing by six.',
+        'Yes, if the overall rate of preterm birth is also given.',
+        'No: the intercept, and the exact coding and units, are needed.'
       ],
       answer: 3,
-      why: 'Odds ratios give relative effects only; the absolute risk requires the intercept, which places the linear predictor on the correct baseline, plus exact coding and units. Multiplying odds ratios gives the odds relative to the reference patient, not her risk. The overall incidence alone does not give the intercept unless all predictors are centred appropriately.'
+      why: 'Odds ratios are relative effects. Multiplying them gives her odds relative to a reference woman, not her risk. The overall rate does not give the intercept unless every predictor was centred in a stated way. Only the intercept, with exact coding and units, places her linear predictor on an absolute scale.'
     },
     {
-      q: 'A preterm-birth model has lp = −3.0 + 1.5 × previous preterm birth + 0.9 × chronic hypertension. What is the predicted risk for a woman with both characteristics?',
+      q: 'A preterm model has lp = −3.0 + 1.5 × previous preterm birth + 0.9 × chronic hypertension. What is the predicted risk for a woman with both?',
       options: ['About 18%', 'About 35%', 'About 65%', 'About 85%'],
       answer: 1,
-      why: 'lp = −3.0 + 1.5 + 0.9 = −0.6; p = 1/(1 + exp(0.6)) = 1/(1 + 1.822) = 0.354. Option A results from omitting chronic hypertension (lp = −1.5, p = 0.18); option C results from reversing the sign of lp (p = 0.65).'
+      why: 'lp = −3.0 + 1.5 + 0.9 = −0.6, and risk = 1 ÷ (1 + e<sup>0.6</sup>) = 1 ÷ 2.82 = 0.354. About 18% comes from leaving out chronic hypertension (lp −1.5). About 65% comes from reversing the sign of lp.'
     },
     {
-      q: 'An author shrinks all coefficients of an anaemia-in-pregnancy model by 0.85 but keeps the original intercept. What is the expected consequence?',
+      q: 'The team shrinks every coefficient of its preterm model by 0.85 but keeps the original intercept. What is the expected consequence?',
       options: [
-        'Calibration-in-the-large is likely to be wrong, because the intercept was not re-estimated',
-        'Discrimination falls substantially',
-        'No consequence, because shrinkage affects only the slope',
-        'The calibration slope becomes greater than 1 in the development data'
+        'Calibration-in-the-large is likely to be wrong, because the intercept was not re-estimated.',
+        'Discrimination falls substantially.',
+        'Nothing, because shrinkage affects only the slope.',
+        'The calibration slope in new women moves further from 1.'
       ],
       answer: 0,
-      why: 'Shrinking coefficients changes the mean linear predictor, so the average predicted risk no longer matches the observed frequency unless the intercept is re-estimated. Uniform shrinkage hardly changes c, because the ranking of patients is unchanged (against option B).'
+      why: 'Shrinking the coefficients changes the average linear predictor, so the mean predicted risk no longer matches the observed rate unless the intercept is re-estimated. Uniform shrinkage hardly changes c, because the ranking of women stays the same. Shrinkage is meant to bring the calibration slope in new women closer to 1, not further from it.'
     },
     {
-      q: 'To build a score chart, an investigator divides every coefficient by the smallest binary coefficient (0.35), giving that predictor 1 point. What is the main objection?',
+      q: 'To build a preterm score chart, an analyst divides every coefficient by the smallest one (0.35, first pregnancy), so that predictor scores 1 point. What is the main objection?',
       options: [
-        'Scores must always be whole numbers between 0 and 10',
-        'The scaling capitalises on the estimate of one coefficient, adding unnecessary uncertainty; a common denominator across coefficients is preferable',
-        'Binary predictors should not receive points',
-        'The resulting chart cannot be converted back to a probability'
+        'Scores must be whole numbers between 0 and 10.',
+        'All points then rest on one uncertain estimate; a common denominator across the coefficients is better.',
+        'Yes/no predictors should not receive points.',
+        'The chart cannot then be converted back to a risk.'
       ],
       answer: 1,
-      why: 'Dividing by the smallest coefficient lets the imprecision of that single estimate drive all scores. The book recommends searching for a common denominator (for example multiplying by 10, or a smaller factor). Any rescaled score can be converted back to a probability by refitting the multiplier and intercept, so option D is wrong.'
+      why: 'Dividing by the smallest coefficient lets the imprecision of that single estimate drive every score. The book recommends a common denominator, such as multiplying by 10 or a smaller factor. Any rescaled score can still be converted back to risk by refitting the multiplier and intercept.'
     },
     {
-      q: 'In the book example, which presentation of the testicular cancer model lost the most discrimination?',
+      q: 'Book example: which presentation of the testicular cancer model lost the most discrimination?',
       options: [
-        'The nomogram',
-        'The score chart with rounded scores and continuous predictors',
-        'The simple table of predictions',
-        'The score chart with categorised continuous predictors'
+        'The nomogram.',
+        'The score chart with rounded points and continuous predictors.',
+        'The simple table of predictions.',
+        'The score chart with categorised continuous predictors.'
       ],
       answer: 2,
-      why: 'The c statistic was 0.839 for formula and nomogram, 0.838 for rounded continuous scores, 0.808 for categorised scores and 0.773 for the table. Rounding costs little; the misconception is that rounding scores is the main source of loss, when categorisation and tabulation cost far more.'
+      why: 'c was 0.839 for the formula and nomogram, 0.838 for rounded continuous scores, 0.808 for categorised scores and 0.773 for the table. The common belief that rounding is the main cost is wrong: grouping and tabulating cost far more.'
     },
     {
-      q: 'A model developed in 20,000 women gives a predicted risk of PPH of 8% (95% CI 7.6% to 8.4%) for a woman at a new hospital where the model has not been validated. How should the narrow interval be interpreted?',
+      q: 'A preterm model developed in 20,000 women gives a woman at a new hospital a risk of 8% (95% interval 7.6% to 8.4%). The model has not been validated there. How should the narrow interval be read?',
       options: [
-        'Her true risk is almost certainly between 7.6% and 8.4%',
-        'The model is certainly well calibrated in the new hospital',
-        'She will have a PPH with probability between 7.6% and 8.4% regardless of setting',
-        'It reflects random error only; systematic miscalibration in the new setting is not included'
+        'Her true risk is almost certainly between 7.6% and 8.4%.',
+        'The model must be well calibrated in the new hospital.',
+        'She will deliver early with a probability between 7.6% and 8.4% in any setting.',
+        'It reflects random error only; miscalibration in the new setting is not included.'
       ],
       answer: 3,
-      why: 'Confidence intervals for predictions are valid only if there is no systematic bias. A large development sample gives narrow intervals, but miscalibration from different case-mix or coefficients in a new setting is not shown. Options A and C mistake precision for accuracy.'
+      why: 'A confidence interval for a prediction is valid only if there is no systematic bias. A large development sample gives narrow intervals, but miscalibration from a different case-mix or different coefficients is not shown. The other options mistake precision for accuracy.'
     }
   ],
   tasks: [
     {
-      id: 't1',
-      title: 'From formula to score chart by hand',
-      level: 'Apply',
-      scenario: `<p>Illustrative (synthetic). A gestational diabetes model is published as:</p>
-<div class="formula">lp = −2.2 + 0.05 × (age − 27) + 0.09 × (BMI − 23) + 0.6 × family history + 1.3 × previous GDM + 0.06 × (fasting glucose − 85)</div>
-<p>Age in years, BMI in kg/m², fasting plasma glucose in mg/dL; family history and previous GDM coded 1 = yes. A score chart is to be built with 1 point = 0.6 log-odds; a refit of the total score in the development data gives lp = −2.2 + 0.6 × score.</p>
-<p>Woman A: 35 years, BMI 30, family history no, previous GDM yes, fasting glucose 95 mg/dL.</p>
-<p>For a second woman with lp = −1.0, the SE of the linear predictor (from xᵀVx) is 0.20.</p>`,
+      id: 't0',
+      title: 'An odds ratio table and a request for a rule',
+      level: 'Understand',
+      scenario: `<p>The journal paper found by the neighbouring district reports adjusted odds ratios: previous preterm birth 4.5, chronic hypertension 2.5, bacteriuria 2.0, tobacco 1.8, and haemoglobin 0.74 per g/dL. There is no intercept and no statement of units. The programme officer asks for "a simple rule for whom to refer".</p>`,
       questions: [
-        '<b>(a)</b> Calculate woman A\'s linear predictor and predicted risk from the formula.',
-        '<b>(b)</b> Derive the points per unit for each predictor and the points for previous GDM (rounded to a whole number). Score woman A without rounding the continuous items and convert to a probability.',
-        '<b>(c)</b> Explain where the score-based risk differs from the formula and why.',
-        '<b>(d)</b> Calculate the 95% confidence interval for the second woman\'s predicted risk. What does it not include?',
-        '<b>(e)</b> A colleague proposes points equal to the odds ratios (family history 1.8, previous GDM 3.7). Explain why this is wrong.'
+        '<b>(a)</b> Why can the district not calculate a woman\'s risk from this paper?',
+        '<b>(b)</b> List what the authors would need to supply.',
+        '<b>(c)</b> How does a decision rule differ from a prediction model, and what extra decision does it need?'
       ],
-      answer: `<p><b>(a)</b> lp = −2.2 + 0.05 × 8 + 0.09 × 7 + 0.6 × 0 + 1.3 × 1 + 0.06 × 10 = −2.2 + 0.40 + 0.63 + 0 + 1.30 + 0.60 = 0.73. p = 1/(1 + exp(−0.73)) = 1/(1 + 0.482) = <b>0.675</b>.</p>
-<p><b>(b)</b> Points = coefficient/0.6. Age 0.05/0.6 = 0.083 per year (1 point per 12 years); BMI 0.09/0.6 = 0.15 per unit (1 point per 6.7 units); glucose 0.06/0.6 = 0.1 per mg/dL (1 point per 10 mg/dL); family history 0.6/0.6 = 1; previous GDM 1.3/0.6 = 2.17, rounded to 2. Woman A: age 8 × 0.083 = 0.67; BMI 7 × 0.15 = 1.05; family history 0; previous GDM 2; glucose 10 × 0.1 = 1.0. Total = 4.72. lp = −2.2 + 0.6 × 4.72 = 0.63; p = 1/(1 + exp(−0.63)) = <b>0.653</b>.</p>
-<p><b>(c)</b> The difference (65.3% versus 67.5%) comes from rounding previous GDM from 2.17 to 2 points: 2 × 0.6 = 1.2 log-odds instead of 1.3, a loss of 0.1 on the logit scale. The continuous items were not rounded, so they contribute no error. In a real chart, the multiplier and intercept are re-estimated from the rounded scores, which partly compensates on average.</p>
-<p><b>(d)</b> 95% CI for lp: −1.0 ± 1.96 × 0.20 = −1.392 to −0.608. Probabilities: 1/(1 + exp(1.392)) = 0.199 and 1/(1 + exp(0.608)) = 0.353, around a point estimate of 0.269. The interval covers random estimation error only; it does not include systematic error such as miscalibration if the model is used in a different setting, and it does not express the fact that the individual woman either will or will not develop GDM.</p>
-<p><b>(e)</b> The linear predictor adds log-odds, so points must be proportional to coefficients (0.6 and 1.3, ratio 2.17). Odds ratios (1.8 and 3.7, ratio about 2.0) distort the relative weights, and any predictor with no effect (OR 1.0) would receive 1 point instead of 0; a protective factor with OR 0.5 would add points instead of subtracting them. The sum of odds ratios has no defined relation to risk.</p>`
+      answer: `<p><b>(a)</b> Odds ratios are relative effects. Multiplying them gives a woman's odds relative to a reference woman, but the odds of that reference woman (the intercept) are unknown, so no absolute risk can be found. The haemoglobin odds ratio cannot be used safely either, because the unit (g/dL or g/L) and any centring are not stated.</p>
+<p><b>(b)</b> The intercept and all coefficients (after any shrinkage, with the intercept re-estimated); coding of each predictor (what 1 means, reference categories); units, transformations and centring values; and the outcome definition (before 37 weeks, dating method) and time horizon.</p>
+<p><b>(c)</b> A prediction model gives an absolute risk and leaves the action to the clinician and the woman. A decision rule recommends an action for each combination of characteristics. It is made by adding a threshold to a model, and the threshold must be chosen from the relative harms of an unnecessary referral and a missed preterm birth. That is a clinical and programme decision, not a statistical one.</p>`
+    },
+    {
+      id: 't1',
+      title: 'Calculate risks from the formula',
+      level: 'Apply',
+      scenario: `<p>Illustrative (synthetic). The team's formula is:</p>
+<div class="formula">lp = −2.3 + 1.5 × previous preterm birth + 0.9 × chronic hypertension + 0.6 × tobacco + 0.7 × bacteriuria − 0.3 × (Hb − 11) − 0.06 × (BMI − 22)</div>
+<p>Hb is in g/dL and BMI in kg/m². Yes/no predictors are coded 1 = yes. Woman A has had a previous preterm birth and has bacteriuria; she has no hypertension and no tobacco use, Hb 10.2 g/dL and BMI 24.5.</p>`,
+      questions: [
+        '<b>(a)</b> Calculate woman A\'s linear predictor and risk.',
+        '<b>(b)</b> What is the risk of a woman with no risk factors, Hb 11 and BMI 22? Why is this the intercept?',
+        '<b>(c)</b> A clerk enters woman A\'s Hb as 102 g/L. What risk results?',
+        '<b>(d)</b> The coefficients were shrunk by 0.9 after bootstrapping. What must have been done to the intercept?'
+      ],
+      answer: `<p><b>(a)</b> lp = −2.3 + 1.5 + 0.7 − 0.3 × (10.2 − 11) − 0.06 × (24.5 − 22) = −2.3 + 1.5 + 0.7 + 0.24 − 0.15 = −0.01. Risk = 1 ÷ (1 + e<sup>0.01</sup>) = 0.498, about 50%.</p>
+<p><b>(b)</b> All terms are 0, so lp = −2.3 and risk = 1 ÷ (1 + e<sup>2.3</sup>) = 9.1%. Because Hb and BMI are centred at 11 and 22, the intercept is the log-odds for a woman at these reference values with no risk factors.</p>
+<p><b>(c)</b> −0.3 × (102 − 11) = −27.3, so lp = −2.3 + 1.5 + 0.7 − 27.3 − 0.15 = −27.55, a risk of practically 0%. A woman at about 50% risk would look risk-free. Units must be stated beside the formula and checked in any calculator.</p>
+<p><b>(d)</b> After shrinking, the intercept must be re-estimated (with the shrunk linear predictor as an offset), so that the average predicted risk equals the observed rate of preterm birth in the development data. Keeping the old intercept leaves calibration-in-the-large wrong.</p>`
     },
     {
       id: 't2',
-      title: 'Cost of simplification in the score chart builder',
-      level: 'Analyze',
-      scenario: `<p>Open the score chart builder, which uses a fixed 9-predictor preterm-birth model fitted to the synthetic district hospital cohort (ptb_dev).</p>`,
+      title: 'A confidence interval for a risk',
+      level: 'Apply',
+      scenario: `<p>Illustrative (synthetic). A simple model has an intercept a = −2.1 and one predictor, previous preterm birth, with coefficient b = 1.5. Its covariance matrix gives var(a) = 0.0057, var(b) = 0.0300 and cov(a, b) = −0.0057.</p>`,
       questions: [
-        '<b>(a)</b> With continuous predictors kept continuous, vary the points-per-log-odds multiplier from coarse to fine. How does the c statistic of the points score compare with the full regression model?',
-        '<b>(b)</b> Switch to categorised continuous predictors. What happens to c, and why?',
-        '<b>(c)</b> Score two women of your choice in the patient form and compare score-based and model-based risks. Where are the discrepancies largest?',
-        '<b>(d)</b> Which format would you recommend for a printed antenatal card, and what would you publish alongside it?'
+        '<b>(a)</b> Calculate the predicted risk for a woman with a previous preterm birth.',
+        '<b>(b)</b> Calculate var(lp) and SE(lp) for her, using x = (1, 1).',
+        '<b>(c)</b> Calculate the 95% interval for her risk. Why is it not symmetric?',
+        '<b>(d)</b> Why is her interval wider than that of a woman without a previous preterm birth (9.6% to 12.4%)?'
       ],
-      answer: `<p><b>(a)</b> Expected pattern: with continuous handling, the points score has a c statistic very close to the full model, even with a fairly coarse multiplier; only very coarse rounding (a few points per predictor) lowers c noticeably. This mirrors the book example, where rounded scores lost only 0.001 in c (0.839 to 0.838).</p>
-<p><b>(b)</b> c falls more, because categorisation throws away information within categories: women at the edges of a category receive the same points as those in the middle. In the book example categorisation cost 0.031 (0.839 to 0.808). Continuous predictors with graded effects (such as haemoglobin, BMI or age in preterm-birth risk) lose most when categorised coarsely.</p>
-<p><b>(c)</b> Discrepancies are largest where rounding errors accumulate, typically for women with several risk factors or extreme values of continuous predictors. For most women the difference is small.</p>
-<p><b>(d)</b> A score chart with continuous predictors scored by interpolation (or with fine categories) and a conversion table from total score to risk is a reasonable printed format. Alongside it, publish the full regression formula: intercept, coefficients after shrinkage with re-estimated intercept, coding, units, transformation details, and the score multiplier and intercept, so the model can be validated and updated elsewhere.</p>`
+      answer: `<p><b>(a)</b> lp = −2.1 + 1.5 = −0.6. Risk = 1 ÷ (1 + e<sup>0.6</sup>) = 1 ÷ 2.82 = 0.354.</p>
+<p><b>(b)</b> var(lp) = var(a) + var(b) + 2 cov(a, b) = 0.0057 + 0.0300 − 0.0114 = 0.0243. SE = √0.0243 = 0.156.</p>
+<p><b>(c)</b> lp limits: −0.6 ± 1.96 × 0.156 = −0.906 to −0.294. Risks: 1 ÷ (1 + e<sup>0.906</sup>) = 0.288 and 1 ÷ (1 + e<sup>0.294</sup>) = 0.427. So 35.4% (28.8% to 42.7%). The interval is symmetric on the log-odds scale and becomes asymmetric after the logistic transformation.</p>
+<p><b>(d)</b> Fewer women have had a previous preterm birth, so b is less precise (var 0.0300) than a (0.0057). Her lp uses both, so her SE (0.156) is about twice that of a woman without (√0.0057 = 0.075).</p>`
     },
     {
       id: 't3',
-      title: 'Critique a published neonatal sepsis score',
+      title: 'A narrow interval at the referral hospital',
+      level: 'Analyse',
+      scenario: `<p>Illustrative (synthetic). At the referral hospital, a woman with a previous preterm birth is shown "35.4% (28.8% to 42.7%)" by the simple model in the last task. External validation there found calibration-in-the-large of +0.29: the observed odds of preterm birth were exp(0.29) = 1.34 times the predicted odds.</p>`,
+      questions: [
+        '<b>(a)</b> If the miscalibration applies to her, what is her risk after adding 0.29 to her lp?',
+        '<b>(b)</b> What does the displayed interval include, and what does it leave out?',
+        '<b>(c)</b> A colleague says "her risk is uncertain, so we should not use a number at all". Respond.',
+        '<b>(d)</b> How should the risk be shown to the woman herself?'
+      ],
+      answer: `<p><b>(a)</b> lp = −0.6 + 0.29 = −0.31. Risk = 1 ÷ (1 + e<sup>0.31</sup>) = 0.423, about 42%, near the upper end of the displayed interval.</p>
+<p><b>(b)</b> It includes random error in the coefficients from the development sample. It leaves out systematic error, such as miscalibration from a different case-mix or different effects in a new setting. It is valid only if the predictions are unbiased there. It also does not express that she either will or will not deliver early.</p>
+<p><b>(c)</b> For decisions the point estimate matters most; if no better estimate is available, following the model's estimate is the best one can do. The right response to the miscalibration is to update the intercept for the referral hospital, not to drop the number.</p>
+<p><b>(d)</b> As a frequency: "of 100 women like you, about 35 deliver before 37 weeks" (about 42 at the referral hospital after updating). The risk itself already expresses the uncertainty for her as an individual.</p>`
+    },
+    {
+      id: 't4',
+      title: 'Build the antenatal score chart by hand',
+      level: 'Apply',
+      scenario: `<p>Illustrative (synthetic). Use the formula from the earlier task. One point equals 0.3 log-odds. Hb scores 0 at 11 g/dL and BMI scores 0 at 22 kg/m². A refit in the development data gives lp = −2.3 + 0.3 × score.</p>`,
+      questions: [
+        '<b>(a)</b> Give the points for each yes/no predictor (rounded to whole numbers) and the points per unit for Hb and BMI.',
+        '<b>(b)</b> Score woman A (previous preterm birth, bacteriuria, Hb 10.2, BMI 24.5) without rounding the continuous items, and convert her score to a risk.',
+        '<b>(c)</b> Her formula risk was 49.8%. Explain the difference.',
+        '<b>(d)</b> A colleague suggests points equal to the odds ratios (previous preterm birth 4.5, chronic hypertension 2.5, bacteriuria 2.0, tobacco 1.8). Explain why this is wrong.'
+      ],
+      answer: `<p><b>(a)</b> Previous preterm birth 1.5 ÷ 0.3 = 5; chronic hypertension 0.9 ÷ 0.3 = 3; tobacco 0.6 ÷ 0.3 = 2; bacteriuria 0.7 ÷ 0.3 = 2.33, rounded to 2. Hb: 0.3 ÷ 0.3 = 1 point per g/dL below 11 (minus 1 per g/dL above). BMI: 0.06 ÷ 0.3 = 0.2 points per unit below 22, that is 1 point per 5 units.</p>
+<p><b>(b)</b> 5 + 2 + (11 − 10.2) × 1 + (22 − 24.5) × 0.2 = 5 + 2 + 0.8 − 0.5 = 7.3. lp = −2.3 + 0.3 × 7.3 = −0.11. Risk = 1 ÷ (1 + e<sup>0.11</sup>) = 47.3%.</p>
+<p><b>(c)</b> Bacteriuria was rounded from 2.33 to 2 points, so it contributes 2 × 0.3 = 0.6 log-odds instead of 0.7. Her lp is 0.1 lower (−0.11 against −0.01), and her risk 2.5 percentage points lower. The continuous items were not rounded, so they add no error. In a real chart the multiplier and intercept are re-estimated from the rounded scores, which partly makes up for this on average.</p>
+<p><b>(d)</b> The model adds log-odds, so points must be proportional to the coefficients. Odds ratios distort the weights: previous preterm birth against chronic hypertension is 4.5 ÷ 2.5 = 1.8 with odds ratios, but 1.5 ÷ 0.9 = 1.67 with coefficients. The distortion grows with larger effects (book: odds ratios 10 and 1.5 differ 6.7-fold, their coefficients 2.30 and 0.41 only 5.7-fold). A predictor with no effect (OR 1.0) would earn 1 point, a protective factor would add points, and the sum has no defined relation to risk.</p>`
+    },
+    {
+      id: 't5',
+      title: 'What the score chart builder shows',
+      level: 'Analyse',
+      scenario: `<p>Use the score chart builder in this case. It fits a 9-predictor model to the complete cases of ptb_dev (1,548 women, 182 preterm births). Its defaults are 4 points per 1.0 of log-odds and "Categorise" for age, BMI and Hb.</p>`,
+      questions: [
+        '<b>(a)</b> At the defaults, record the c of the points score, the c of the full regression model, the score range, and the points for previous preterm birth.',
+        '<b>(b)</b> Move the slider to 1. Record the two c statistics and the points. Why does c fall?',
+        '<b>(c)</b> Return to 4 and choose "Keep continuous (linear)". Both c statistics fall. Why, when the book found that categorising lowers c?',
+        '<b>(d)</b> In the patient form enter age 24, BMI 19, Hb 9.5, previous preterm birth and tobacco use, with the other boxes empty. Compare the two risks at 4 and at 1 point per log-odds (categorised).'
+      ],
+      answer: `<p><b>(a)</b> c of the points score 0.727 against 0.729 for the full model (difference −0.002); score range 0 to 22; previous preterm birth 6 points (coefficient 1.495 × 4 = 5.98).</p>
+<p><b>(b)</b> c falls to 0.697 (full model still 0.729), and the score range shrinks to 0 to 4. At 1 point per log-odds most coefficients round to 0 or 1 (previous preterm birth 1 point, Hb 9 to 10.9 and tobacco 0 points), so women with quite different risks get the same score. Very coarse rounding loses discrimination; 4 points per log-odds already loses almost nothing.</p>
+<p><b>(c)</b> The continuous model gives c 0.664 (score 0.663). In these synthetic data the true effect of age is U-shaped (higher risk for young and older women), and low Hb and low BMI act mainly below a threshold. A straight-line term for each misses this, while the groups (age under 20 and 35 or more; Hb below 9 and 9 to 10.9; BMI below 18.5 and 25 or more) capture it. The book's comparison assumed the continuous predictors were well modelled. The lesson is that a badly specified continuous term can cost more than grouping; the best option is a flexible continuous term (Module 6), not grouping.</p>
+<p><b>(d)</b> At 4 points per log-odds: score 10 (Hb 9 to 10.9: 2, previous preterm birth: 6, tobacco: 2), risk from score 27.9%, from the model 27.9%. At 1: score 1, risk from score 13.5% against 27.9% from the model. Coarse rounding badly misplaces this woman, because two of her risk factors earn no points.</p>`
+    },
+    {
+      id: 't6',
+      title: 'Critique a published preterm risk score',
       level: 'Evaluate',
-      scenario: `<p>Illustrative (synthetic). A newborn unit publishes a "sepsis risk score" developed in 700 newborns. The paper contains a table of odds ratios. Points were assigned by rounding each odds ratio (for example lethargy OR 4.1 = 4 points, male sex OR 1.1 = 1 point). C-reactive protein and temperature were categorised at cut-points chosen to maximise the odds ratio. The total score is presented with a recommendation: "score ≥ 6: start antibiotics", which in the development data had 100% sensitivity. The paper also shows a nomogram from a separate model with a spline for respiratory rate, but no intercept or formula. A hospital in another state wants to adopt the score.</p>`,
+      scenario: `<p>Illustrative (synthetic). A neighbouring hospital publishes a "preterm risk score" developed in 600 women. The paper gives a table of odds ratios. Points were made by rounding each odds ratio (previous preterm birth OR 4.5 = 5 points; baby's sex OR 1.1 = 1 point). Hb and BMI were each cut at the value that gave the largest odds ratio. The score comes with a recommendation: "score of 6 or more: refer for cervical length scan", which had 100% sensitivity in the development data. The paper also shows a nomogram from a separate model with a spline for age, but no formula or intercept.</p>`,
       questions: [
         '<b>(a)</b> Identify the problems with how the model is presented.',
-        '<b>(b)</b> What would the receiving hospital need to validate the model, and what should it expect about the 100% sensitivity?',
+        '<b>(b)</b> What would the district need in order to validate the score, and what should it expect of the 100% sensitivity?',
         '<b>(c)</b> Rewrite the presentation plan.'
       ],
-      answer: `<p><b>(a)</b> Problems:</p>
+      answer: `<p><b>(a)</b></p>
 <ol>
-<li>Points based on odds ratios: the score is not proportional to log-odds. A predictor with essentially no effect (male sex, OR 1.1) gains 1 point, and relative weights are distorted. The sum has no defined relation to risk.</li>
-<li>No conversion from score to probability (no multiplier or intercept), so absolute risks cannot be obtained.</li>
-<li>Continuous predictors dichotomised at data-derived "optimal" cut-points: loss of information and optimistic, biased effects.</li>
-<li>The decision rule (score ≥ 6) is reported without justification of the threshold in terms of harms of unnecessary antibiotics versus missed sepsis.</li>
-<li>100% sensitivity is an apparent (development) result, which is optimistic.</li>
-<li>The nomogram with a spline term and no published formula or intercept cannot be reconstructed reliably, making external validation error-prone.</li>
+<li><b>Critical:</b> points from odds ratios. The score is not proportional to log-odds: a predictor with almost no effect (baby's sex, OR 1.1) earns 1 point, and the weights are distorted. The sum has no defined relation to risk.</li>
+<li>No conversion from score to risk (no multiplier or intercept), so absolute risks cannot be found.</li>
+<li>Hb and BMI cut at data-chosen "optimal" points: information is lost and the effects are biased upwards.</li>
+<li>The referral threshold (6 or more) is given without reasons in terms of the harms of unnecessary scans against missed preterm births.</li>
+<li>100% sensitivity is an apparent result in the development data, and is optimistic.</li>
+<li>A nomogram with a spline and no formula cannot be reconstructed reliably, so external validation is error-prone.</li>
 </ol>
-<p><b>(b)</b> The receiving hospital needs the full regression formula: intercept, coefficients, coding, units (CRP in mg/L, temperature in °C), spline knot positions and the outcome definition. It should expect sensitivity below 100% in its own newborns; in the book's head injury example, a rule with 100% apparent sensitivity had an average of 96% in bootstrap validation and 100% in only 56% of samples. It should check calibration-in-the-large locally, because sepsis incidence and case-mix differ between units.</p>
-<p><b>(c)</b> Plan: publish the full formula (with shrinkage and a re-estimated intercept); keep CRP and temperature continuous with appropriate transformations; build a score chart from the coefficients using a common denominator, with interpolation for continuous predictors and a table converting total score to probability; report the c statistic of the score against the full model; present any decision threshold as a separate decision rule with its rationale and internally validated sensitivity and specificity; and provide a nomogram only as a supplement to the formula.</p>`
+<p><b>(b)</b> The full formula: intercept, coefficients, coding, units (Hb in g/dL, BMI in kg/m²), spline knot positions, and the outcome definition (before 37 weeks, how dated). It should expect sensitivity below 100% in its own women. In the book's head injury example, a rule with 100% apparent sensitivity averaged 96% in bootstrap validation, and reached 100% in only 56% of samples. It should also check calibration-in-the-large locally.</p>
+<p><b>(c)</b> Publish the full formula, with shrinkage and a re-estimated intercept. Keep Hb, BMI and age continuous with suitable flexible terms. Build the score chart from the coefficients with a common denominator, interpolation for continuous predictors, and a table from score to risk. Report c for the score and for the full model. Present any referral threshold as a separate decision rule, with its reasons and internally validated sensitivity and specificity. Give the nomogram only as a supplement to the formula.</p>`
+    },
+    {
+      id: 't7',
+      title: 'Design the presentation package',
+      level: 'Create',
+      scenario: `<p>The team's validated model will reach three groups: midwives at sub-centres with a printed antenatal card and no computer; doctors at the district hospital, whose electronic record can run a calculator; and researchers who want to validate or update the model elsewhere.</p>`,
+      questions: [
+        '<b>(a)</b> Choose a format for each group, and give one advantage and one cost of each.',
+        '<b>(b)</b> List the items that must be published whatever format is used.',
+        '<b>(c)</b> The programme wants the card to say "refer if 4 points or more". What must happen before this is printed?'
+      ],
+      answer: `<p><b>(a)</b> <b>Midwives:</b> a score chart with whole points for yes/no predictors, interpolated points for Hb and BMI, and a small table from total score to risk (for example as "out of 100 women"). It is easy to use, but predictions are approximate. A table of predictions would be easier still, but grouping costs more discrimination (book: 0.773 against 0.839). <b>Doctors:</b> the regression formula built into the electronic record, showing the exact risk and an approximate 95% interval. It is exact, but depends on correct units and coding in the software. <b>Researchers:</b> the full formula with its covariance matrix (or a spreadsheet), so the model can be validated, recalibrated and updated. A nomogram may be added as a picture, but never alone.</p>
+<p><b>(b)</b> The intercept and all coefficients after shrinkage, with the intercept re-estimated; coding of every predictor, reference categories, units, transformations and centring values (and knots if splines are used); the outcome definition and time horizon (before 37 weeks, dating method); and for the score chart the points, interpolation rules and the score-to-risk conversion (multiplier and intercept).</p>
+<p><b>(c)</b> This turns the model into a decision rule. The threshold must be chosen from the harms of unnecessary referral against those of a missed preterm birth, with clinical and programme input, and the rule's sensitivity, specificity and net benefit must be validated, ideally in new women, rather than assumed from the development data.</p>`
     }
   ]
 });

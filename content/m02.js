@@ -10,11 +10,18 @@ registerModule({
     'Choose a data source for a model',
     'Correct risks from a case-control sample',
     'Spot verification bias',
-    'Judge a predictor by its odds ratio and how common it is',
+    'Judge a predictor by effect and frequency',
     'See how measurement error weakens a predictor',
     'Count events per variable'
   ],
   format: 'cases',
+  reading: [
+    { cite: "Riley RD, Ensor J, Snell KIE, et al. (2020). Calculating the sample size required for developing a clinical prediction model. BMJ 368:m441.", url: "https://doi.org/10.1136/bmj.m441", note: "The current standard for judging whether a development dataset is large enough, replacing the simple events-per-variable rule." },
+    { cite: "van Smeden M, Moons KGM, de Groot JAH, et al. (2019). Sample size for binary logistic prediction models: beyond events per variable criteria. Stat Methods Med Res 28:2455-2474.", url: "https://doi.org/10.1177/0962280218784726", note: "Simulation evidence that events per variable alone is a poor guide, and that predictors, sample size and event fraction matter together." },
+    { cite: "Peduzzi P, Concato J, Kemper E, Holford TR, Feinstein AR (1996). A simulation study of the number of events per variable in logistic regression analysis. J Clin Epidemiol 49:1373-1379.", url: "https://doi.org/10.1016/s0895-4356(96)00236-3", note: "The classic source of the ten events per variable rule, useful for knowing what it did and did not show." },
+    { cite: "Courvoisier DS, Combescure C, Agoritsas T, Gayet-Ageron A, Perneger TV (2011). Performance of logistic regression modeling: beyond the number of events per variable, the role of data structure. J Clin Epidemiol 64:993-1000.", url: "https://doi.org/10.1016/j.jclinepi.2010.11.012", note: "Shows that correlated predictors and large effects can cause problems even with more than ten events per variable." },
+    { cite: "Wolff RF, Moons KGM, Riley RD, et al. (2019). PROBAST: a tool to assess the risk of bias and applicability of prediction model studies. Ann Intern Med 170:51-58.", url: "https://doi.org/10.7326/M18-1376", note: "A checklist of 20 signalling questions on participants, predictors, outcome and analysis for judging the quality of a study design." }
+  ],
   essentials: `
 <ul>
 <li>A model is only as good as the data it is built from. Clever statistics cannot rescue a badly designed study.</li>
@@ -26,6 +33,34 @@ registerModule({
 <li>Count the <b>events</b>, not the people. Divide the events by the number of things you plan to try in the model: this is <b>events per variable</b> (EPV). Below 10 is risky.</li>
 </ul>`,
   story: 'Throughout the course you follow the maternity team of a district hospital as it works on one problem: preterm birth. The hospital and its data are fictional and synthetic. The team has written down its question: at the first antenatal (booking) visit, which women are likely to deliver before 37 weeks? In this module it plans the study: where the data will come from, a side question about urine infection, which predictors to record and how, and how many women it needs. You do not need the earlier modules for this story.',
+  defs: {
+    'prospective cohort': 'A group of people enrolled now and followed forward, with the information recorded by a plan made in advance.',
+    'reference standard': 'The best available way of finding out whether the condition is really present, used to check a test.',
+    'index test': 'The test being studied, whose results are compared with the reference standard.',
+    'verification bias': 'Making a test look better than it is by checking the true answer mainly in people whose test was positive.',
+    'kappa': 'How much two observers agree beyond the agreement expected by chance, from 0 (chance) to 1 (perfect).',
+    'regression dilution': 'The weakening of a predictor\'s apparent effect when it is measured with error.',
+    'events per variable': 'The number of people with the outcome divided by the number of coefficients you try in the model.',
+    'composite': 'An outcome made by combining several events into one, such as preterm birth or stillbirth.'
+  },
+  explainers: [
+    {
+      id: 'epv',
+      title: 'Why events, not women, set the sample size',
+      scenes: [
+        { svg: EX.svg(EX.text(40, 36, '2,000 women at booking (each dot is 2 women)', { size: 'm', bold: true }) + EX.dots(1000, { x: 46, y: 60, cols: 50, gap: 9.4, r: 3.1, stagger: 0.0012 })),
+          say: 'The team follows 2,000 women from their first antenatal visit to the birth. Two thousand sounds like a lot of information.' },
+        { svg: EX.svg(EX.text(40, 36, '240 of them deliver before 37 weeks', { size: 'm', bold: true }) + EX.dots(1000, { x: 46, y: 60, cols: 50, gap: 9.4, r: 3.1, k: 120, hrole: 'obs', hd: 0.4, stagger: 0.0006 })),
+          say: 'But only 240 of them deliver early. For a yes or no outcome, these events carry most of the information. The other women mostly tell us what normal looks like.' },
+        { svg: EX.svg(EX.text(40, 36, 'Share the 240 events between the coefficients you try', { size: 'm', bold: true }) + (function () { var s = ''; for (var i = 0; i < 15; i++) s += EX.rect(40 + i * 32, 90, 26, 120, { role: 'obs', op: 0.85, grow: true, d: 0.15 * i }) + EX.text(53 + i * 32, 228, '16', { size: 's', anchor: 'middle', d: 0.15 * i + 0.4 }); return s; })() + EX.text(40, 270, '15 candidate coefficients: 240 ÷ 15 = 16 events each (EPV 16)', { d: 2.6 })),
+          say: 'Now share those events between everything the model is allowed to try. With 15 candidate coefficients, each one gets 16 events. That number is the events per variable, or E P V.' },
+        { svg: EX.svg(EX.text(40, 36, 'A rare outcome: 10,000 women, 0.5% have it', { size: 'm', bold: true }) + EX.dots(1000, { x: 46, y: 60, cols: 50, gap: 9.4, r: 3.1, k: 5, hrole: 'obs', hd: 0.5 }) + EX.text(40, 270, '50 events: enough for only about 5 coefficients at EPV 10', { bold: true, d: 1.2 })),
+          say: 'A rare outcome is harder. Ten thousand women with an outcome of half a percent give only 50 events. At the usual minimum of 10 events per coefficient, that supports about 5 coefficients, whatever the number of women.' },
+        { svg: EX.svg(EX.text(280, 120, 'Count the events first', { size: 'l', bold: true, anchor: 'middle' }) + EX.text(280, 156, 'Below 10 per coefficient: expect the model to fit the noise', { anchor: 'middle', d: 0.6 }) + EX.text(280, 182, '20 or more: a model fixed in advance may need no correction', { anchor: 'middle', d: 1.2 }) + EX.text(280, 208, '50 or more: needed to let the data choose predictors', { anchor: 'middle', d: 1.8 })),
+          say: 'So count the events before anything else. Below 10 per coefficient, expect the model to fit noise. Twenty or more is safer for a model fixed in advance, and choosing predictors from the data needs about 50.' }
+      ]
+    }
+  ],
   cases: [
     {
       id: 'c1',
@@ -80,7 +115,7 @@ registerModule({
 <div class="formula">kappa = (observed agreement − agreement expected by chance) ÷ (1 − agreement expected by chance)</div>
 <p>For a model used in daily practice, measure each predictor the way it will be measured in practice.</p>`,
       scenario: `<p>The team has a long list of possible predictors. Some are common, such as anaemia; some are rare, such as a particular gene variant. One sign, "the woman looks pale", is judged by midwives by eye and they often disagree.</p>`,
-      widgets: `<div data-widget="regressionDilution"></div>`,
+      widgets: `<div data-widget="regressionDilution" data-try="Start at 80% sensitivity and specificity, then raise both to 90% and watch the observed odds ratio move back towards 4."></div>`,
       tasks: [4, 5],
       takeaway: 'A predictor helps through both its effect and how common it is; measuring it badly dilutes its effect, but does not by itself make it useless.'
     },
@@ -100,9 +135,10 @@ registerModule({
 <li>EPV 20 or more: a model fixed in advance may need no correction for overfitting.</li>
 <li>EPV 50 or more: needed to let the data choose the predictors reliably.</li>
 </ul>
-<p>Example: 2,000 women with 12% preterm births give 240 events. With 15 candidate coefficients, EPV = 240 ÷ 15 = 16.</p>`,
+<p>Example: 2,000 women with 12% preterm births give 240 events. With 15 candidate coefficients, EPV = 240 ÷ 15 = 16.</p>
+<div data-explainer="epv"></div>`,
       scenario: `<p>A smaller satellite clinic wants a model of its own. Meanwhile, the research committee sends the team a published preterm birth model from another hospital to comment on.</p>`,
-      widgets: `<div data-widget="epvCalculator"></div>`,
+      widgets: `<div data-widget="epvCalculator" data-try="Enter 240 events and 15 coefficients, then raise the coefficients to 40 and watch the verdict change."></div>`,
       tasks: [6, 7],
       takeaway: 'Measure the outcome as rigorously as in a trial, and count events, not women, before planning the analysis.'
     }
@@ -189,7 +225,7 @@ registerModule({
 <tr><td>&ge; 20</td><td>A pre-specified model may not need shrinkage (Module 10)</td></tr>
 <tr><td>&ge; 50</td><td>Reliable selection from candidates (Module 8)</td></tr>
 </table>
-<p>Validation of an existing model needs at least about 100 events (Module 14). <b>In the course story:</b> ptb_dev has 2,000 women and 240 preterm births; with 15 candidate parameters EPV = 16. EPV 10 would need 150 events (1,250 women), EPV 20 300 events and EPV 50 750 events.</p>
+<p>Validation of an existing model needs at least about 100 events (Module 14). <b>In the course story:</b> ptb_dev has 2,000 women and 234 preterm births (11.7%); with 15 candidate parameters EPV = 234 / 15 = 15.6. EPV 10 would need 150 events (1,250 women), EPV 20 300 events and EPV 50 750 events.</p>
 <div class="callout warn"><b>Critical: counting patients instead of events</b>
 <p>10,000 women with an outcome of 0.5% give only 50 events, enough for about 5 candidate parameters.</p></div>
 <p class="src">Source: Ch. 3, §3.8-3.9</p>`
@@ -277,7 +313,7 @@ registerModule({
     {
       id: 't0',
       title: 'Choose a data source',
-      level: 'Analyze',
+      level: 'Analyse',
       scenario: `<p>Four sources could provide data for the booking-visit model: (i) hospital records of 5,000 deliveries, 2019 to 2023; (ii) a new prospective cohort in six clinics; (iii) data from a finished trial of iron tablets, which left out women with severe anaemia and women under 18; (iv) the state birth registry, which records the mother's age, number of previous births and gestational age at birth.</p>`,
       questions: [
         '<b>(a)</b> For each source, give one strength and one weakness for this model.',

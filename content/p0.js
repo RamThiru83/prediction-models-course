@@ -14,6 +14,13 @@ registerModule({
     'Tell discrimination from calibration'
   ],
   format: 'cases',
+  reading: [
+    { cite: "Altman DG, Bland JM (1994). Diagnostic tests 1: sensitivity and specificity. BMJ 308:1552.", url: "https://doi.org/10.1136/bmj.308.6943.1552", note: "A one-page definition of sensitivity and specificity with a worked example, ideal before the accuracy ideas in the primer." },
+    { cite: "Altman DG, Bland JM (1994). Diagnostic tests 2: predictive values. BMJ 309:102.", url: "https://doi.org/10.1136/bmj.309.6947.102", note: "Shows why the positive and negative predictive values change with how common the condition is, which matters for preterm birth." },
+    { cite: "Bland JM, Altman DG (2000). Statistics notes: The odds ratio. BMJ 320:1468.", url: "https://doi.org/10.1136/bmj.320.7247.1468", note: "Explains odds and odds ratios and how they differ from risks, the basis for reading logistic regression coefficients." },
+    { cite: "Bland JM, Altman DG (2015). Statistics Notes: Bootstrap resampling methods. BMJ 350:h2622.", url: "https://doi.org/10.1136/bmj.h2622", note: "A short, plain explanation of how resampling your own data shows how much an estimate would vary." },
+    { cite: "Steyerberg EW, Harrell FE Jr, Borsboom GJJM, et al. (2001). Internal validation of predictive models: efficiency of some procedures for logistic regression analysis. J Clin Epidemiol 54:774-781.", url: "https://doi.org/10.1016/s0895-4356(01)00341-9", note: "Shows that apparent performance is over-optimistic and that the bootstrap corrects this better than splitting the sample." }
+  ],
   essentials: `
 <ul>
 <li>A <b>clinical prediction model</b> takes some information about a patient/person (the <b>predictors</b>; some computer scientists call them features) and returns the chance of an <b>outcome</b>. In this course the outcome is, for simplicity, yes or no; a patient with it is an <b>event</b>.</li>
@@ -24,6 +31,72 @@ registerModule({
 <li>Judge a model on patients it was not built on, with two questions: does it <b>rank</b> patients correctly (discrimination, the c statistic), and are its risks the <b>right size</b> (calibration)?</li>
 </ul>`,
   story: 'Throughout the course you follow the maternity team of a district hospital as it works on one problem: preterm birth. The hospital and its data are fictional and synthetic. In this primer the team starts to use predicted risks of preterm birth: at the booking visit, for women who arrive with threatened preterm labour, in the district\'s own figures, and in a second hospital.',
+  defs: {
+    'odds': 'The number of events for every non-event: the risk divided by one minus the risk.',
+    'log-odds': 'The logarithm of the odds, the scale on which a logistic model adds up its effects.',
+    'odds ratio': 'How many times a predictor multiplies the odds of the outcome.',
+    'sensitivity': 'Of the women who have the outcome, the share whose test is positive.',
+    'specificity': 'Of the women who do not have the outcome, the share whose test is negative.',
+    'PPV': 'Of the women whose test is positive, the share who really have the outcome.',
+    'bootstrap': 'Drawing many new samples of the same size from your own data, putting each woman back after each draw, to see how much a result varies.',
+    'c statistic': 'Out of all pairs of one woman with the outcome and one without, how often the model gives the higher risk to the woman with it.',
+    'calibration': 'Whether predicted risks are the right size: when the model says 20%, about 20 in every 100 such women should have the outcome.',
+    'optimism': 'How much better a model looks on the data it was built from than on new women.'
+  },
+  explainers: [
+    {
+      id: 'scurve',
+      title: 'How a score becomes a risk',
+      scenes: (function () {
+        var risk = function (x) { return 1 / (1 + Math.exp(-x)); };
+        var pc = function (v) { return Math.round(v * 100) + '%'; };
+        var mk = function () { return EX.box({ l: 80, t: 50, w: 430, h: 190, xlim: [-5, 2], ylim: [0, 1], xticks: [-4, -3, -2, -1, 0, 1, 2], yticks: [0, 0.25, 0.5, 0.75, 1], yfmt: pc, xlabel: 'score (lp, the log-odds)', ylabel: 'risk' }); };
+        var curve = function (B, d) { return EX.curve(B, risk, -5, 2, { role: 'pred', draw: false, d: d || 0 }); };
+        /* guide lines from a point on the curve down to the x axis and across to the y axis, drawn as thin muted bars */
+        var guide = function (B, x, d) { var y = risk(x); return EX.rect(B.X(x) - 0.5, B.Y(y), 1, B.Y(0) - B.Y(y), { role: 'muted', rx: 0, d: d }) + EX.rect(B.X(-5), B.Y(y) - 0.5, B.X(x) - B.X(-5), 1, { role: 'muted', rx: 0, d: d }); };
+        var pt = function (B, x, d) { return EX.pts(B, [[x, risk(x)]], { role: 'pred', r: 5, d: d }); };
+        var step = function (B, x0, x1, d) { return EX.rect(B.X(x0), B.Y(0) - 6, B.X(x1) - B.X(x0), 4, { role: 'obs', rx: 2, d: d }); };
+        var B = mk();
+        return [
+          { svg: EX.svg(EX.text(40, 30, 'The model turns a score into a risk', { size: 'm', bold: true }) + B.s + curve(B, 0.4) + pt(B, 0, 1.4) + EX.text(B.X(0) + 10, B.Y(0.5) + 5, 'score 0 = risk 50%', { d: 1.8 }) + EX.text(B.X(-4.8), B.Y(0.9), 'risk = 1 ÷ (1 + e^−score)', { size: 's', d: 2.2 })),
+            say: 'A logistic model first adds up a score, the linear predictor. This S-shaped curve then turns any score into a risk between zero and one hundred per cent. A score of zero is a risk of fifty per cent.' },
+          { svg: EX.svg(EX.text(40, 30, 'A woman with neither predictor', { size: 'm', bold: true }) + B.s + curve(B) + guide(B, -3, 0.6) + pt(B, -3, 1.0) + EX.text(B.X(-4.8), B.Y(0.78), 'score −3.0, risk 4.7%', { d: 1.4 }) + EX.text(B.X(-4.8), B.Y(0.9), 'lp = −3.0 + 0.8 × chronic_htn + 1.2 × prior_ptb', { size: 's', d: 2.0 })),
+            say: 'A woman with neither predictor starts at the intercept, a score of minus three. Read up to the curve and across: her risk is 4.7 per cent. Down here the curve is almost flat, so risks are small.' },
+          { svg: EX.svg(EX.text(40, 30, 'A previous preterm birth adds 1.2 to the score', { size: 'm', bold: true }) + B.s + curve(B) + guide(B, -3, 0) + pt(B, -3, 0) + step(B, -3, -1.8, 0.8) + guide(B, -1.8, 1.4) + pt(B, -1.8, 1.8) + EX.text(B.X(-1.8) - 10, B.Y(0.142) - 12, 'score −1.8, risk 14.2%', { anchor: 'end', d: 2.2 }) + EX.text(B.X(-4.8), B.Y(0.9), 'odds 0.05 × 3.3 = 0.165, which is 14.2%', { size: 's', d: 2.8 })),
+            say: 'A previous preterm birth adds 1.2 to the score, moving her to minus 1.8. The curve gives 14.2 per cent. On the odds scale the same step multiplies the odds by 3.3: 0.05 becomes 0.165, which is 14.2 per cent.' },
+          { svg: EX.svg(EX.text(40, 30, 'The same step from a higher start', { size: 'm', bold: true }) + B.s + curve(B) + guide(B, -3, 0) + pt(B, -3, 0) + pt(B, -1.8, 0) + EX.text(B.X(-4.8), B.Y(0.9), 'from 4.7%: +1.2 on the score gives 14.2% (+9.5 points)', { size: 's', d: 0.4 }) + guide(B, -2.2, 1.0) + pt(B, -2.2, 1.2) + step(B, -2.2, -1.0, 1.6) + guide(B, -1.0, 2.2) + pt(B, -1.0, 2.6) + EX.text(B.X(-4.8), B.Y(0.8), 'from 10.0%: the same +1.2 gives 26.9% (+16.9 points)', { size: 's', d: 3.0 })),
+            say: 'Now a woman with chronic hypertension starts at minus 2.2 and ten per cent. The same step of 1.2 takes her to minus one and 26.9 per cent. The same odds ratio adds 17 points of risk instead of nine and a half, because the curve is steeper here.' },
+          { svg: EX.svg(EX.text(280, 90, 'Effects add on the score.', { size: 'l', bold: true, anchor: 'middle' }) + EX.text(280, 126, 'Odds ratios multiply the odds.', { size: 'l', bold: true, anchor: 'middle', d: 0.6 }) + EX.text(280, 162, 'Risks do neither.', { size: 'l', bold: true, anchor: 'middle', d: 1.2 }) + EX.text(280, 206, 'OR 3.3: 4.7% to 14.2% is × 3.0, but 10.0% to 26.9% is × 2.7', { anchor: 'middle', d: 1.8 }) + EX.text(280, 234, 'The extra risk depends on where a woman starts on the curve', { anchor: 'middle', d: 2.4 })),
+            say: 'So remember three things. Effects add on the score. Odds ratios multiply the odds. Risks do neither: an odds ratio of 3.3 is not a risk ratio of 3.3, and the extra risk from a predictor depends on where a woman starts on the curve.' }
+        ];
+      })()
+    },
+    {
+      id: 'optimism',
+      title: 'Why a model looks better on its own data',
+      scenes: (function () {
+        var pc = function (v) { return Math.round(v * 100) + '%'; };
+        var dev = [0.02, 0.05, 0.03, 0.08, 0.06, 0.12, 0.10, 0.20, 0.25, 0.38];
+        var nw = [0.05, 0.06, 0.07, 0.09, 0.10, 0.12, 0.14, 0.17, 0.20, 0.26];
+        var B = EX.box({ l: 80, t: 50, w: 430, h: 190, xlim: [0.5, 10.5], ylim: [0, 0.45], xticks: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10], yticks: [0, 0.1, 0.2, 0.3, 0.4], yfmt: pc, xlabel: 'tenths of women, ranked by model score (1 = lowest)', ylabel: 'share preterm' });
+        var xy = function (a) { return a.map(function (v, i) { return [i + 1, v]; }); };
+        var fit = EX.line(xy(dev).map(function (p) { return [B.X(p[0]), B.Y(p[1])]; }), { role: 'pred', draw: false, d: 0.6 });
+        var gaps = EX.gaps(B, dev.map(function (v, i) { return [i + 1, v, nw[i]]; }), { d: 1.6 });
+        return [
+          { svg: EX.svg(EX.text(40, 30, 'Development data: what was observed', { size: 'm', bold: true }) + B.s + EX.pts(B, xy(dev), { role: 'obs', r: 5, d: 0.4, stagger: 0.15 })),
+            say: 'Sort the women the model was built from into ten groups by their model score, and plot the share in each group who delivered early. These solid dots are what was observed.' },
+          { svg: EX.svg(EX.text(40, 30, 'The model fitted to these women', { size: 'm', bold: true }) + B.s + EX.pts(B, xy(dev), { role: 'obs', r: 5 }) + fit + EX.text(B.X(1), B.Y(0.41), 'apparent c statistic 0.82', { size: 's', d: 1.6 })),
+            say: 'The model\'s coefficients were chosen to fit these very women. Its dashed curve follows every bump in the dots, including bumps that are only chance. On its own data it looks excellent: a c statistic of 0.82.' },
+          { svg: EX.svg(EX.text(40, 30, 'The same model in a second hospital', { size: 'm', bold: true }) + B.s + fit + EX.pts(B, xy(nw), { role: 'obs', r: 5, d: 0.4, stagger: 0.1 }) + gaps + EX.text(B.X(1), B.Y(0.41), 'too high at the top, too low at the bottom', { size: 's', d: 2.2 })),
+            say: 'Now apply the same model to women in a second hospital. The observed shares are gentler. The dashed curve sits above the dots at the top and below them at the bottom: its risks are too extreme. The red gaps are the error.' },
+          { svg: EX.svg(EX.text(280, 80, 'c statistic 0.82 on its own data', { size: 'l', anchor: 'middle' }) + EX.text(280, 116, 'c statistic 0.71 in the second hospital', { size: 'l', anchor: 'middle', d: 0.6 }) + EX.text(280, 162, 'The difference is optimism.', { size: 'l', bold: true, anchor: 'middle', d: 1.2 }) + EX.text(280, 196, 'A model with a lot of optimism is overfitted:', { anchor: 'middle', d: 1.8 }) + EX.text(280, 220, 'it has learned the quirks of its own sample.', { anchor: 'middle', d: 1.8 })),
+            say: 'The c statistic was 0.82 on the model\'s own data and 0.71 in the second hospital. The difference is optimism. A model with a lot of optimism is overfitted: it has learned the quirks of its own sample.' },
+          { svg: EX.svg(EX.text(280, 96, 'Judge a model on women it was not built on', { size: 'l', bold: true, anchor: 'middle' }) + EX.text(280, 150, 'Does it rank women correctly? (discrimination, c statistic)', { anchor: 'middle', d: 0.8 }) + EX.text(280, 184, 'Are its risks the right size? (calibration)', { anchor: 'middle', d: 1.6 })),
+            say: 'So judge a model on women it was not built on, and ask two questions. Does it rank women correctly? That is discrimination. And are its risks the right size? That is calibration.' }
+        ];
+      })()
+    }
+  ],
   cases: [
     {
       id: 'c1',
@@ -32,9 +105,10 @@ registerModule({
       minutes: 12,
       need: `
 <p>Odds = risk / (1 − risk), and risk = odds / (1 + odds). A 20% risk is odds of 0.25: one event for every four non-events. For small risks the two are close; for large risks they are not (80% is odds 4).</p>
-<p>A logistic model adds up a score, lp, then turns it into a risk with 1 / (1 + e<sup>−lp</sup>). A score of 0 is a risk of 50%. exp(coefficient) is the odds ratio: how much that predictor multiplies the odds.</p>`,
+<p>A logistic model adds up a score, lp, then turns it into a risk with 1 / (1 + e<sup>−lp</sup>). A score of 0 is a risk of 50%. exp(coefficient) is the odds ratio: how much that predictor multiplies the odds.</p>
+<div data-explainer="scurve"></div>`,
       scenario: `<p>The team's antenatal clinic wants each woman's risk of preterm birth at her booking visit. A colleague gives them a simple model: lp = −3.0 + 0.8 × chronic_htn + 1.2 × prior_ptb, with each predictor coded 1 if present and 0 if not.</p>`,
-      widgets: `<div data-widget="oddsConverter"></div><div data-widget="logisticCurve"></div>`,
+      widgets: `<div data-widget="oddsConverter" data-try="Slide the probability from 5% up to 50% and watch the odds pull away from the probability as the risk grows."></div><div data-widget="logisticCurve" data-try="Tick Binary predictor, set the intercept to −3.0 and the coefficient to 1.2, and read the two risks: 4.7% and 14.2%."></div>`,
       tasks: [0, 1, 2],
       takeaway: 'A model adds effects on the log-odds scale. Its odds ratios are not risk ratios, and the extra risk from a predictor depends on where a woman starts.'
     },
@@ -48,7 +122,7 @@ registerModule({
 <p>Work in counts. Out of 1000 women in whom 14% will deliver within 7 days: 140 will, and 85% of them (119) test positive; 860 will not, and 30% of them (258) also test positive. PPV = 119 / 377 = 32%.</p>`,
       scenario: `<p>Some women come to the labour ward with contractions before 37 weeks. The team uses a quick bedside test to predict which of them will deliver within 7 days (illustrative values: sensitivity 85%, specificity 70%).</p>
 <p>In the team's own unit, 14% of the women tested deliver within 7 days. In the regional referral unit, where the team sends women, 40% do. What does a test result mean in each place?</p>`,
-      widgets: `<div data-widget="bayes2x2"></div>`,
+      widgets: `<div data-widget="bayes2x2" data-try="Set sensitivity 85%, specificity 70% and prevalence 14%, then move prevalence to 40% and watch the risk after a positive test rise."></div>`,
       tasks: [3, 4],
       takeaway: 'Sensitivity and specificity belong to the test; what a result means for a woman also depends on how common the outcome is where the test is used.'
     },
@@ -62,7 +136,7 @@ registerModule({
 <p>For a yes/no outcome, what counts is the <b>number of events</b> (here, preterm births), not the number of women.</p>
 <p>The <b>bootstrap</b> is a way to see this uncertainty using only your own data. Pick women at random from your records, putting each one back after picking, until you have a new sample of the same size. Some women are picked twice and others not at all (about 63% of them appear). Repeat this many times and see how much the result changes.</p>`,
       scenario: `<p>The district manager compares the preterm birth rates of different clinics with the district rate of 12%. She is also offered two sets of records for building a better model.</p>`,
-      widgets: `<div data-widget="samplingDemo"></div>`,
+      widgets: `<div data-widget="samplingDemo" data-try="Set the true risk to 12% and press Draw 200 samples at n = 50, then again at n = 1000, and compare the spread."></div>`,
       tasks: [5, 6],
       takeaway: 'Small samples mislead; before reading meaning into a figure, ask how much it would vary by chance, and count the events.'
     },
@@ -77,7 +151,8 @@ registerModule({
 <ul>
 <li><b>Does it rank women correctly?</b> Take one woman who delivered early and one who did not. The <b>c statistic</b> is how often the model gives the higher risk to the woman who delivered early. 0.5 is no better than tossing a coin; 1 is perfect.</li>
 <li><b>Are the risks the right size?</b> This is <b>calibration</b>. If the model says 20% for a group of women, about 20 in every 100 of them should deliver early.</li>
-</ul>`,
+</ul>
+<div data-explainer="optimism"></div>`,
       scenario: `<p>The team's model worked well on the women it was built from. Before using it every day, the team tries it on women in a second hospital.</p>`,
       widgets: '',
       tasks: [7, 8],
@@ -263,7 +338,7 @@ registerModule({
     {
       id: 't2',
       title: 'Odds ratio or risk ratio?',
-      level: 'Analyze',
+      level: 'Analyse',
       scenario: `<p>A colleague reads the model and tells the midwives: "a previous preterm birth gives a woman 3.3 times the risk of preterm birth".</p>`,
       questions: [
         '<b>(a)</b> Using your risks from Task 2, calculate the ratio of risks for a previous preterm birth in women without hypertension and in women with hypertension.',
@@ -301,7 +376,7 @@ registerModule({
     {
       id: 't5',
       title: 'Is this clinic really different?',
-      level: 'Analyze',
+      level: 'Analyse',
       scenario: `<p>(i) A new clinic reports 10 preterm births among its first 50 deliveries (20%), and the manager proposes a review. (ii) A larger hospital reports 16% among 400 deliveries. The district rate is 12%.</p>`,
       questions: [
         '<b>(a)</b> Use the sampling widget above (true risk 12%) to find the range that 95% of samples fall in for 50 and for 400 deliveries.',

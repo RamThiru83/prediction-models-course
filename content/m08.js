@@ -4,312 +4,325 @@ registerModule({
   part: 'Development',
   title: 'Selecting main effects',
   book: 'Ch. 11',
-  minutes: 65,
-  summary: 'Why reducing a model with significance tests is attractive and what it costs: instability of the selected set, biased coefficients, exaggerated p-values and worse predictions, with the alternatives of a pre-specified full model and modern methods.',
+  minutes: 70,
+  summary: 'Why reducing a model with significance tests is attractive and what it costs: an unstable choice of predictors, coefficients that are too large, p-values that are too small and worse predictions, with the alternatives of a pre-specified full model and newer methods.',
   objectives: [
-    'State which arguments for a smaller model are valid and which are false (non-significance, collinearity, parsimony).',
-    'Describe forward, backward and all-subsets selection and translate AIC and BIC stopping rules into p-values.',
-    'Explain, with numbers, the four disadvantages of stepwise selection: unstable selection, biased coefficients, misspecified variability and worse predictions.',
-    'Calculate the share of significant estimates and the mean selected estimate for a given true effect and standard error.',
-    'Apply the guidance on events per variable for fitting versus selecting.',
-    'Outline bootstrap selection, bagging, Bayesian model averaging and the Lasso as alternatives.'
+    'Sort valid from false reasons to drop predictors',
+    'Turn AIC and BIC into p-values',
+    'Trace a backward elimination by hand',
+    'Show why selected predictors are unstable',
+    'Calculate testimation bias for one predictor',
+    'Judge a stepwise model by validated performance'
+  ],
+  format: 'cases',
+  reading: [
+    { cite: "Steyerberg EW, Eijkemans MJC, Habbema JDF (1999). Stepwise selection in small data sets: a simulation study of bias in logistic regression analysis. J Clin Epidemiol 52:935-942.", url: "https://doi.org/10.1016/s0895-4356(99)00103-1", note: "Demonstrates the overestimation of coefficients that survive stepwise selection, especially with few events per variable." },
+    { cite: "Steyerberg EW, Eijkemans MJC, Harrell FE Jr, Habbema JDF (2001). Prognostic modeling with logistic regression analysis: in search of a sensible strategy in small data sets. Med Decis Making 21:45-56.", url: "https://doi.org/10.1177/0272989X0102100106", note: "Compares coding, stepwise selection and shrinkage in small samples and favours a well-coded full model with shrinkage." },
+    { cite: "Heinze G, Wallisch C, Dunkler D (2018). Variable selection: a review and recommendations for the practicing statistician. Biom J 60:431-449.", url: "https://doi.org/10.1002/bimj.201700067", note: "An open-access review of selection methods and their effect on stability, bias and p-values, with pragmatic recommendations." },
+    { cite: "Sun GW, Shook TL, Kay GL (1996). Inappropriate use of bivariable analysis to screen risk factors for use in multivariable analysis. J Clin Epidemiol 49:907-916.", url: "https://doi.org/10.1016/0895-4356(96)00025-x", note: "Explains why screening candidate predictors by univariable p-values wrongly discards variables." }
+  ],
+  essentials: `
+<ul>
+<li>The best start is a short list of candidate predictors chosen with subject knowledge. Then all of them go into one <b>full model</b>, and modelling becomes a matter of estimation, not testing.</li>
+<li>Valid reasons to drop a predictor: it is hard or costly to collect, or its effect is tiny or implausible. False reasons: "it is not significant", "it is correlated with another predictor" and "simpler is always better".</li>
+<li><b>Stepwise selection</b> adds or removes predictors one at a time by a significance rule. If it is used, backward is better than forward. The stopping rule matters more than the direction: AIC equals p &lt; 0.157 for one coefficient, and BIC gets stricter as the sample grows.</li>
+<li>The predictors chosen change from sample to sample. In small data the "final model" is one of many that fit almost equally well.</li>
+<li>Coefficients that survive a significance test are too large on average (<b>testimation bias</b>). The bias is worst for weak effects that are hard to detect.</li>
+<li>The printed standard errors and p-values of a selected model ignore the selection, so they are too optimistic. In new women a selected model usually predicts worse than the full model.</li>
+<li>Reliable selection needs about 50 events per candidate coefficient. With fewer, prefer the full model, and if you must select, use AIC and repeat the whole selection in every bootstrap sample.</li>
+</ul>`,
+  story: 'Throughout the course you follow the maternity team of a district hospital as it works on one problem: preterm birth (before 37 weeks). The hospital and its data are fictional and synthetic. The team has a list of candidate predictors recorded at the booking visit. In this module it argues about whether to make the model smaller, tries stepwise selection, sees how unstable and flattering it is, and decides what to do instead. You do not need the earlier modules for this story.',
+  defs: {
+    'full model': 'A model that contains every candidate predictor chosen in advance, with no predictor removed by testing.',
+    'stepwise selection': 'Building a model by adding or removing predictors one at a time according to a significance rule.',
+    'backward elimination': 'Stepwise selection that starts with all candidates and removes the least significant one at each step.',
+    'collinearity': 'Strong correlation between two or more predictors, which makes their separate coefficients imprecise.',
+    'variance inflation factor': 'How many times larger the variance of a coefficient is because the predictor is correlated with the others.',
+    'aic': 'Akaike\'s Information Criterion: keep a term if it adds more than 2 per degree of freedom to the model chi-square.',
+    'bic': 'Bayesian Information Criterion: keep a term only if it adds more than the natural log of the sample size per degree of freedom.',
+    'testimation bias': 'The overestimation of effects that are kept only because they passed a significance test.',
+    'selection frequency': 'The share of bootstrap samples in which a predictor is chosen by the selection procedure.',
+    'lasso': 'A fitting method that shrinks coefficients towards zero and sets some exactly to zero, so it selects and shrinks at once.'
+  },
+  explainers: [
+    (function () {
+      var B = EX.box({ l: 60, t: 56, w: 460, h: 150, xlim: [-1, 3], ylim: [0, 5], xticks: [-1, 0, 1, 2, 3], xlabel: 'Estimated log odds ratio in each study' });
+      var Z = [];
+      // 40 evenly spaced normal quantiles (deterministic stand-in for 40 studies)
+      (function () { function qn(p) { var a = [-39.6968302866538, 220.946098424521, -275.928510446969, 138.357751867269, -30.6647980661472, 2.50662827745924], b = [-54.4760987982241, 161.585836858041, -155.698979859887, 66.8013118877197, -13.2806815528857], c = [-0.00778489400243029, -0.322396458041136, -2.40085797994012, -2.54973253934373, 4.37466414146497, 2.93816398269878], d = [0.00778469570904146, 0.32246712907004, 2.445134137143, 3.75440866190742], q, r; if (p < 0.02425) { q = Math.sqrt(-2 * Math.log(p)); return (((((c[0] * q + c[1]) * q + c[2]) * q + c[3]) * q + c[4]) * q + c[5]) / ((((d[0] * q + d[1]) * q + d[2]) * q + d[3]) * q + 1); } if (p > 1 - 0.02425) { q = Math.sqrt(-2 * Math.log(1 - p)); return -(((((c[0] * q + c[1]) * q + c[2]) * q + c[3]) * q + c[4]) * q + c[5]) / ((((d[0] * q + d[1]) * q + d[2]) * q + d[3]) * q + 1); } q = p - 0.5; r = q * q; return (((((a[0] * r + a[1]) * r + a[2]) * r + a[3]) * r + a[4]) * r + a[5]) * q / (((((b[0] * r + b[1]) * r + b[2]) * r + b[3]) * r + b[4]) * r + 1); } for (var i = 0; i < 40; i++) Z.push(qn((i + 0.5) / 40)); })();
+      function dots(beta, filter) {
+        var kept = [], gone = [];
+        Z.forEach(function (z, i) { var e = beta + 0.5 * z, row = 1.2 + (i % 5) * 0.75; if (!filter || Math.abs(e) > 0.98) kept.push([e, row]); else gone.push([e, row]); });
+        return EX.pts(B, gone, { role: 'line', r: 4.5 }) + EX.pts(B, kept, { role: 'obs', r: 4.5, stagger: 0.02 });
+      }
+      function vbar(x, role, d) { return EX.rect(B.X(x) - 1, 50, 2, 160, { role: role, d: d }); }
+      function meanMark(x, d) { return EX.line([[B.X(x), 50], [B.X(x), 210]], { role: 'pred', d: d }); }
+      function gap(x0, x1, d) { return EX.line([[B.X(x0), 50], [B.X(x1), 50]], { role: 'err', w: 4, d: d }); }
+      var cut = function (d) { return vbar(0.98, 'muted', d) + EX.text(B.X(0.98) - 5, 201, '0.98', { size: 's', anchor: 'end', d: d }); };
+      return {
+        id: 'testimation',
+        title: 'Why a coefficient that passed a test is too large',
+        scenes: [
+          { svg: EX.svg(EX.text(30, 24, '40 small studies: true log odds ratio 1, SE 0.5', { bold: true }) + B.s + vbar(1, 'muted', 0.2) + EX.text(B.X(1) + 6, 68, 'true value 1', { size: 's', d: 0.3 }) + dots(1, false) + EX.text(30, 285, 'Illustrative (synthetic). Each dot is one study\'s estimate.', { size: 's', d: 1.2 })),
+            say: 'Imagine forty small studies, each estimating the effect of bacteriuria on preterm birth. The true log odds ratio is 1. Chance moves each estimate up or down, so the dots spread from about 0 to 2.' },
+          { svg: EX.svg(EX.text(30, 24, 'Keep only p < 0.05: estimate must exceed 1.96 × 0.5 = 0.98', { bold: true }) + B.s + vbar(1, 'muted') + cut(0.2) + dots(1, true) + EX.text(30, 285, '21 of 40 studies pass (in theory 52%)', { d: 1 })),
+            say: 'Now keep only the estimates that reach p below 0.05. With a standard error of 0.5, an estimate must be larger than 0.98. Only about half of the studies pass: 52 per cent.' },
+          { svg: EX.svg(EX.text(30, 24, 'The kept estimates average 1.39: 39% too high', { bold: true }) + B.s + vbar(1, 'muted') + cut(0) + dots(1, true) + meanMark(1.386, 0.4) + gap(1, 1.386, 1) + EX.text(B.X(1.386) + 8, 45, 'mean of kept 1.39', { size: 's', d: 0.6 }) + EX.text(30, 285, 'Mean of all 40 estimates: 1.00. Mean of the kept ones: 1.39.', { d: 1.2 })),
+            say: 'The average of all forty estimates sits right on 1. The average of the kept ones is 1.39, which is 39 per cent too high. The small estimates that would pull it down were thrown away. The red bar is that error.' },
+          { svg: EX.svg(EX.text(30, 24, 'A weaker effect: true 0.5, same SE 0.5', { bold: true }) + B.s + vbar(0.5, 'muted') + cut(0) + dots(0.5, true) + meanMark(1.225, 0.6) + gap(0.5, 1.225, 1.1) + EX.text(B.X(1.225) + 8, 45, 'mean of kept 1.23', { size: 's', d: 0.8 }) + EX.text(30, 285, '7 of 40 pass (in theory 17%): 145% too high', { d: 1.3 })),
+            say: 'Now take a weaker effect, a log odds ratio of 0.5, with the same standard error. Only 17 per cent of studies pass the test. Those that pass report about 1.23 on average, more than double the truth.' },
+          { svg: EX.svg(EX.text(30, 24, 'A strong effect: true 1.5, same SE 0.5', { bold: true }) + B.s + vbar(1.5, 'muted') + cut(0) + dots(1.5, true) + meanMark(1.637, 0.6) + gap(1.5, 1.637, 1.1) + EX.text(B.X(1.637) + 8, 45, 'mean of kept 1.64', { size: 's', d: 0.8 }) + EX.text(30, 285, '34 of 40 pass (in theory 85%): only 9% too high', { d: 1.3 })),
+            say: 'With a strong effect of 1.5, 85 per cent of studies pass, and the kept estimates average 1.64, only 9 per cent too high. The filter hardly cuts anything away, so it hardly changes the average.' },
+          { svg: EX.svg(EX.text(280, 110, 'Stepwise selection applies this filter to every predictor', { bold: true, anchor: 'middle' }) + EX.text(280, 146, 'Weak predictors stay in only when they happen to look strong', { anchor: 'middle', d: 0.6 }) + EX.text(280, 172, 'so their coefficients come out too large', { anchor: 'middle', d: 0.9 }) + EX.text(280, 208, 'Larger samples and a full model reduce the problem', { anchor: 'middle', d: 1.5 })),
+            say: 'Stepwise selection applies this filter to every predictor. A weak predictor stays in only when it happens to look strong, so its coefficient comes out too large. Larger samples and a full model without testing reduce the problem.' }
+        ]
+      };
+    })()
+  ],
+  cases: [
+    {
+      id: 'c1',
+      title: 'Should the model be smaller?',
+      aim: 'sort the valid reasons for dropping predictors from the false ones, and judge collinearity.',
+      minutes: 15,
+      need: `
+<p>The previous module cut the candidate list down without looking at the outcome. If that is done well, the next step is simple: put all the candidates into one <b>full model</b> and estimate their coefficients. Checks of interactions and non-linear terms come later (Module 9).</p>
+<p><b>Valid reasons to drop a predictor.</b> (1) It is impractical: costly, slow, or not available when the model will be used. (2) Its effect is tiny or biologically implausible. (3) In discovery research, such as choosing markers from a large gene panel, finding the predictive markers is itself the aim; that is exploration, not prediction.</p>
+<p><b>False reasons.</b></p>
+<ul>
+<li>"It is not significant." Prediction is estimation, not hypothesis testing. A p-value above 0.05 is not evidence of no effect, especially in a small sample, for a rare but strong predictor, or for a predictor known from earlier studies.</li>
+<li>"Parsimony." A full model asks the data one question: what are the coefficients? A reduced model asks two: which predictors can go, and what are the coefficients of the rest, given that the others went? That is more complex, not less.</li>
+<li>"Collinearity." <b>Collinearity</b> means predictors are strongly correlated. It makes their separate coefficients imprecise, but the predictions can still be reliable.</li>
+</ul>
+<p>The <b>variance inflation factor</b> (VIF) shows how much correlation widens a coefficient's variance. For two predictors with correlation r, VIF = 1 ÷ (1 − r²). Example: booking height and weight correlate at about r = 0.5, so VIF = 1 ÷ (1 − 0.25) = 1.33, a 33% wider variance and no real problem. Trouble starts near r = 0.8 or a VIF above 10. When two measures are very close, combining them (for example a mean arterial pressure from systolic and diastolic readings) is often better than choosing one.</p>`,
+      scenario: `<p>Illustrative (synthetic). At a team meeting, five people give reasons to make the booking-visit model smaller. The statistician also notices that systolic and diastolic blood pressure at booking are correlated, and that haemoglobin and haematocrit, both measured on the same blood sample, are almost the same measure.</p>`,
+      widgets: '',
+      tasks: [0, 1],
+      takeaway: 'Drop a predictor because it is impractical or implausible, not because it is non-significant or correlated with another.'
+    },
+    {
+      id: 'c2',
+      title: 'How stepwise selection works',
+      aim: 'describe forward, backward and all-subsets selection, and translate AIC and BIC into p-values.',
+      minutes: 15,
+      need: `
+<p><b>Stepwise selection</b> builds a model by testing. <b>Forward</b> selection starts with no predictors and adds the most significant one, step by step. <b>Backward elimination</b> starts with the full model and removes the least significant predictor, re-fits, and repeats. Combined methods switch between the two. <b>All possible subsets</b> fits every combination: with k candidates there are 2<sup>k</sup> models (10 candidates give 1,024), so it tests very many models and overfits easily.</p>
+<p>If you use stepwise selection, prefer backward: you see the full model first, and correlated predictors are judged together. In a forward search, neither of two correlated predictors may ever enter.</p>
+<p><b>The stopping rule matters more than the direction.</b> Each term adds an amount to the model chi-square (χ²). The rule says how large that amount must be.</p>
+<ul>
+<li><b>p &lt; 0.05:</b> for 1 degree of freedom (df), χ² must exceed 3.84.</li>
+<li><b>AIC:</b> χ² must exceed 2 × df. For 1 df the chance that pure noise exceeds 2 is 0.157, so AIC equals p &lt; 0.157. For 2 df the threshold is 4 (p = 0.135), for 3 df it is 6 (p = 0.112).</li>
+<li><b>BIC:</b> χ² must exceed df × ln(n). For n = 200, ln(200) = 5.30, which is p = 0.021 for 1 df. For n = 2,000, ln(2,000) = 7.60, which is p = 0.006. BIC gets stricter as the sample grows and can remove too much in small samples (underfitting).</li>
+</ul>
+<p>There is nothing special about 0.05. In small datasets with an agreed candidate list, AIC or even p &lt; 0.20 or 0.50 keeps weak true predictors more often and gives better predictions.</p>`,
+      scenario: `<p>Illustrative (synthetic). The team has 2,000 women and 12 candidate predictors with 1 df each. A visiting statistician offers three programs: one runs forward selection, one backward elimination, one all-subsets regression. Each lets you choose p &lt; 0.05, AIC or BIC.</p>`,
+      widgets: '',
+      tasks: [2, 3],
+      takeaway: 'Backward elimination with a liberal rule such as AIC is the least harmful stepwise choice; the rule decides far more than the direction.'
+    },
+    {
+      id: 'c3',
+      title: 'An unstable choice and inflated coefficients',
+      aim: 'see that the selected predictors change from sample to sample, and calculate how much selection inflates a coefficient.',
+      minutes: 20,
+      need: `
+<p><b>Instability.</b> Many sets of predictors fit almost equally well, so a slightly different sample gives a different "final model". In the book's GUSTO-I example, backward selection at p &lt; 0.05 in one small subsample of 429 patients kept three predictors. That same set was found in only 7 of 110 other small subsamples. Statements such as "the only independent predictors were A, B and C", or reading meaning into the order in which predictors entered, overinterpret chance.</p>
+<p>You can see this in your own data with the bootstrap: repeat the selection in many resamples and record each predictor's <b>selection frequency</b>. A stable model would reproduce itself in most resamples.</p>
+<p><b>Testimation bias.</b> A coefficient that is first tested and then kept only if significant is too large on average. Worked example: true log odds ratio 1, standard error (SE) 0.5. Significance needs an estimate above 1.96 × 0.5 = 0.98. Estimates follow a normal curve with mean 1 and SD 0.5, so about 52 of every 100 studies pass. The 52 that pass average 1.39, not 1: 39% too high.</p>
+<p>For the share that passes and their mean, with cut-off c = 1.96 × SE:</p>
+<div class="formula">a = (c − β) ÷ SE,  b = (−c − β) ÷ SE<br>share kept = [1 − Φ(a)] + Φ(b)<br>mean kept = β + SE × [φ(a) − φ(b)] ÷ share kept</div>
+<p>Here Φ is the area under the standard normal curve to the left of a value and φ is the height of the curve there. The bias is largest when β ÷ SE is around 0.6, and small once β ÷ SE is above about 3. A larger sample has a smaller SE, so the same effect is less biased.</p>
+<div data-explainer="testimation"></div>`,
+      scenario: `<p>Illustrative (synthetic). The team runs backward elimination at p &lt; 0.05 in its development data and gets a model with five predictors. A colleague repeats it in a second sample from the same clinics and gets a different five. The team also wonders how much the coefficient for bacteriuria (true log odds ratio 0.9 in these synthetic data) is inflated when it is kept only if significant.</p>`,
+      widgets: `<div data-widget="testimationSim" data-try="Set the true coefficient to 0.9 and keep SE 0.5 and threshold 0.05, then lower the SE to 0.25 and watch the bias in the selected estimate shrink."></div>
+<div data-widget="stepwiseInstability" data-try="Keep sample size 600 and the rule Backward, p &lt; 0.05, press Run 100 bootstraps, and note how rarely the original model is reproduced."></div>`,
+      tasks: [4, 5],
+      takeaway: 'Stepwise selection picks an unstable set of predictors and overstates the effects it keeps, most of all for weak predictors in small samples.'
+    },
+    {
+      id: 'c4',
+      title: 'What selection does to predictions, and what to do instead',
+      aim: 'compare a selected model with the full model on validated performance, and plan a better strategy.',
+      minutes: 20,
+      need: `
+<p><b>Wrong standard errors and p-values.</b> The software prints standard errors as if the final model had been chosen in advance. It ignores the selection. So the confidence intervals are too narrow and the p-values too small. Do not trust the p-value of a predictor in a stepwise model.</p>
+<p><b>Worse predictions.</b> Dropping weak predictors lowers the apparent performance only a little. What matters is performance in new women, measured by bootstrap validation (repeating the whole selection in each resample) or in external data. There, selected models usually do worse than the full model. In the book's GUSTO-I subsample of 429 patients, the optimism-corrected Nagelkerke R² was 15.1% for the full 8-predictor model and 11.7% for the 3-predictor stepwise model.</p>
+<p><b>Noise variables.</b> Selection is meant to remove predictors with no true effect. It does remove most of them, but it also throws away true predictors. Leaving out a true predictor can cost more than keeping a noise variable.</p>
+<p><b>How many events?</b> Events per variable (EPV) = events ÷ candidate coefficients. An EPV of 10 is a lower limit for a model fixed in advance. For reliable selection the book suggests about 50. Example: 15 candidate coefficients need 15 × 50 = 750 events; at 12% preterm births that is 750 ÷ 0.12 = 6,250 women.</p>
+<p><b>Better options.</b> Keep the candidate list short with subject knowledge and fit the full model. If a smaller model is needed for practical reasons, use AIC and bootstrap the whole selection. Newer methods include the <b>Lasso</b>, which shrinks coefficients and sets some to zero, and Bayesian model averaging (see the notes).</p>`,
+      scenario: `<p>Illustrative (synthetic). The team takes a random 600 women with complete data from ptb_dev (73 preterm births) and compares the full 14-term model with a backward p &lt; 0.05 model, using 200 bootstrap samples. Meanwhile a regional journal sends it a stepwise preterm birth model to review.</p>`,
+      widgets: '',
+      tasks: [6, 7],
+      takeaway: 'Judge a selected model by its validated performance against the full model; usually the full model with a short, knowledge-based candidate list predicts better.'
+    }
   ],
   sections: [
     {
-      id: 's1',
-      title: 'Reduction before modelling versus while modelling, and collinearity',
+      id: 'n1',
+      title: 'Reasons to reduce a model, collinearity and parsimony',
       html: `
-<p>Specifying the model is the hardest part of prediction modelling. Especially in smaller datasets it is nearly impossible to obtain a reliable answer to the question "which predictors are important and which are not". The previous module described how to cut down the candidate list without looking at the outcome. If that is done well, predictive modelling becomes an estimation problem rather than a testing problem. The ideal outcome is a limited list of candidates that can all be entered into a <b>full model</b>: a model containing the main effects of all candidate predictors. Checks of assumptions such as additivity (interactions) and linearity (non-linear terms) are then the next step (Module 9).</p>
-<h3>Reasons to reduce the model while modelling</h3>
-<ul>
-<li><b>Practicality.</b> It may be impractical to collect or enter a large set of predictors, in particular if some will not be available in future patients or are costly to obtain.</li>
-<li><b>Implausible or very small effects.</b> Some predictors may have negligible or biologically implausible effects. For example, when predicting valve fracture from production characteristics, it was unclear which characteristics were relevant at all.</li>
-<li><b>Discovery.</b> In genetic and proteomic research, identifying which markers from a very large panel are predictive is itself the aim. Such analyses are exploratory and aimed more at biological knowledge than at prediction.</li>
-</ul>
-<h3>Collinearity</h3>
-<p><b>Collinearity</b> means that predictors are strongly correlated with each other. Its effect is to make the coefficients of the correlated variables imprecise. The <b>variance inflation factor</b> (VIF) measures how much the variance of a coefficient is inflated by the correlation; the book mentions correlation above 0.8 or a VIF above 10 as the level where trouble starts. Is this a worry for prediction models?</p>
-<ul>
-<li>Correlation between predictors is the reason multivariable models are used at all, to estimate joint effects that a univariable analysis cannot show.</li>
-<li>In practice most correlations are less than 0.5. In GUSTO-I the strongest was between height and weight (r = 0.5), and the rest were around 0.1 to 0.2.</li>
-<li>Some correlation is created by the analyst, for example between age and age² (r above 0.9), yet their coefficients can be estimated quite reliably.</li>
-</ul>
-<p>When two predictors are strongly correlated, it may be wiser to combine them than to choose one. For diastolic (DBP) and systolic blood pressure (SBP), with r = 0.62 in one study, a mean pressure such as (2 × DBP + 1 × SBP) may be a better choice than either alone, although subject knowledge matters (systolic pressure is known to be more relevant for cardiovascular risk).</p>
-<p class="src">Source: Ch. 11, §11.1.1 to §11.1.3</p>
-`
-    },
-    {
-      id: 's2',
-      title: 'Arguments for smaller models: which hold and which do not',
-      html: `
-<h3>Parsimony</h3>
-<p>The principle of parsimony (Occam's razor) says that simpler explanations are preferred to complex ones. For comparing two pre-specified theories it is a sensible principle. For prediction models derived by examining the data, the book argues for the opposite conclusion:</p>
-<ul>
-<li>A full model asks <b>one</b> question of the data: what are the regression coefficients?</li>
-<li>A reduced model asks <b>two</b>: (a) which variables can be eliminated, and (b) what are the coefficients of the remaining predictors, given that the others were eliminated?</li>
-</ul>
-<p>A reduced model therefore answers two questions rather than one, which is arguably more complex. A smaller model is easier to use (a rule with few simple predictors is easy to remember), but this simplicity is conditional on having selected the right predictors from the candidates.</p>
-<h3>Should non-significant predictors be removed?</h3>
-<p>Some argue that a predictor that is not statistically significant should not be in the model, because its effect has not been proven. This mixes two concepts: hypothesis testing and estimation. Prediction is about estimation, so it is quite reasonable to keep a predictor with a p-value above 5%, especially if the dataset is small, the predictor is uncommon but strong (for example shock in GUSTO-I), or the predictor is known from previous research to be predictive. Non-significance does not mean there is evidence for a zero effect: absence of evidence is not evidence of absence. Finally, simulations with true noise variables in a model show only a limited decrease in predictive ability.</p>
-<div class="callout key"><b>Summary of the arguments</b>
+<p>Specifying the model is the hardest part of prediction modelling, and in small datasets "which predictors are important?" has no reliable answer. If the candidate list is limited beforehand, modelling becomes an estimation problem. Valid reasons to reduce while modelling: <b>practicality</b> (predictors unavailable or costly in future patients), <b>very small or implausible effects</b> (book example: production characteristics of heart valves when predicting valve fracture), and <b>discovery</b> in genetic or proteomic panels, which is exploratory.</p>
+<p><b>Collinearity</b> makes coefficients of correlated predictors imprecise (correlation above 0.8 or VIF above 10 as a rough warning). But correlation is why multivariable models are used at all; most correlations are below 0.5 (book example: in GUSTO-I the strongest was height with weight, r = 0.5, the rest about 0.1 to 0.2); and age and age² correlate above 0.9 yet both coefficients are estimated reliably. Combining correlated predictors may beat choosing one: for diastolic and systolic pressure (r = 0.62 in one study), a mean such as (2 × DBP + SBP) ÷ 3 may be better, though subject knowledge (systolic pressure matters more for cardiovascular risk) also counts.</p>
 <table class="data">
-<tr><th>Argument</th><th>Verdict</th></tr>
-<tr><td>Larger models are less practical to work with</td><td>Valid</td></tr>
-<tr><td>Some predictors have very small or implausible effects</td><td>Valid</td></tr>
-<tr><td>"Statistically non-significant variables should be excluded"</td><td>False: for estimation, significance testing is not relevant, especially when subject knowledge supports the predictor</td></tr>
-<tr><td>"Collinearity precludes reliable predictions"</td><td>False: collinearity makes individual coefficients unstable but reliable predictions can still be obtained</td></tr>
-<tr><td>"Parsimony principle"</td><td>False when models are selected by studying patterns in the data; it may hold when pre-specified models are compared</td></tr>
-</table></div>
-<p class="src">Source: Ch. 11, §11.1.4 to §11.1.6</p>
-`
-    },
-    {
-      id: 's3',
-      title: 'Stepwise selection: variants and stopping rules',
-      html: `
-<p>Stepwise methods are probably the most widely used selection approach in medical applications. They add or remove predictors using a significance criterion: the F test in linear regression, and the likelihood-ratio, Wald or score statistic in logistic and Cox regression.</p>
-<ul>
-<li><b>Forward selection</b> starts with no predictor and adds the most significant candidate that is not yet in, as long as it meets the criterion.</li>
-<li><b>Backward selection</b> starts with the full model and removes the least significant predictor, then re-fits and repeats.</li>
-<li><b>Combined</b> procedures iterate between the two.</li>
-<li><b>All possible subsets</b> examines every combination of predictors to find the best fitting model. It can find combinations missed by forward or backward procedures but examines very many models, with multiple testing, and easily overfits.</li>
-</ul>
-<p>If stepwise selection is used, backward is generally preferred. The analyst is forced to look at the full model and to judge the effect of all candidates together, and correlated variables may remain in the model, whereas in a forward procedure none of them might enter.</p>
-<h3>Stopping rules matter more than the variant</h3>
-<p>The criterion for inclusion or exclusion is far more important than the variant. Common choices:</p>
-<ul>
-<li><b>Significance level</b>, usually p &lt; 0.05.</li>
-<li><b>Akaike's Information Criterion (AIC)</b>: keep a predictor only if the increase in model χ² exceeds 2 × its df. This is the same as using a more liberal p-value, which depends on the df:</li>
-</ul>
-<table class="data">
-<tr><th>df of the predictor</th><th>χ² must exceed</th><th>Equivalent p-value</th></tr>
-<tr><td>1</td><td>2</td><td>0.157</td></tr>
-<tr><td>2</td><td>4</td><td>0.135</td></tr>
-<tr><td>3</td><td>6</td><td>0.112</td></tr>
-<tr><td>4</td><td>8</td><td>0.092</td></tr>
-<tr><td>5</td><td>10</td><td>0.075</td></tr>
+<tr><th>Argument for a smaller model</th><th>Verdict</th></tr>
+<tr><td>Larger models are less practical</td><td>Valid</td></tr>
+<tr><td>Some effects are very small or implausible</td><td>Valid</td></tr>
+<tr><td>Non-significant variables should be excluded</td><td>False: significance is not relevant for estimation, especially with supporting subject knowledge</td></tr>
+<tr><td>Collinearity precludes reliable predictions</td><td>False: coefficients are unstable, predictions need not be</td></tr>
+<tr><td>Parsimony</td><td>False when models are selected from patterns in the data; may hold when comparing pre-specified models</td></tr>
 </table>
-<p class="src">Ch. 11, Table 11.1</p>
-<ul>
-<li><b>Bayesian Information Criterion (BIC)</b>: the model χ² must exceed log(n), the natural logarithm of the sample size. In survival data the effective sample size, such as the number of events, should be used for n. The corresponding p-value for 1 df becomes smaller as the sample grows:</li>
-</ul>
+<p>Simulations with true noise variables in a model show only a limited loss of predictive ability. Book example: shock in GUSTO-I is uncommon but strong, and may be non-significant in a small sample.</p>
+<p class="src">Source: Ch. 11, §11.1</p>`
+    },
+    {
+      id: 'n2',
+      title: 'Stepwise variants and stopping rules',
+      html: `
+<p>Stepwise methods use the F test (linear regression) or the likelihood ratio, Wald or score statistic (logistic and Cox regression). Forward, backward and combined variants exist; all possible subsets can find combinations the others miss but examines very many models. Backward is preferred: the analyst sees the full model, and correlated variables may stay in.</p>
 <table class="data">
-<tr><th>n</th><th>20</th><th>50</th><th>100</th><th>200</th><th>500</th><th>1,000</th><th>2,000</th></tr>
-<tr><td>χ² must exceed log(n)</td><td>3.0</td><td>3.9</td><td>4.6</td><td>5.3</td><td>6.2</td><td>6.9</td><td>7.6</td></tr>
+<tr><th>AIC: df</th><th>1</th><th>2</th><th>3</th><th>4</th><th>5</th></tr>
+<tr><td>χ² must exceed 2 × df</td><td>2</td><td>4</td><td>6</td><td>8</td><td>10</td></tr>
+<tr><td>Equivalent p</td><td>0.157</td><td>0.135</td><td>0.112</td><td>0.092</td><td>0.075</td></tr>
+</table>
+<table class="data">
+<tr><th>BIC (1 df): n</th><th>20</th><th>50</th><th>100</th><th>200</th><th>500</th><th>1,000</th><th>2,000</th></tr>
+<tr><td>χ² must exceed ln(n)</td><td>3.0</td><td>3.9</td><td>4.6</td><td>5.3</td><td>6.2</td><td>6.9</td><td>7.6</td></tr>
 <tr><td>Equivalent p</td><td>0.083</td><td>0.048</td><td>0.032</td><td>0.021</td><td>0.013</td><td>0.009</td><td>0.006</td></tr>
 </table>
-<p class="src">Ch. 11, Table 11.2</p>
-<div class="callout eg"><b>Worked example: where 0.157 comes from</b><p>A predictor with 1 df adds to the model χ² a value that, if the predictor has no true effect, follows a chi-square distribution with 1 df. The AIC rule keeps it if the value exceeds 2. The probability that a 1-df chi-square exceeds 2 is 0.157, so the rule is the same as testing at p &lt; 0.157. With 3 df the threshold is 6 and the chance a 3-df chi-square exceeds 6 is 0.112. BIC for n = 200 requires χ² above log(200) = 5.30, giving p = 0.021.</p></div>
-<p>There is no particular reason to stick to a p-value of 0.05. The book notes that using AIC has been recommended, and that even higher p-values (0.20 or 0.50) have been found to give more power for selecting predictors with relatively weak effects and better predictions in small datasets that have an established set of candidate predictors. BIC leads to smaller models than AIC and in small effective sample sizes may produce "underfitting", in which too many predictors are removed.</p>
-<p class="src">Source: Ch. 11, §11.2</p>
-`
+<p>In survival data the effective sample size (such as the number of events) is used for n. AIC has been recommended; higher p-values (0.20 or 0.50) gave more power for weak predictors and better predictions in small datasets with an established candidate set. BIC gives smaller models and may underfit in small samples.</p>
+<p><b>Advantages</b> of stepwise methods: easy to run; relatively objective, so the whole strategy can be replayed in bootstrap samples; usually achieves a smaller model (in very large data such as GUSTO-I a stricter p &lt; 0.01 may be used). With multiple imputation, base each step on pooled p-values from the full model fitted to all imputed datasets. In small datasets few predictors reach small p-values, which argues for AIC or a higher p.</p>
+<p class="src">Source: Ch. 11, §11.2-11.3, Tables 11.1-11.2</p>`
     },
     {
-      id: 's4',
-      title: 'Advantages of stepwise methods, and the first disadvantage: instability of selection',
+      id: 'n3',
+      title: 'Instability of selection',
       html: `
-<h3>Advantages</h3>
-<ul>
-<li>It is straightforward to apply in modern statistical packages.</li>
-<li>It is relatively <b>objective</b>: another analyst, given the same data and the same candidate list, would arrive at a very similar model. This allows the whole strategy to be replayed in each bootstrap sample to estimate the optimism due to selection (Module 4).</li>
-<li>It usually achieves its aim of making the model smaller. In very large datasets such as GUSTO-I a stricter criterion (p &lt; 0.01) may be used because many predictors have very small p-values.</li>
-<li>With multiply imputed data, selection should be based on the pooled results: obtain p-values for each predictor in a full model fitted to all imputed datasets, combine them, eliminate the least significant if its p exceeds the stopping criterion, re-fit and repeat.</li>
-</ul>
-<p>The practical caution is that in small datasets only few predictors may have small p-values, leading to a very small model. This argues for AIC or an even higher p-value as the criterion.</p>
-<h3>Disadvantage 1: instability of the selection</h3>
-<p>Stepwise selection considers a huge number of possible predictor sets, and several fit almost equally well. As a result, which predictors are chosen changes when a slightly different group of patients is used.</p>
-<div class="callout book"><b>Book example: selection in small subsamples of GUSTO-I</b><p>Backward selection with p &lt; 0.05 in subsample 5 (n = 429) selected age over 65 (A65), hypotension (HYP) and shock (SHO). In the other 110 small subsamples where the 8-predictor model could be fitted, the percentage of the 111 subsamples in which each predictor was selected was: A65 80%, SHO 53%, HYP 47%, high-risk infarct location (HIG) 29%, heart rate above 80 (HRT) 23%, sex 22%, diabetes (DIA) 13%, time to relief of pain (TTR) 11%. This particular set of three was reproduced in only 7 of the 110 other subsamples. Source: Ch. 11, §11.4.1, Table 11.3.</p></div>
-<p>Statements such as "the only independent predictors in this problem were age, hypotension and shock" are overinterpretations unless the sample is huge and the other predictors have much smaller effects. Even worse is to interpret the order of entry in a forward procedure, or the rank order of p-values in the selected model.</p>
-<p>Instability depends on the sample size and on the number of candidates. The mean number of predictors selected out of 8 shows the pattern.</p>
-<div class="callout book"><b>Book example: mean number of predictors selected out of 8 (± SD)</b>
+<div class="callout book"><b>Book example: GUSTO-I small subsamples</b>
+<p>Backward selection (p &lt; 0.05) in subsample 5 (n = 429) chose age over 65 (A65), hypotension (HYP) and shock (SHO). Over the 111 subsamples, selection percentages were: A65 80%, SHO 53%, HYP 47%, high-risk infarct location 29%, heart rate above 80 23%, sex 22%, diabetes 13%, time to relief of pain 11%. The set of three was reproduced in only 7 of the 110 other subsamples (Table 11.3).</p>
 <table class="data">
-<tr><th>Samples</th><th>p &lt; 0.05</th><th>AIC</th><th>p &lt; 0.5</th></tr>
+<tr><th>Mean predictors kept of 8 (± SD)</th><th>p &lt; 0.05</th><th>AIC</th><th>p &lt; 0.5</th></tr>
 <tr><td>Small subsamples</td><td>2.8 ± 1.1</td><td>4.2 ± 1.1</td><td>6.3 ± 1.2</td></tr>
 <tr><td>Large subsamples</td><td>4.8 ± 1.1</td><td>6.0 ± 1.0</td><td>7.0 ± 0.9</td></tr>
-<tr><td>16 large regions (at least 2,000 patients, 178 events on average)</td><td>6.6 ± 1.0</td><td>7.1 ± 0.8</td><td>7.8 ± 0.4</td></tr>
-</table>
-<p>Source: Ch. 11, Table 11.4.</p></div>
-<p>The more candidates there are, the more combinations are possible, so the crucial quantity is the ratio of candidate predictors to the effective sample size, which for a binary outcome is the number of events. An EPV of 10 is only a reasonable lower bound for a pre-specified model. For <b>reliable selection</b> among candidates the book states that an EPV of 50 is better. With 8 candidate predictors this means at least 400 events. The full GUSTO-I data (2,851 events in 40,830 patients) satisfy this easily, but that is exceptional. The instability can be studied in any dataset with bootstrap resampling, and when a few predictors are strong and the others weak this should be visible from the selection frequencies over the bootstrap samples.</p>
-<div data-widget="stepwiseInstability"></div>
-<ul class="try">
-<li>Set the sample size to the smallest value and the rule to "backward p&lt;0.05". Press "Run 100 bootstraps" and note the selection frequency of each predictor, the spread of the number of predictors kept and the percentage of bootstraps that reproduce the original model.</li>
-<li>Repeat with the largest sample size. Observe which predictors reach a high selection frequency and how the percentage of reproduced models changes.</li>
-<li>Switch to "backward p&lt;0.5" and "full model" and compare the number of predictors kept.</li>
-</ul>
-<p class="src">Source: Ch. 11, §11.3 and §11.4.1</p>
-`
+<tr><td>16 large regions (≥ 2,000 patients, 178 events on average)</td><td>6.6 ± 1.0</td><td>7.1 ± 0.8</td><td>7.8 ± 0.4</td></tr>
+</table><p>Table 11.4.</p></div>
+<p>Interpreting the order of entry, or the ranking of p-values, is even worse than naming "the independent predictors". Instability depends on the ratio of candidates to events: EPV 10 is a lower bound for a pre-specified model; reliable selection needs EPV about 50 (400 events for 8 candidates). The full GUSTO-I data (2,851 events in 40,830 patients) meet this, which is exceptional. Bootstrap selection frequencies show the instability in any dataset.</p>
+<p class="src">Source: Ch. 11, §11.4.1</p>`
     },
     {
-      id: 's5',
-      title: 'Disadvantage 2: biased coefficients (testimation bias)',
+      id: 'n4',
+      title: 'Biased coefficients and wrong variability',
       html: `
-<p>Module 4 introduced <b>testimation bias</b>: when a coefficient is first tested and then estimated, only estimates that are large enough to pass the test are retained, so the retained estimates are biased away from zero. In stepwise selected models this shows in the distribution of coefficients over subsamples. Many coefficients are exactly zero because the predictor was not selected. Between zero and the lowest selected value there is a gap, since small estimates were not significant and were set to zero. The gap is smaller with a higher p-value (AIC or 0.5) because fewer coefficients are set to zero. The problem is smaller in larger samples.</p>
-<h3>How large is the bias, and when?</h3>
-<p>A simulation study drew small random subsamples of GUSTO-I and measured the relative bias of coefficients in the selected models, in relation to the events per variable (EPV). The findings:</p>
-<ul>
-<li>With selection at p &lt; 0.05 the bias was substantial. At EPV = 10 the bias exceeded 50% for 3 predictors.</li>
-<li>With selection at p &lt; 0.50 the bias was much smaller. In the full model without selection, the bias was small for reasonable sample sizes (EPV of 10 or more) and at EPV = 3 the absolute bias was below 20% for every predictor.</li>
-<li>The bias is related to how often a predictor is selected. A strong predictor such as age is selected in nearly every subsample and has little bias. A weak predictor such as diabetes is selected in only a few subsamples, and when it is selected its coefficient is biased upward by more than 100% at low EPV.</li>
-<li>Bias is greatest when the ratio of the true coefficient to its standard error is around 0.6, and falls for both weaker and stronger effects. The standard error shrinks as the sample size grows, so a given effect becomes less biased as the sample grows.</li>
-</ul>
-<div class="callout eg"><b>Worked example (Book example numbers): true coefficient 1, SE 0.5</b>
-<p>If only estimates with p &lt; 0.05 are kept, the estimate must exceed 1.96 × 0.5 = 0.98 in absolute value. The estimates are distributed normally with mean 1 and standard deviation 0.5. P(estimate &gt; 0.98) = P(z &gt; (0.98 − 1) / 0.5) = P(z &gt; −0.04) = 0.516. The lower tail, P(estimate &lt; −0.98) = P(z &lt; −3.96), is negligible. So 52% of estimates are significant. Their average is 1.39, which is 39% above the true value of 1. The "selected" estimates overstate the effect, because the estimates below 0.98 that pull the average down have been discarded. Source: Ch. 5.</p></div>
-<div class="callout mch"><b>Illustrative (synthetic): a modest effect of bacteriuria</b><p>Suppose that in reality asymptomatic bacteriuria has a log odds ratio of 0.5 (OR 1.65) for preterm birth, and the sample is so small that the standard error is also 0.5. The estimate will reach p &lt; 0.05 in only about 17% of studies, and when it does, the average reported log odds ratio will be about 1.23 (OR 3.4). Task 1 asks you to derive this.</p></div>
-<div data-widget="testimationSim"></div>
-<ul class="try">
-<li>Keep the default (true coefficient 1, SE 0.5, threshold 0.05) and note the share significant and the percentage bias among significant estimates.</li>
-<li>Keep the coefficient and reduce the standard error step by step (a larger sample). Watch the bias fall.</li>
-<li>Raise the selection threshold from 0.05 to 0.5 and see how the bias changes. Then look at the plot of mean selected estimate against the ratio β/SE to see where the bias is greatest.</li>
-</ul>
-<p class="src">Source: Ch. 11, §11.4.2 and §11.4.3, Figs 11.2 to 11.5</p>
-`
-    },
-    {
-      id: 's6',
-      title: 'Disadvantages 3 and 4: wrong variability, exaggerated p-values and worse predictions',
-      html: `
-<h3>Misspecified variability</h3>
-<p>The standard errors a program prints for the final model assume the model was specified in advance. They ignore the uncertainty about which predictors were selected. Over repeated samples, the distribution of a coefficient can be viewed in two ways. The <b>unconditional</b> view counts a coefficient as zero when the predictor was not selected. The <b>conditional</b> view considers only the samples in which the predictor was selected.</p>
-<div class="callout book"><b>Book example: standard errors of coefficients in p &lt; 0.05 selected models, GUSTO-I subsamples</b>
+<p>Over subsamples, many selected coefficients are exactly zero, with a gap between zero and the smallest selected value; the gap is smaller with AIC or p &lt; 0.5. In GUSTO-I simulations, selection at p &lt; 0.05 gave substantial bias: at EPV 10 it exceeded 50% for 3 predictors. With p &lt; 0.50 the bias was much smaller, and in the full model it was small at EPV 10 or more and below 20% for every predictor even at EPV 3. Strong predictors (age) were selected nearly always and had little bias; weak ones (diabetes), when selected, were biased upward by more than 100% at low EPV. Bias peaks at β ÷ SE about 0.6. Book example (Ch. 5): β = 1, SE 0.5 gives 52% significant and a mean selected estimate of 1.39.</p>
 <table class="data">
-<tr><th>Standard error</th><th>A65</th><th>Sex</th><th>DIA</th><th>HYP</th><th>HRT</th><th>HIG</th><th>SHO</th><th>TTR</th></tr>
+<tr><th>SE, p &lt; 0.05 models</th><th>A65</th><th>Sex</th><th>DIA</th><th>HYP</th><th>HRT</th><th>HIG</th><th>SHO</th><th>TTR</th></tr>
 <tr><td>Empirical, unconditional</td><td>0.87</td><td>0.55</td><td>0.53</td><td>0.98</td><td>0.55</td><td>0.77</td><td>1.51</td><td>0.46</td></tr>
 <tr><td>Empirical, conditional</td><td>0.52</td><td>0.27</td><td>0.36</td><td>0.47</td><td>0.29</td><td>0.62</td><td>0.75</td><td>0.27</td></tr>
-<tr><td>Printed (asymptotic), conditional</td><td>0.57</td><td>0.48</td><td>0.55</td><td>0.61</td><td>0.48</td><td>0.59</td><td>0.88</td><td>0.62</td></tr>
+<tr><td>Printed, conditional</td><td>0.57</td><td>0.48</td><td>0.55</td><td>0.61</td><td>0.48</td><td>0.59</td><td>0.88</td><td>0.62</td></tr>
 </table>
-<p>Source: Ch. 11, Table 11.5. On average the printed standard errors are somewhat larger than the empirical conditional ones but smaller than the unconditional ones, which reflect the possibility that the coefficient was set to zero.</p></div>
-<p>For this reason confidence intervals from a stepwise model are of doubtful meaning. The variability of predictions was also studied by bootstrapping, and predictions were far more variable than expected from estimates made as if the model had been pre-specified.</p>
-<h3>Exaggerated p-values</h3>
-<p>Combining testimation bias with understated variability exaggerates statistical significance. The p-value of a predictor in a stepwise-selected model is computed as if the model were pre-specified, and should generally not be trusted.</p>
-<h3>Predictions of worse quality than a full model</h3>
-<p>For the sample at hand, dropping weak predictors lowers apparent performance only a little, because they are weak by definition. The question that matters is performance in new patients, evaluated through internal validation (bootstrapping) or external validation. In both, models selected by stepwise methods usually perform worse than a full model without selection.</p>
-<div class="callout book"><b>Book example: bootstrap validation of R² in GUSTO-I subsample 5 (n = 429)</b>
+<p>Unconditional counts a coefficient as zero when not selected; conditional uses only samples where it was selected. Printed SEs are on average somewhat larger than the empirical conditional ones but smaller than the unconditional ones (Table 11.5). Bootstrapped predictions were far more variable than a pre-specified model suggests. Testimation bias plus understated variability exaggerates significance.</p>
+<p class="src">Source: Ch. 11, §11.4.2-11.4.4</p>`
+    },
+    {
+      id: 'n5',
+      title: 'Predictive quality, noise variables and univariable screening',
+      html: `
 <table class="data">
-<tr><th>Model</th><th>Apparent</th><th>Bootstrap</th><th>Test</th><th>Optimism</th><th>Optimism-corrected</th></tr>
+<tr><th>Book example: R² (%), GUSTO-I subsample 5</th><th>Apparent</th><th>Bootstrap</th><th>Test</th><th>Optimism</th><th>Corrected</th></tr>
 <tr><td>Full model, 8 predictors</td><td>22.7</td><td>24.7</td><td>17.2</td><td>7.6</td><td>15.1</td></tr>
-<tr><td>Stepwise, 3 predictors, p &lt; 0.05</td><td>17.6</td><td>18.7</td><td>12.7</td><td>5.9</td><td>11.7</td></tr>
+<tr><td>Stepwise p &lt; 0.05, 3 predictors</td><td>17.6</td><td>18.7</td><td>12.7</td><td>5.9</td><td>11.7</td></tr>
 </table>
-<p>R² is Nagelkerke R² in percent. The optimism-corrected value is the apparent value minus the optimism, 22.7 − 7.6 = 15.1 and 17.6 − 5.9 = 11.7. The stepwise model replays the selection in every bootstrap sample. Source: Ch. 11, Table 11.6.</p></div>
-<h3>Noise variables</h3>
-<p>The argument for stepwise selection is that it removes noise variables, predictors with a true coefficient of zero. Derksen and Keselman found that stepwise selection produced models in which 30% to 70% of the selected predictors were pure noise, when candidates included a mix of noise and real predictors. How many noise variables are included depends on how many were among the candidates and on the correlation between candidates. Stepwise methods are therefore no guarantee for excluding noise variables. Restricting the candidates by subject knowledge reduces the chance that noise predictors are present at all.</p>
-<div class="callout book"><b>Book example: adding 9 noise variables in GUSTO-I (test n = 20,318)</b>
+<p>Table 11.6 (Nagelkerke R²; selection replayed in each bootstrap sample). Derksen and Keselman found 30% to 70% of stepwise-selected predictors were pure noise; the number depends on the noise candidates present and their correlation. Restricting candidates by subject knowledge reduces noise at the source.</p>
 <table class="data">
-<tr><th></th><th>Model with 17 true predictors</th><th>Same, p &lt; 0.05 selection</th><th>8 true + 9 noise</th><th>Same, p &lt; 0.05 selection</th></tr>
-<tr><td>Noise predictors in model</td><td>0</td><td>0</td><td>9</td><td>0.5</td></tr>
-<tr><td>True predictors in model</td><td>17</td><td>5.9</td><td>8</td><td>4.8</td></tr>
-<tr><td>c statistic in test data</td><td>0.784</td><td>0.762</td><td>0.753</td><td>0.746</td></tr>
+<tr><th>Book example: GUSTO-I, test n = 20,318</th><th>17 true</th><th>17 true, p &lt; 0.05</th><th>8 true + 9 noise</th><th>Same, p &lt; 0.05</th></tr>
+<tr><td>Noise in model</td><td>0</td><td>0</td><td>9</td><td>0.5</td></tr>
+<tr><td>True in model</td><td>17</td><td>5.9</td><td>8</td><td>4.8</td></tr>
+<tr><td>c in test data</td><td>0.784</td><td>0.762</td><td>0.753</td><td>0.746</td></tr>
 </table>
-<p>Source: Ch. 11, Table 11.7 (23 large subsamples of GUSTO-I; counts are means). Selection removed almost all the noise (only 0.5 of 9 kept) but also threw away true predictors (only 4.8 of 8 kept), and performed worse than the full model with the noise included.</p></div>
-<p>The book draws the conclusion that omitting a true predictor may be far worse than including a noise variable. Ambler and colleagues found stepwise selection with AIC to be the best of the stopping rules in their simulations.</p>
-<p class="src">Source: Ch. 11, §11.4.4 to §11.5</p>
-`
+<p>Table 11.7 (means over 23 large subsamples). Omitting a true predictor may be worse than including noise. Ambler and colleagues found stepwise with AIC the best stopping rule.</p>
+<p><b>Univariable pre-selection</b> (p &lt; 0.05 to 0.5) is a variant of stepwise selection in which only screened candidates are considered later. In the book's hypothetical illustration (Tables 11.8-11.9), screening loses predictors 6 to 8 and backward selection leaves 1, 2, 3; standard backward selection from all eight can keep predictor 6 as well. Pros: it removes predictors that cannot be estimated (shock in tiny GUSTO-I subsamples) and lowers computation. Con: it fixes none of the problems. Informal screening (eyeballing plots or cross-tables against the outcome) also adds to overfitting. <b>Testing within domains</b> has appeal but the same problems; forcing each domain to stay, combining variables within a cluster, or using prior studies can help.</p>
+<p class="src">Source: Ch. 11, §11.5-11.6</p>`
     },
     {
-      id: 's7',
-      title: 'Univariable pre-selection and testing within domains',
+      id: 'n6',
+      title: 'Modern selection methods and conclusions',
       html: `
-<p>Another common way to choose predictors is to examine each variable's univariable relation with the outcome first, and take forward into the multivariable model only those that meet a criterion such as p &lt; 0.05, p &lt; 0.1, p &lt; 0.2 or p &lt; 0.5. It seems to reduce overfitting and the problems of stepwise selection. The book shows it is just a variant of stepwise selection: in standard backward selection every candidate is considered at every step, whereas with univariable pre-selection only the candidates that passed the first screen are considered thereafter.</p>
-<div class="callout key"><b>Hypothetical illustration (Tables 11.8 and 11.9)</b><p>Eight candidates, numbered 1 to 8. With univariable screening, predictors 6, 7 and 8 are lost at the first step. Backward selection then omits 5 and 4, leaving 1, 2, 3. With standard backward selection starting from all eight, predictor 6, which looked insignificant univariably, can remain in the final model with 1, 2 and 3, because the full model judges it together with all the other candidates.</p></div>
-<h3>Practical pros and cons</h3>
-<ul>
-<li><b>Pro:</b> predictors for which no coefficient can be estimated by standard fitting algorithms (for example shock in the very small GUSTO-I subsamples) are eliminated early, and a model can be fitted with the remaining ones.</li>
-<li><b>Pro:</b> in a large dataset with many predictors, the computational burden is lower when starting from a "reduced full model".</li>
-<li><b>Con:</b> it does not remove any of the problems described in the previous section.</li>
-<li><b>Informal screening</b> such as eyeballing relationships between continuous predictors and the outcome, or inspecting cross-tabulations, also uses the outcome relationship and therefore contributes to overfitting.</li>
-</ul>
-<h3>Testing within domains</h3>
-<p>A variant tests the relevance of predictors within a cluster of related variables (a disease domain), for example blood pressure measurements and treatment of hypertension. This has some appeal, but the problems of stepwise selection apply. Some power can be gained by requiring that every domain stays in the final model even if no member is significant after pre-selection. Other approaches combine variables within a cluster (for example mean blood pressure), or pre-select using prior information from other studies.</p>
-<p class="src">Source: Ch. 11, §11.6</p>
-`
-    },
-    {
-      id: 's8',
-      title: 'Modern selection methods and what to do in practice',
-      html: `
-<p>A number of newer methods exist. They are computationally intensive and still seldom used in medical applications.</p>
-<h3>Bootstrap selection</h3>
-<p>Stepwise selection is repeated in many bootstrap samples, the candidates are ranked by their selection frequency, and the predictors selected in more than 50% of bootstrap samples are fitted in the original sample. The evidence for its advantages is unconvincing. The result will generally resemble the stepwise model in the original sample, since a predictor with a low p-value in the original data is chosen frequently in bootstrap samples.</p>
-<h3>Bagging and boosting</h3>
-<p>Bagging (bootstrap aggregating) builds many versions of a predictor from bootstrap resamples and averages the predictions. It can improve accuracy when small changes in the development data cause large changes in the constructed predictor. Boosting reweights the observations so that those that are difficult to classify count more.</p>
-<h3>Bayesian model averaging (BMA)</h3>
-<p>Researchers usually ignore the uncertainty of the model-selection step. BMA takes it into account. With p candidate predictors (ignoring interactions) there are up to 2<sup>p</sup> possible models. The averaged estimate is the sum of each model's estimate, weighted by the posterior probability of that model given the data:</p>
-<div class="formula">E(β | D) = Σ over models  β<sub>model</sub> × Pr(model | D)</div>
-<p>The number of models can be limited by "Occam's window", which discards models far less probable than the best one, for example more than 20 times less likely. In simulations with 25 noise variables and no true predictors, stepwise selection sometimes included two or more noise variables whereas BMA always found none. With two relatively strong predictors and 23 noise variables, stepwise selection included up to 5 noise variables besides the 2 true ones. In the Framingham coronary events data, 12 exploratory variables were available; Occam's window retained 6 of the 8,192 (2<sup>13</sup>) models considered, with 5 or 6 predictors and posterior probabilities between 3% and 65%. The best backward model at p &lt; 0.05 had eight variables, and BMA predicted somewhat better.</p>
-<h3>Shrinkage to zero: Lasso</h3>
-<p>The <b>Lasso</b> ("least absolute shrinkage and selection operator") maximises the likelihood subject to the sum of the absolute values of the coefficients being bounded by a constant. This shrinks coefficients, some exactly to zero, and so removes predictors. It showed promising results in simulation and when predicting 30-day mortality in GUSTO-I subsamples. Module 10 explains it in more detail.</p>
-<div class="callout key"><b>The book's conclusions</b><p>Overfitting begins with considering too many candidate predictors. The standard techniques used by default in medical research, such as stepwise selection, do not solve this problem. The improvements to look for are: limiting the need for selection through subject knowledge, particularly in smaller datasets; better fitting algorithms such as the Lasso; bootstrapping; and Bayesian estimation. The uncertainty of model selection is an important source of overfitting, to be prevented by analysing larger datasets and limiting stepwise use. Faraway's phrase for the problems of data-driven modelling is "the cost of data analysis".</p></div>
-<div class="callout mch"><b>Illustrative (synthetic): practical plan for a preterm-birth model</b><p>With 200 events: (1) restrict to about 10 candidates with an obstetrician and a literature review (Module 7); (2) code them in advance (Module 6); (3) fit the full model, check its performance by bootstrap and apply shrinkage (Module 10); (4) if a smaller model is needed for practical reasons, choose the stopping rule, say AIC, and bootstrap the whole selection process to see how much optimism it adds.</p></div>
-<p class="src">Source: Ch. 11, §11.7 and §11.8</p>
-`
+<p><b>Bootstrap selection</b> keeps predictors chosen in more than 50% of bootstrap samples; evidence of benefit is unconvincing, and the result usually resembles the original stepwise model. <b>Bagging</b> averages predictions from models built in bootstrap resamples, which helps when small data changes cause large model changes; <b>boosting</b> up-weights observations that are hard to classify.</p>
+<p><b>Bayesian model averaging</b> (BMA) accounts for model uncertainty. With p candidates there are up to 2<sup>p</sup> models; the averaged estimate is</p>
+<div class="formula">E(β | D) = Σ over models β<sub>model</sub> × Pr(model | D)</div>
+<p>"Occam's window" drops models far less probable than the best (for example over 20 times less likely). In simulations with 25 noise variables and no true predictors, stepwise sometimes kept two or more noise variables while BMA kept none; with 2 strong predictors and 23 noise variables, stepwise kept up to 5 noise variables. Book example: in the Framingham coronary data, Occam's window kept 6 of 8,192 models (5 or 6 predictors, posterior probabilities 3% to 65%); the best backward p &lt; 0.05 model had 8 variables, and BMA predicted somewhat better.</p>
+<p>The <b>Lasso</b> maximises the likelihood with the sum of absolute coefficients bounded, shrinking some to exactly zero; it was promising in simulation and in GUSTO-I subsamples (Module 10).</p>
+<p><b>Conclusions.</b> Overfitting begins with too many candidates, and stepwise selection does not solve it. Limit selection with subject knowledge, especially in small data; use better algorithms (Lasso), bootstrapping and Bayesian methods; analyse larger datasets. Faraway called these costs "the cost of data analysis".</p>
+<p class="src">Source: Ch. 11, §11.7-11.8</p>`
     }
   ],
   keyPoints: [
-    'A full model with a limited, knowledge-based candidate list asks one question of the data; a stepwise-reduced model asks two.',
-    'Non-significance, collinearity and parsimony are false reasons for dropping predictors in a prediction model; practicality and implausible effects are valid ones.',
-    'AIC corresponds to p &lt; 0.157 for 1 df, and BIC to a p-value that shrinks with n (0.021 at n = 200).',
-    'Selection is unstable: in 111 GUSTO-I subsamples the specific 3-predictor model was reproduced only 7 times out of 110.',
-    'About 50 events per candidate predictor are needed for reliable selection (400 events for 8 candidates); 10 per variable is only a lower bound for a pre-specified model.',
-    'Coefficients selected by significance are biased away from zero, most for moderate effects with a true coefficient to SE ratio near 0.6.',
-    'Standard errors and p-values of a stepwise model are computed as if the model were pre-specified and are too optimistic; validated performance is lower than for the full model (R² 11.7 vs 15.1).',
-    'Omitting a true predictor can cost more than including a noise variable; alternatives are the full model, bootstrapping the whole selection, BMA and the Lasso.'
+    'A full model with a short, knowledge-based candidate list asks the data one question; a selected model asks two.',
+    'Practicality and implausible effects are valid reasons to drop a predictor; non-significance, collinearity and parsimony are not.',
+    'Prefer backward over forward selection; AIC equals p < 0.157 for 1 df, and BIC equals a p-value that falls with n (0.021 at n = 200, 0.006 at n = 2,000).',
+    'Selection is unstable: in GUSTO-I the 3-predictor set from one subsample reappeared in only 7 of 110 others.',
+    'Coefficients kept because they were significant are too large: for β = 1 and SE 0.5, 52% pass and they average 1.39.',
+    'Printed standard errors and p-values of a selected model ignore the selection and are too optimistic.',
+    'Validated performance of a stepwise model is usually below the full model (corrected R² 11.7% versus 15.1% in the book example).',
+    'Reliable selection needs about 50 events per candidate; otherwise fit the full model, or use AIC and bootstrap the whole procedure.'
   ],
   quiz: [
     {
-      q: 'Which of the following is a false argument for removing predictors from a prediction model?',
+      q: 'In the team\'s model, previous preterm birth has p = 0.09 in the full model fitted to 400 women. It is a well-known strong predictor in earlier studies. What should the team do?',
       options: [
-        'A model with fewer predictors is easier for clinicians to use.',
-        'Some predictors have very small or biologically implausible effects.',
-        'Some predictors will not be available when the model is applied.',
-        'Predictors that are not statistically significant provide no information and should be excluded.'
-      ],
-      answer: 3,
-      why: 'Prediction is an estimation problem, and non-significance is not evidence of a zero effect, especially in small samples or for uncommon but strong predictors. The first three are the valid practical reasons given by the book. The false argument confuses hypothesis testing with estimation.'
-    },
-    {
-      q: 'For a predictor with 1 df, backward elimination using AIC (keep if χ² exceeds 2 × df) is equivalent to a significance test at what level?',
-      options: [
-        'p below 0.05',
-        'p below 0.157',
-        'p below 0.50',
-        'p below 0.01'
+        'Remove it, because it is not significant at 5%.',
+        'Keep it: prediction is estimation, and a p-value above 0.05 in a small sample is not evidence of no effect.',
+        'Remove it and replace it with a predictor that is significant.',
+        'Keep it only if its odds ratio is above 2.'
       ],
       answer: 1,
-      why: 'The probability that a chi-square with 1 df exceeds 2 is 0.157. The usual 5% level corresponds to a threshold of 3.84, so AIC is more liberal. A level of 0.5 is a different, even more liberal choice, sometimes used in small datasets with established candidates, and BIC at large n would approach 0.01.'
+      why: 'Non-significance does not show a zero effect, especially in a small sample and for a predictor supported by earlier research. Removing it confuses hypothesis testing with estimation. Swapping in a "significant" predictor adds testimation bias, and an odds ratio rule has no basis in the book.'
     },
     {
-      q: 'A team has 8 candidate predictors and wants the selection of predictors to be reliable. Using the book\'s guidance on events per variable, how many outcome events do they need at minimum?',
+      q: 'Backward elimination with AIC keeps a 1-df predictor if it adds more than 2 to the model chi-square. This is the same as testing at what level?',
       options: [
-        '80 events',
-        '160 events',
-        '400 events',
-        '800 events'
+        'p < 0.05',
+        'p < 0.157',
+        'p < 0.50',
+        'p < 0.01'
+      ],
+      answer: 1,
+      why: 'The chance that a 1-df chi-square exceeds 2 is 0.157. The 5% level needs 3.84, so AIC is more liberal. p < 0.5 is a separate, even more liberal choice, and BIC in large samples approaches 0.01 or less.'
+    },
+    {
+      q: 'The team has 8 candidate coefficients and wants the data to choose among them reliably. About how many preterm births does it need?',
+      options: [
+        '80',
+        '160',
+        '400',
+        '800'
       ],
       answer: 2,
-      why: 'The book suggests an EPV of 50 for reliable selection among candidates, so 8 × 50 = 400 events. The 10 events per variable figure (80 events) is a lower bound for a pre-specified model, not for selection. 160 corresponds to 20 per variable, which is the level at which a pre-specified model may not need shrinkage.'
+      why: 'The book suggests about 50 events per candidate for reliable selection: 8 × 50 = 400. Eighty (EPV 10) is a lower limit for a model fixed in advance, not for selection, and 160 (EPV 20) is the level at which a pre-specified model may need little shrinkage.'
     },
     {
-      q: 'True coefficient 1.0 and SE 0.5, with only estimates significant at p below 0.05 kept. Which result matches the book?',
+      q: 'The true log odds ratio of bacteriuria is 0.9 and a small study has SE 0.5. If the coefficient is reported only when p < 0.05, what happens on average to the reported value?',
       options: [
-        'About half of estimates are significant and their mean is about 1.39, i.e. 39% too high.',
-        'About 95% of estimates are significant and their mean is 1.0.',
-        'About half of estimates are significant and their mean is 1.0 because selection is random.',
-        'About 52% are significant and their mean is 0.7, an underestimate.'
-      ],
-      answer: 0,
-      why: 'The significance cut-off is 0.98, which is just below the true value, so about 52% pass, and only the larger estimates are kept, so the mean among them is 1.39. The distractors assume selection does not change the average, or confuse the direction of bias, which is always away from zero for selected coefficients.'
-    },
-    {
-      q: 'In bootstrap validation of GUSTO-I subsample 5, the optimism-corrected R² was 15.1% for the 8-predictor model and 11.7% for the stepwise model (p below 0.05, 3 predictors, selection replayed in the bootstrap). What does this show?',
-      options: [
-        'The stepwise model is better because its optimism (5.9) is smaller than that of the full model (7.6).',
-        'The models are equivalent because the apparent R² values are similar.',
-        'The full model predicts better, because the corrected R² is higher; the stepwise model has lower optimism only because it is smaller.',
-        'The comparison is invalid because stepwise selection cannot be bootstrapped.'
+        'It is correct on average, because chance errors cancel out.',
+        'It is too small, because selection removes large estimates.',
+        'It is too large (about 1.35), because only estimates above 0.98 are kept.',
+        'It is too large only if the sample is very large.'
       ],
       answer: 2,
-      why: 'The corrected value is the quantity to compare, and the full model is ahead (15.1 vs 11.7). Lower optimism does not mean better, since the stepwise model started lower (17.6 vs 22.7). Stepwise selection can be bootstrapped, which is a stated advantage of its objectivity.'
+      why: 'Only estimates above 1.96 × 0.5 = 0.98 pass, about 44% of them, and they average about 1.35, 50% above 0.9. Errors cancel only if all estimates are kept. Selection removes small estimates, not large ones, and bias falls as the sample grows.'
     },
     {
-      q: 'With 10 candidate predictors, how many models does an all-possible-subsets search consider, and how many if 4 predictors are pre-specified to stay in the model?',
+      q: 'In a bootstrap comparison, the stepwise model had optimism in c of 0.044 and the full model 0.044, with optimism-corrected c 0.707 and 0.727. Which conclusion is right?',
+      options: [
+        'The two models are equal, because their optimism is the same.',
+        'The stepwise model is better, because it is smaller.',
+        'The full model is expected to predict better in new women, because its corrected c is higher.',
+        'The comparison is invalid, because stepwise selection cannot be bootstrapped.'
+      ],
+      answer: 2,
+      why: 'The optimism-corrected value is the one to compare, and the full model is ahead. Equal optimism does not mean equal performance, because the stepwise model started lower. Stepwise selection can and should be replayed in every bootstrap sample; that is an advantage of its objectivity.'
+    },
+    {
+      q: 'With 10 candidate predictors, how many models does an all-possible-subsets search examine, and how many if 4 predictors are forced to stay in?',
       options: [
         '100 and 36',
         '1,024 and 64',
@@ -317,67 +330,171 @@ registerModule({
         '10 and 6'
       ],
       answer: 1,
-      why: 'Each predictor is either in or out, so 2^10 = 1,024 models are possible. With 4 forced in, only the other 6 vary, so 2^6 = 64. The multiple testing implied by examining many models is why all-subsets regression easily overfits.'
+      why: 'Each predictor is in or out, so there are 2^10 = 1,024 models. With 4 forced in, only 6 vary: 2^6 = 64. Squaring the number (100) or counting the predictors (10) misses that every combination is a separate model, which is why all-subsets regression overfits so easily.'
     }
   ],
   tasks: [
     {
-      id: 't1',
-      title: 'EPV, stopping rules, number of models and testimation bias',
-      level: 'Apply',
-      scenario: `<p><b>Illustrative (synthetic).</b> A district team has 1,800 deliveries with 198 preterm births. They have 12 candidate predictors, each with 1 df, and plan backward elimination. A colleague asks whether the sample supports this.</p>
-<p>For part (e) assume a different situation: a predictor has a true log odds ratio of 0.5 (OR 1.65) for preterm birth and the sample is so small that the standard error is 0.5. Only estimates with p &lt; 0.05 (|estimate| above 1.96 × SE) are retained. You may use these standard normal values: Φ(0.96) = 0.8315, Φ(−2.96) = 0.0015, φ(0.96) = 0.2516, φ(−2.96) = 0.0050, where Φ is the cumulative distribution and φ the density. For estimates restricted to a region, the mean of the retained estimates is: true value + SE × [φ(a) − φ(b)] / P(retained), where a = (cut-off − true value) / SE, b = (−cut-off − true value) / SE, and P(retained) = [1 − Φ(a)] + Φ(b).</p>`,
+      id: 't0',
+      title: 'Sort the team\'s arguments',
+      level: 'Understand',
+      scenario: `<p>Illustrative (synthetic). At the meeting the team hears five reasons to make the booking model smaller:</p>
+<ol>
+<li>"Cervical length needs a scan that most of our clinics do not have."</li>
+<li>"Height had p = 0.31, so it adds nothing."</li>
+<li>"BMI and weight are correlated, so the model cannot be trusted with both."</li>
+<li>"Whether the woman conceived in the monsoon season has no plausible link with preterm birth in our setting."</li>
+<li>"Occam's razor: the simplest model is always the best."</li>
+</ol>`,
       questions: [
-        '<b>(a)</b> Compute the EPV of the full 12-predictor model.',
-        '<b>(b)</b> How many events would the book suggest for reliable selection among 12 candidates? How many candidates can 198 events support at that standard?',
-        '<b>(c)</b> What p-value corresponds to AIC for a 1-df predictor and for a 3-df predictor? What χ² does BIC require when n = 200, and what is the equivalent p?',
-        '<b>(d)</b> How many models does all-possible-subsets regression consider with 12 candidates, and with 4 of them forced in?',
-        '<b>(e)</b> Find the share of estimates retained and the mean retained estimate. Express the bias as a percentage of the true value, and compare it with the book result for a true coefficient of 1 and SE 0.5.'
+        '<b>(a)</b> Label each argument valid or false.',
+        '<b>(b)</b> For each false argument, explain in one or two sentences why it fails.',
+        '<b>(c)</b> In what situation can parsimony be a sound principle?'
       ],
-      answer: `<p><b>(a)</b> EPV = 198 / 12 = 16.5. This is above the minimum of 10 for a pre-specified model, so fitting the full model is supported, and it is below the 20 at which shrinkage may become unnecessary.</p>
-<p><b>(b)</b> 12 × 50 = 600 events for reliable selection. 198 / 50 = 3.96, so the data support selection among about 4 candidates at that standard. The selection among 12 would be unstable. The fully pre-specified model (or a model with a restricted candidate list agreed in advance) is better supported.</p>
-<p><b>(c)</b> AIC 1 df: χ² must exceed 2, p = 0.157. AIC 3 df: χ² must exceed 6, p = 0.112. BIC with n = 200: log(200) = 5.30 and p = 0.021.</p>
-<p><b>(d)</b> 2<sup>12</sup> = 4,096 models. With 4 forced in, 2<sup>8</sup> = 256 models.</p>
-<p><b>(e)</b> Cut-off = 1.96 × 0.5 = 0.98. a = (0.98 − 0.5) / 0.5 = 0.96. b = (−0.98 − 0.5) / 0.5 = −2.96. P(retained) = (1 − 0.8315) + 0.0015 = 0.1700, so about 17% of estimates are retained. Mean retained = 0.5 + 0.5 × (0.2516 − 0.0050) / 0.1700 = 0.5 + 0.5 × 1.4506 = 1.225. The bias is 1.225 / 0.5 − 1 = 145%, which is an odds ratio of e<sup>1.225</sup> = 3.4 instead of 1.65. In the book's example (true 1, SE 0.5, ratio 2) the share retained is 52% and the bias +39%. Here the true effect is smaller relative to the SE (ratio 1), so fewer estimates pass, and those that do overstate the effect by much more. The estimates with the worst relative bias are those whose ratio is small to moderate (near 0.6), where the effect is hard to detect.</p>`
+      answer: `<p><b>(a)</b> 1 valid (practicality: not available where the model will be used). 2 false. 3 false. 4 valid (implausible effect, judged before seeing the outcome data). 5 false.</p>
+<p><b>(b)</b> 2: a p-value of 0.31 is not evidence of a zero effect; prediction is about estimation, and keeping a weak predictor costs little. 3: collinearity makes the separate coefficients of BMI and weight imprecise, but the predictions from the model can still be reliable; if they measure almost the same thing, choose or combine on subject grounds, not by testing. 5: a reduced model chosen from the data asks two questions (which predictors, and their coefficients given the selection), so it is more complex, not simpler, and its coefficients are biased by the selection.</p>
+<p><b>(c)</b> When two theories or models are specified in advance and compared, preferring the simpler one is reasonable. It fails when the "simple" model was found by searching the data.</p>`
+    },
+    {
+      id: 't1',
+      title: 'How much does collinearity matter?',
+      level: 'Apply',
+      scenario: `<p>Illustrative (synthetic). In the booking data, height and weight correlate at r = 0.50, systolic and diastolic blood pressure at r = 0.62, and haemoglobin and haematocrit at r = 0.95. Variance inflation factor for two predictors: VIF = 1 ÷ (1 − r²).</p>`,
+      questions: [
+        '<b>(a)</b> Calculate the VIF for each pair.',
+        '<b>(b)</b> Which pair, if any, passes the rough warning level of VIF 10?',
+        '<b>(c)</b> One woman has blood pressure 130/80 mmHg. Calculate (2 × DBP + SBP) ÷ 3 and say why a single combined measure may be better than choosing one reading.',
+        '<b>(d)</b> What would you do with haemoglobin and haematocrit?'
+      ],
+      answer: `<p><b>(a)</b> Height and weight: r² = 0.25, VIF = 1 ÷ 0.75 = 1.33. Blood pressure: r² = 0.3844, VIF = 1 ÷ 0.6156 = 1.62. Haemoglobin and haematocrit: r² = 0.9025, VIF = 1 ÷ 0.0975 = 10.3.</p>
+<p><b>(b)</b> Only haemoglobin with haematocrit (10.3). A VIF of 1.33 or 1.62 widens the variance by 33% or 62%, which is no reason to drop anything.</p>
+<p><b>(c)</b> (2 × 80 + 130) ÷ 3 = 290 ÷ 3 = 96.7 mmHg. A combined measure uses the information in both readings with one coefficient, avoids two imprecise coefficients, and avoids a data-driven choice between them. Subject knowledge may still favour one reading.</p>
+<p><b>(d)</b> They measure almost the same thing. Choose one on practical grounds (haemoglobin is cheaper and routinely measured at booking), before looking at the outcome. The decision is about practicality and redundancy, not about which one is "significant".</p>`
     },
     {
       id: 't2',
-      title: 'Instability of selection and testimation in the course simulations',
-      level: 'Analyze',
-      scenario: `<p>Use the stepwise instability widget on <b>ptb_dev</b> (synthetic; 14 candidate terms; complete cases). In the data-generating process the strong predictors are prior preterm birth (log odds 1.5), chronic hypertension (0.9), bacteriuria (0.9), the age curve, short interval (0.7) and tobacco (0.6). Weaker effects are primigravida (0.35), Hb below 11, BMI below 20 and low SES (0.12). Four variables have no effect: antenatal visits, female fetus, conception in monsoon and height.</p>`,
+      title: 'Stopping rules and the number of models',
+      level: 'Apply',
+      scenario: `<p>Illustrative (synthetic). The team has 2,000 women and 12 candidate predictors with 1 df each, plus one predictor (age) that would use 2 df if coded with a squared term.</p>`,
       questions: [
-        '<b>(a)</b> At the smallest sample size and the rule "backward p&lt;0.05", run 100 bootstraps. Which predictors have high selection frequency? Do any noise predictors appear? What fraction of bootstraps reproduce the original model?',
-        '<b>(b)</b> Change the rule to "backward p&lt;0.5" and then to the full model. How do the number of predictors kept and the reproducibility change?',
-        '<b>(c)</b> Raise the sample size to the largest value and repeat (a). What changes?',
-        '<b>(d)</b> In the testimation simulator, set the true coefficient to 0.3 and the SE to 0.5 (ratio 0.6) and then to 1.5 with the same SE. Compare the share significant and the bias among significant estimates.'
+        '<b>(a)</b> What chi-square must a 1-df predictor add under p &lt; 0.05, AIC and BIC (n = 2,000)? Give the equivalent p-value for each.',
+        '<b>(b)</b> Repeat (a) for the 2-df age term under AIC.',
+        '<b>(c)</b> How many models would all-possible-subsets regression examine with the 12 one-df candidates? How many if 4 are forced in?',
+        '<b>(d)</b> Which rule would you choose for this dataset, and why?'
       ],
-      answer: `<p><b>(a)</b> At the smallest sample size and p &lt; 0.05, expect few predictors per bootstrap, with a pattern of the strongest predictors (prior preterm birth, chronic hypertension, bacteriuria, the age term) selected frequently, moderate ones (tobacco, short interval) in a fraction of bootstraps and weak ones (primigravida, Hb, BMI, SES) rarely. Noise predictors may appear occasionally, near the 5% rate for a variable with no effect (though the selection frequency may be higher because the bootstrap resamples the same data). The percentage of bootstraps that reproduce the original selected model will be small, a pattern parallel to the GUSTO-I subsamples where the specific set was reproduced in 7 of 110 samples.</p>
-<p><b>(b)</b> With p &lt; 0.5 many more predictors are kept (including some noise variables), the spread in model size shrinks, and the full model keeps all 14. The fully pre-specified model is by definition always "reproduced", and adds noise terms with little loss, as in the book's noise-variable experiment.</p>
-<p><b>(c)</b> With a large sample the selection frequencies of strong predictors approach 100%, noise predictors stay low, the number of predictors kept becomes more stable and a larger share of bootstraps reproduce the model, consistent with the book's finding that instability is less extreme in larger samples (about 6 to 7 predictors in large GUSTO-I regions). Weak true predictors (such as low SES with a coefficient of only 0.12) may still be selected inconsistently, because their effect is small compared with the SE even in a large sample.</p>
-<p><b>(d)</b> With ratio 0.6 only about 9% of estimates are significant, but those that pass have a mean of about 1.08, more than three times the true 0.3, which is a very large percentage bias. With a ratio of 3 about 85% of estimates are significant and the mean among them is about 1.64, a bias of roughly 9%. These values follow from the same normal calculation as Task 1(e); the widget's simulated values will be close. The book states that bias is greatest around a ratio of about 0.6 and decreases for stronger effects, because strong predictors are selected nearly always and so selection does not truncate the distribution.</p>`
+      answer: `<p><b>(a)</b> p &lt; 0.05: χ² above 3.84 (p = 0.05). AIC: χ² above 2 × 1 = 2, p = 0.157. BIC: χ² above ln(2,000) = 7.60, p = 0.006.</p>
+<p><b>(b)</b> AIC with 2 df: χ² above 2 × 2 = 4, which is p = 0.135 for a 2-df chi-square.</p>
+<p><b>(c)</b> 2<sup>12</sup> = 4,096 models. With 4 forced in, 2<sup>8</sup> = 256 models. Every extra model is another chance to fit noise.</p>
+<p><b>(d)</b> If selection is needed at all, AIC with backward elimination: it is more liberal than p &lt; 0.05, so weak true predictors are dropped less often, and Ambler and colleagues found it the best stopping rule. BIC at n = 2,000 is very strict (p = 0.006) and would remove true but modest predictors. Better still, fit the full model if the candidates were chosen with subject knowledge.</p>`
     },
     {
       id: 't3',
-      title: 'Critique a stepwise model for neonatal sepsis',
-      level: 'Evaluate',
-      scenario: `<p><b>Illustrative (synthetic).</b> A newborn unit study includes 700 neonates, 92 with culture-positive sepsis. Twenty-five variables were collected. The report says: "Predictors with p &lt; 0.10 in univariable analysis (11 variables) entered a forward stepwise procedure (entry p &lt; 0.05); five remained: temperature, respiratory rate, lethargy, CRP and PROM &gt;18 h. The first variable to enter, CRP, was the strongest independent predictor, followed by lethargy. Birth weight and gestational age were correlated (r = 0.72) so gestational age was dropped. The final model gave odds ratios with 95% confidence intervals and p-values from the software. Internal validation used a random split: the model was developed in 350 neonates (46 events) and tested in the other 350, giving c = 0.88 in the development half and 0.79 in the test half. We conclude that the model performs well. No recalibration was needed."</p>`,
+      title: 'Trace a backward elimination by hand',
+      level: 'Analyse',
+      scenario: `<p>Illustrative (synthetic). The full model in 2,000 women gives these Wald chi-squares. Assume, for simplicity, that they do not change when other terms are removed (in practice they do, which is why the model is re-fitted after each step).</p>
+<table class="data">
+<tr><th>Term</th><th>df</th><th>Wald χ²</th></tr>
+<tr><td>Previous preterm birth</td><td>1</td><td>30.2</td></tr>
+<tr><td>Maternal age (with squared term)</td><td>2</td><td>24.5</td></tr>
+<tr><td>Chronic hypertension</td><td>1</td><td>13.8</td></tr>
+<tr><td>Bacteriuria</td><td>1</td><td>7.1</td></tr>
+<tr><td>Tobacco use</td><td>1</td><td>5.0</td></tr>
+<tr><td>Short inter-pregnancy interval</td><td>1</td><td>3.2</td></tr>
+<tr><td>First pregnancy</td><td>1</td><td>2.4</td></tr>
+<tr><td>Low socio-economic status</td><td>1</td><td>1.1</td></tr>
+<tr><td>Antenatal visits</td><td>1</td><td>0.7</td></tr>
+<tr><td>Conceived in monsoon</td><td>1</td><td>0.3</td></tr>
+</table>`,
       questions: [
-        '<b>(a)</b> List the problems with the selection approach and what the book says about each.',
-        '<b>(b)</b> Compute the EPV at the start and at the split-sample stage.',
-        '<b>(c)</b> What would you recommend instead?'
+        '<b>(a)</b> Which terms remain under p &lt; 0.05, AIC, BIC (n = 2,000) and p &lt; 0.5? (Thresholds for 2 df: 5.99, 4, 15.2 and 1.39.)',
+        '<b>(b)</b> A short inter-pregnancy interval has a well-established effect on preterm birth. Under which rules is it lost, and what does that tell you?',
+        '<b>(c)</b> Why must the model be re-fitted after each removal in real data?'
       ],
-      answer: `<p><b>(a) Point-by-point.</b></p>
+      answer: `<p><b>(a)</b> Thresholds for 1 df: 3.84 (p &lt; 0.05), 2 (AIC), 7.60 (BIC), 0.455 (p &lt; 0.5). For age (2 df): 5.99, 4, 2 × 7.60 = 15.2 and 1.39; age passes all four.</p>
+<ul>
+<li><b>p &lt; 0.05:</b> previous preterm birth, age, hypertension, bacteriuria (7.1), tobacco (5.0). Five terms, 6 df.</li>
+<li><b>AIC:</b> the same plus short interval (3.2) and first pregnancy (2.4). Seven terms, 8 df.</li>
+<li><b>BIC:</b> previous preterm birth, age (24.5 &gt; 15.2), hypertension (13.8). Bacteriuria (7.1 &lt; 7.60) goes. Three terms, 4 df.</li>
+<li><b>p &lt; 0.5:</b> all except conceived in monsoon (0.3): nine terms, 10 df.</li>
+</ul>
+<p><b>(b)</b> It is lost under p &lt; 0.05 and BIC. A true predictor with a modest χ² in this sample is dropped by the stricter rules. The rule, not the biology, decided its fate; with a different sample it might have stayed. Prior knowledge is a good reason to keep it whatever its p-value.</p>
+<p><b>(c)</b> Correlated predictors share information. When one is removed, part of its effect moves to the others, so their chi-squares change. A term that was weak may become strong, or the reverse, so the order of removal can change the final model.</p>`
+    },
+    {
+      id: 't4',
+      title: 'How much is the bacteriuria effect inflated?',
+      level: 'Apply',
+      scenario: `<p>Illustrative (synthetic). In the synthetic data the true log odds ratio for bacteriuria is 0.9 (odds ratio 2.46). In a small study the SE is 0.5; in a larger one it is 0.25. The coefficient is reported only if p &lt; 0.05. Use: Φ(0.16) = 0.5636, φ(0.16) = 0.3939, Φ(−3.76) = 0.0001, φ(−3.76) = 0.0003, Φ(−1.64) = 0.0505, φ(−1.64) = 0.1040, and treat values beyond ±5 as zero.</p>`,
+      questions: [
+        '<b>(a)</b> For SE 0.5, find the cut-off, a and b, the share of studies that report the coefficient, and the mean reported value.',
+        '<b>(b)</b> Express the bias as a percentage and as an odds ratio.',
+        '<b>(c)</b> Repeat for SE 0.25.',
+        '<b>(d)</b> Check both results in the testimation widget (true coefficient 0.9, threshold 0.05, SE 0.5 and then 0.25). Explain why the bias falls.'
+      ],
+      answer: `<p><b>(a)</b> Cut-off = 1.96 × 0.5 = 0.98. a = (0.98 − 0.9) ÷ 0.5 = 0.16; b = (−0.98 − 0.9) ÷ 0.5 = −3.76. Share = (1 − 0.5636) + 0.0001 = 0.4365, about 44%. Mean = 0.9 + 0.5 × (0.3939 − 0.0003) ÷ 0.4365 = 0.9 + 0.5 × 0.9017 = 0.9 + 0.451 = 1.35.</p>
+<p><b>(b)</b> 1.35 ÷ 0.9 − 1 = 0.50, so 50% too high. As odds ratios: e<sup>1.35</sup> = 3.86 instead of e<sup>0.9</sup> = 2.46.</p>
+<p><b>(c)</b> Cut-off = 1.96 × 0.25 = 0.49. a = (0.49 − 0.9) ÷ 0.25 = −1.64; b = (−0.49 − 0.9) ÷ 0.25 = −5.56, treated as zero. Share = 1 − 0.0505 = 0.9495, about 95%. Mean = 0.9 + 0.25 × 0.1040 ÷ 0.9495 = 0.9 + 0.25 × 0.1095 = 0.927. Bias 0.927 ÷ 0.9 − 1 = 3%.</p>
+<p><b>(d)</b> The widget's simulated values are close (about 44% and 1.35; about 95% and 0.93). β ÷ SE rises from 1.8 to 3.6. When nearly all estimates pass, the filter removes almost nothing, so the average is hardly changed. A smaller SE (a larger sample) is the cure; the book notes the bias is largest near β ÷ SE of 0.6.</p>`
+    },
+    {
+      id: 't5',
+      title: 'Watch selection fall apart in the bootstrap',
+      level: 'Analyse',
+      scenario: `<p>Use the stepwise instability widget. It uses women with complete data in <b>ptb_dev</b> (1,548 women, 182 preterm births) and 14 candidate terms (15 coefficients, because age has a squared term). In the synthetic truth, previous preterm birth (log odds ratio 1.5), chronic hypertension (0.9), bacteriuria (0.9), short interval (0.7), tobacco (0.6), the age curve and low haemoglobin (0.45 per g/dL below 11) have real effects; first pregnancy (0.35), low BMI (0.12 per unit below 20) and low socio-economic status (0.12) have weak effects. Antenatal visits, the baby's sex, conception in the monsoon and height have no effect. Results vary a little between runs.</p>`,
+      questions: [
+        '<b>(a)</b> Keep sample size 600 and the rule "Backward, p &lt; 0.05". Press "Run 100 bootstraps". Record the number of events, the mean number of terms kept, the share of bootstraps that reproduce the original model, and the selection frequency of previous preterm birth and of the four noise terms.',
+        '<b>(b)</b> Change the rule to "Backward, AIC-like (p ≈ 0.157)" and then "Backward, p &lt; 0.5", and repeat. What happens to the number of terms kept and to the noise terms?',
+        '<b>(c)</b> Set the sample size to 1,600 (the widget uses all 1,548 women) and repeat (a). What changes and what does not?',
+        '<b>(d)</b> Compute the EPV at 600 and at 1,548 women, and compare with the book\'s advice for reliable selection.'
+      ],
+      answer: `<p><b>(a)</b> About 65 to 80 events (600 × 182 ÷ 1,548 = 71 on average). In our runs the original model usually had 4 to 6 terms (occasionally only 2 or 3), and the bootstraps kept about 4 to 6 on average. Only 0% to 10% of bootstraps reproduced the original model. Even previous preterm birth, the strongest true predictor, was selected in anywhere from about 60% to almost all bootstraps depending on the sample. Noise terms were usually selected in about 5% to 35% of bootstraps, and sometimes in more than half, more than the nominal 5%, because each bootstrap resamples the same small sample and repeats its chance patterns.</p>
+<p><b>(b)</b> With AIC about 7 or 8 terms are kept, and with p &lt; 0.5 about 11. True weak predictors are kept more often, but noise terms also appear more often (half the time or more at p &lt; 0.5). Reproducing the exact model stays rare. The full model keeps all 14 every time.</p>
+<p><b>(c)</b> About 180 events. Strong predictors (previous preterm birth, hypertension, short interval, age, haemoglobin) are now chosen in 80% to 100% of bootstraps and noise terms in about 5% to 20%. About 7 terms are kept at p &lt; 0.05. But the exact model is still reproduced in under 10% of bootstraps: weak true predictors (low BMI, low SES, first pregnancy) come and go.</p>
+<p><b>(d)</b> At 600 women: about 71 ÷ 15 = 4.7. At 1,548 women: 182 ÷ 15 = 12.1. Reliable selection needs about 50 events per candidate, so 15 × 50 = 750 events, four times what the whole complete-case dataset has. The data support fitting a full model (EPV above 10 at full size), not choosing among the candidates.</p>`
+    },
+    {
+      id: 't6',
+      title: 'Full model or stepwise model?',
+      level: 'Understand',
+      scenario: `<p>Illustrative (synthetic), computed in the course data. From ptb_dev, 600 women with complete data (73 preterm births) were drawn. Two strategies were compared with 200 bootstrap samples; in each sample the backward selection was repeated. Both models were also tested on 20,000 new synthetic women from the same setting.</p>
+<table class="data">
+<tr><th>Strategy</th><th>Apparent c</th><th>Optimism</th><th>Apparent R² (%)</th><th>Optimism (%)</th><th>c in new women</th><th>R² in new women (%)</th></tr>
+<tr><td>Full model, 14 terms (15 df)</td><td>0.7704</td><td>0.0437</td><td>23.07</td><td>7.54</td><td>0.702</td><td>11.4</td></tr>
+<tr><td>Backward p &lt; 0.05, 5 terms (6 df)</td><td>0.7510</td><td>0.0442</td><td>18.33</td><td>7.20</td><td>0.684</td><td>9.9</td></tr>
+</table>`,
+      questions: [
+        '<b>(a)</b> Calculate the optimism-corrected c and R² for each strategy.',
+        '<b>(b)</b> A colleague says the stepwise model is "less overfitted" because its R² optimism is smaller. Is this the right comparison?',
+        '<b>(c)</b> Compare with the book\'s GUSTO-I result (corrected R² 15.1% full, 11.7% stepwise). What is the common message?',
+        '<b>(d)</b> Why are both models still weaker in new women than the bootstrap suggests?'
+      ],
+      answer: `<p><b>(a)</b> Full: c = 0.7704 − 0.0437 = 0.7267; R² = 23.07 − 7.54 = 15.53%. Stepwise: c = 0.7510 − 0.0442 = 0.7068; R² = 18.33 − 7.20 = 11.13%.</p>
+<p><b>(b)</b> No. The question is how well each model predicts in new women, which is the corrected value. The stepwise model starts lower and loses almost as much, so it ends lower (0.707 against 0.727 for c). In new women the same order appears: c 0.684 against 0.702.</p>
+<p><b>(c)</b> In both, the full model's corrected R² is higher (15.5% against 11.1% here; 15.1% against 11.7% in the book). Dropping weak predictors removes real information, and the selection adds its own optimism.</p>
+<p><b>(d)</b> With only 73 events (EPV about 5 for the full model), every estimate is noisy. The bootstrap estimates the average optimism, but one particular small sample can be worse than average. This is why EPV matters before any modelling, and why shrinkage (Module 10) helps.</p>`
+    },
+    {
+      id: 't7',
+      title: 'Review a stepwise preterm birth model',
+      level: 'Evaluate',
+      scenario: `<p>Illustrative (synthetic). A manuscript reports 700 women from one hospital, 84 with preterm birth. Twenty-five variables were collected. "Variables with p &lt; 0.10 in univariable analysis (11) entered a forward stepwise procedure (entry p &lt; 0.05). Five remained: previous preterm birth, bacteriuria, chronic hypertension, tobacco use and low haemoglobin. Previous preterm birth entered first and was therefore the strongest independent predictor. BMI was dropped because it correlated with weight (r = 0.72). We report odds ratios with 95% confidence intervals and p-values from the software. The model was developed in a random half (350 women, 42 events) and tested in the other half: c = 0.86 and 0.77. The model performs well and no recalibration is needed."</p>`,
+      questions: [
+        '<b>(a)</b> Calculate the EPV at the start and in the development half.',
+        '<b>(b)</b> List the problems with the selection and the reporting, and what the book says about each.',
+        '<b>(c)</b> Propose a better analysis plan.'
+      ],
+      answer: `<div class="callout warn"><b>(a) Critical</b><p>EPV = 84 ÷ 25 = 3.4 at the start, and 42 ÷ 25 = 1.7 in the development half, far below 10 even before any selection. The model is likely to be seriously overfitted.</p></div>
+<p><b>(b)</b></p>
 <ol>
-<li><b>25 candidates with 92 events (EPV 3.7).</b> The list is too long for the number of events. Candidates should be limited beforehand using subject knowledge (Module 7), and reliable selection needs about 50 events per candidate.</li>
-<li><b>Univariable pre-selection followed by forward stepwise.</b> Univariable screening is a variant of stepwise selection and adds to overfitting. The book prefers backward over forward selection, because correlated variables are judged together in the full model and a forward procedure may admit none of them.</li>
-<li><b>Interpreting order of entry.</b> Statements such as "CRP was the strongest independent predictor, followed by lethargy" based on order of entry (or order of p-values) are overinterpretations, because the selection is unstable.</li>
-<li><b>Dropping gestational age because of correlation 0.72.</b> Collinearity at this level does not preclude reliable predictions. Correlations of 0.5 are already among the strongest seen in the GUSTO-I data, and r above 0.8 is the level at which coefficients of the correlated variables become unreliable. Gestational age is a strong clinical predictor; combining or keeping both may be sounder.</li>
-<li><b>Confidence intervals and p-values from the software.</b> These assume the model was pre-specified, ignore the selection, and are too optimistic. The coefficients are also biased away from zero by testimation.</li>
-<li><b>Split-sample validation with 46 events.</b> It wastes half the data and is unstable. The book recommends the bootstrap, replaying the whole selection in each bootstrap sample. The drop in c from 0.88 to 0.79 is itself a sign of overfitting. The final model should be developed on all 700 patients.</li>
-<li><b>"No recalibration needed."</b> Nothing in the report assesses calibration (slope, calibration-in-the-large); a lower c in the test half suggests the predictions are too extreme.</li>
+<li><b>Too many candidates.</b> 25 variables for 84 events. Candidates should be cut with subject knowledge first; reliable selection would need about 50 events per candidate.</li>
+<li><b>Univariable screening, then forward selection.</b> Screening is just a variant of stepwise selection and does not remove its problems. Backward is preferred to forward, because correlated predictors are judged together.</li>
+<li><b>"Entered first, therefore strongest".</b> The order of entry and the ranking of p-values are overinterpretations of an unstable process.</li>
+<li><b>Dropping BMI for r = 0.72.</b> This level of correlation does not prevent reliable predictions. If BMI and weight are redundant, choose one on subject grounds before looking at the outcome.</li>
+<li><b>Software confidence intervals and p-values.</b> They assume a pre-specified model, ignore the selection and are too optimistic; the kept odds ratios are also inflated by testimation bias.</li>
+<li><b>Split-sample validation.</b> It wastes half of a small dataset and is itself unstable with 42 events. The fall from 0.86 to 0.77 is a sign of overfitting, not of good performance.</li>
+<li><b>"No recalibration needed".</b> Calibration was not assessed at all; overfitting usually gives predictions that are too extreme.</li>
 </ol>
-<div class="callout warn"><b>(b) Critical:</b><p>EPV at the start is 92 / 25 = 3.7, far under the minimum of 10 even before considering that selection was used. After the split the development half has 46 events and EPV of 46 / 25 = 1.8. A model developed in this way is likely to be seriously overfitted; apparent performance cannot be taken at face value, and the p-values and confidence intervals are not valid.</p></div>
-<p><b>(c) Recommendation.</b> Pre-specify around 8 to 9 candidates based on clinical knowledge and literature (92 / 10 gives about 9 df), keep gestational age and birth weight if both are clinically relevant, combine similar signs where possible, fit the full model on all 700 neonates, and assess optimism by bootstrap. If a smaller model is required, use AIC or a more liberal rule and replay the entire procedure in the bootstrap. Consider shrinkage (Module 10) because EPV remains close to 10.</p>`
+<p><b>(c)</b> Agree about 8 candidate coefficients in advance from the literature and clinical knowledge (84 ÷ 10 = 8.4), choose one of BMI or weight, fit the full model in all 700 women, and assess optimism with 200 or more bootstrap samples. If a smaller model is required for practical reasons, use backward elimination with AIC and replay it in every bootstrap sample. Report calibration (slope and calibration-in-the-large) and apply shrinkage (Module 10). Plan external validation in another hospital.</p>`
     }
   ]
 });

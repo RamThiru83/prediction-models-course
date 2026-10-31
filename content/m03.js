@@ -15,6 +15,11 @@ registerModule({
     'Explain why regression is the default'
   ],
   format: 'cases',
+  reading: [
+    { cite: "Christodoulou E, Ma J, Collins GS, Steyerberg EW, Verbakel JY, Van Calster B (2019). A systematic review shows no performance benefit of machine learning over logistic regression for clinical prediction models. J Clin Epidemiol 110:12-22.", url: "https://doi.org/10.1016/j.jclinepi.2019.02.004", note: "Evidence for why regression remains the sensible default, and how biased validation made machine learning look better." },
+    { cite: "Harrell FE Jr, Lee KL, Mark DB (1996). Multivariable prognostic models: issues in developing models, evaluating assumptions and adequacy, and measuring and reducing errors. Stat Med 15:361-387.", url: "https://doi.org/10.1002/(SICI)1097-0258(19960229)15:4<361::AID-SIM168>3.0.CO;2-4", note: "A foundational paper on regression modelling strategy for binary, ordinal and time-to-event outcomes, including overfitting and validation." },
+    { cite: "Collins GS, Moons KGM, Dhiman P, et al. (2024). TRIPOD+AI statement: updated guidance for reporting clinical prediction models that use regression or machine learning methods. BMJ 385:e078378.", url: "https://doi.org/10.1136/bmj-2023-078378", note: "The current 27-item reporting checklist covering both regression and machine learning models, useful when writing up any model." }
+  ],
   essentials: `
 <ul>
 <li>The type of outcome decides the model. A measured number (birth weight) uses <b>linear regression</b>; a yes/no outcome (preterm birth) uses <b>logistic regression</b>; unordered categories use <b>polytomous</b> logistic regression; ordered categories use a <b>proportional odds</b> model; time to an event, when some women leave before the end, uses <b>Cox regression</b>.</li>
@@ -25,6 +30,45 @@ registerModule({
 <li>Trees and neural networks are more flexible, but need far more data. In medical data a well-built regression model usually predicts as well or better, so regression is the default.</li>
 </ul>`,
   story: 'Throughout the course you follow the maternity team of a district hospital as it works on one problem: preterm birth. The hospital and its data are fictional and synthetic. The team has planned its study. In this module it chooses the statistical model: which model fits each outcome, how a model turns predictors into a risk, how a bedside test fits into the same framework, and whether a fashionable machine-learning method would do better. You do not need the earlier modules for this story.',
+  defs: {
+    'linear predictor': 'The score a model makes by adding the intercept to each coefficient times its predictor; it is the log-odds of the outcome.',
+    'intercept': 'The log-odds for a woman whose predictors are all at zero or at their reference value.',
+    'coefficient': 'How much the log-odds change for one unit of a predictor, with the other predictors held the same.',
+    'odds ratio': 'e raised to a coefficient: the number that multiplies the odds for one unit of the predictor.',
+    'polytomous': 'A logistic model for an outcome with three or more categories that have no natural order.',
+    'proportional odds': 'A model for ordered categories that uses one set of coefficients and a separate intercept for each cut-point.',
+    'Cox regression': 'A model for the time until an event that can use women who leave the study before the event happens.',
+    'naive Bayes': 'Multiplying the likelihood ratios of several findings one after another, which is right only if the findings are unrelated once the condition is known.',
+    'log-likelihood': 'The sum, over all women, of the log of the chance the model gave to what actually happened; closer to zero is a better fit.',
+    'null model': 'A model with no predictors, which gives every woman the same average risk.'
+  },
+  explainers: [
+    {
+      id: 'logodds',
+      title: 'Adding on the log-odds scale',
+      scenes: (function () {
+        var risk = function (x) { return 1 / (1 + Math.exp(-x)); };
+        var pc = function (v) { return Math.round(v * 100) + '%'; };
+        var B = EX.box({ l: 80, t: 50, w: 430, h: 190, xlim: [-5, 1], ylim: [0, 0.6], xticks: [-5, -4, -3, -2, -1, 0, 1], yticks: [0, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6], yfmt: pc, xlabel: 'linear predictor (log-odds)', ylabel: 'risk' });
+        var curve = function (d) { return EX.curve(B, risk, -5, 1, { role: 'pred', draw: false, d: d || 0 }); };
+        var guide = function (x, d) { var y = risk(x); return EX.rect(B.X(x) - 0.5, B.Y(y), 1, B.Y(0) - B.Y(y), { role: 'muted', rx: 0, d: d }) + EX.rect(B.X(-5), B.Y(y) - 0.5, B.X(x) - B.X(-5), 1, { role: 'muted', rx: 0, d: d }); };
+        var pt = function (x, d) { return EX.pts(B, [[x, risk(x)]], { role: 'pred', r: 5, d: d }); };
+        var step = function (x0, x1, d) { return EX.rect(B.X(x0), B.Y(0) - 6, B.X(x1) - B.X(x0), 4, { role: 'obs', rx: 2, d: d }); };
+        return [
+          { svg: EX.svg(EX.text(40, 30, 'Start at the intercept: −3.60', { size: 'm', bold: true }) + B.s + curve(0.3) + guide(-3.6, 0.8) + pt(-3.6, 1.2) + EX.text(B.X(-4.9), B.Y(0.46), 'lp −3.60: odds 0.027, risk 2.7%', { d: 1.6 }) + EX.text(B.X(-4.9), B.Y(0.56), 'no previous preterm birth, no urine infection', { size: 's', d: 2.0 })),
+            say: 'Start with the intercept, minus 3.60. That is the log-odds for a woman with no previous preterm birth and no urine infection. On the curve it is a risk of 2.7 per cent, or odds of about 0.027.' },
+          { svg: EX.svg(EX.text(40, 30, 'Previous preterm birth: add 1.50', { size: 'm', bold: true }) + B.s + curve() + guide(-3.6, 0) + pt(-3.6, 0) + step(-3.6, -2.1, 0.8) + guide(-2.1, 1.4) + pt(-2.1, 1.8) + EX.text(B.X(-2.1) + 10, B.Y(0.109) - 12, 'lp −2.10: odds 0.12, risk 10.9%', { d: 2.2 }) + EX.text(B.X(-4.9), B.Y(0.56), '−3.60 + 1.50 = −2.10;  odds 0.027 × 4.48 = 0.12', { size: 's', d: 2.8 })),
+            say: 'A previous preterm birth adds 1.50 on the log-odds scale: minus 3.60 plus 1.50 is minus 2.10. Adding on the log-odds scale is the same as multiplying the odds, here by 4.48. The odds become about 0.12, and the risk 10.9 per cent.' },
+          { svg: EX.svg(EX.text(40, 30, 'Urine infection: add 0.90 more', { size: 'm', bold: true }) + B.s + curve() + guide(-3.6, 0) + pt(-3.6, 0) + pt(-2.1, 0) + step(-2.1, -1.2, 0.8) + guide(-1.2, 1.4) + pt(-1.2, 1.8) + EX.text(B.X(-1.2) - 10, B.Y(0.232) - 12, 'lp −1.20: odds 0.30, risk 23.2%', { anchor: 'end', d: 2.2 }) + EX.text(B.X(-4.9), B.Y(0.56), '−2.10 + 0.90 = −1.20;  odds 0.12 × 2.46 = 0.30', { size: 's', d: 2.8 })),
+            say: 'A urine infection adds 0.90 more: minus 1.20. The odds are multiplied again, by 2.46, to about 0.30. The curve gives a risk of 23.2 per cent. Two additions on the log-odds scale are two multiplications of the odds.' },
+          { svg: EX.svg(EX.text(40, 30, 'The trap: multiplying the risk instead of the odds', { size: 'm', bold: true }) + B.s + curve() + guide(-1.2, 0) + pt(-1.2, 0) + EX.text(B.X(-1.2) + 12, B.Y(0.232) + 14, 'right: 23.2%', { d: 0.4 }) + EX.pts(B, [[-1.2, 0.293]], { role: 'obs', r: 5, d: 1.0 }) + EX.gaps(B, [[-1.2, 0.232, 0.293]], { d: 1.4 }) + EX.text(B.X(-1.2) - 10, B.Y(0.293) - 10, 'wrong: 2.7% × 4.48 × 2.46 = 29.3%', { anchor: 'end', d: 1.0 }) + EX.text(B.X(-4.9), B.Y(0.56), 'odds ratios multiply odds, not risks', { size: 's', d: 2.2 })),
+            say: 'Here is the trap. Multiplying the risk itself, 2.7 per cent times 4.48 times 2.46, gives 29.3 per cent. The red gap is the error. Odds ratios multiply odds, not risks, and the mistake grows with the risk: a risk can even pass 100 per cent.' },
+          { svg: EX.svg(EX.text(40, 30, 'The same odds ratio, a different change in risk', { size: 'm', bold: true }) + B.s + curve() + pt(-3.6, 0) + pt(-2.1, 0) + step(-3.6, -2.1, 0.4) + EX.text(B.X(-2.1) - 10, B.Y(0.109) - 12, '2.7% to 10.9%: +8.2 points', { size: 's', anchor: 'end', d: 0.8 }) + guide(-2.7, 1.4) + pt(-2.7, 1.6) + step(-2.7, -1.2, 2.0) + guide(-1.2, 2.4) + pt(-1.2, 2.6) + EX.text(B.X(-1.2) - 10, B.Y(0.232) - 12, '6.3% to 23.2%: +16.9 points', { size: 's', anchor: 'end', d: 3.0 }) + EX.text(B.X(-4.9), B.Y(0.56), 'urine infection only: lp −2.70, risk 6.3%; then add 1.50', { size: 's', d: 1.4 })),
+            say: 'One more thing. A woman with a urine infection only has a risk of 6.3 per cent. Add the same 1.50 for a previous preterm birth and she goes to 23.2 per cent: about 17 points, not 8. The odds ratio is the same for every woman; the change in risk is not.' }
+        ];
+      })()
+    }
+  ],
   cases: [
     {
       id: 'c1',
@@ -67,9 +111,10 @@ registerModule({
 <li>A woman with neither: lp = −3.60, risk = 1 ÷ (1 + e<sup>3.60</sup>) = 1 ÷ 37.6 = 2.7%.</li>
 <li>A woman with both: lp = −3.60 + 1.50 + 0.90 = −1.20, risk = 1 ÷ (1 + e<sup>1.20</sup>) = 1 ÷ 4.32 = 23.2%.</li>
 </ul>
-<p>The odds ratios are e<sup>1.50</sup> = 4.48 and e<sup>0.90</sup> = 2.46. Multiplying the <i>risk</i> by them (2.7% × 4.48 × 2.46 = 29.3%) gives the wrong answer: odds ratios multiply the odds. A lp of 0 means a risk of 50%; −4 means under 2%; +4 means over 98%.</p>`,
+<p>The odds ratios are e<sup>1.50</sup> = 4.48 and e<sup>0.90</sup> = 2.46. Multiplying the <i>risk</i> by them (2.7% × 4.48 × 2.46 = 29.3%) gives the wrong answer: odds ratios multiply the odds. A lp of 0 means a risk of 50%; −4 means under 2%; +4 means over 98%.</p>
+<div data-explainer="logodds"></div>`,
       scenario: `<p>The team has a first model from its pilot data. A midwife asks how to get a woman's risk from the coefficients printed in the report.</p>`,
-      widgets: `<div data-widget="logisticCurve"></div>`,
+      widgets: `<div data-widget="logisticCurve" data-try="Keep the coefficient at 0.3 and move the intercept from −4 to −1: the odds ratio stays the same while the risks change a lot."></div>`,
       tasks: [2, 3],
       takeaway: 'Add the coefficients to get the linear predictor, then convert it to a risk; the same odds ratio means very different changes in risk at different baseline risks.'
     },
@@ -85,7 +130,7 @@ registerModule({
 <p>This is <b>Bayes' rule</b>. Written on the log-odds scale it is exactly a logistic model with one yes/no predictor: the intercept is the log-odds after a negative test, and the coefficient is ln(LR+ ÷ LR−). The odds ratio LR+ ÷ LR− belongs to the test; the intercept belongs to the setting, and changes when the condition is more or less common.</p>
 <p><b>Several tests.</b> It is tempting to multiply the LRs of several findings one after another. This is <b>naive Bayes</b>, and it is right only if the findings are unrelated once we know who has the condition. Usually they are linked: a short cervix and a positive swab test often occur together, so the second adds less once the first is known. Multiplying counts the shared information twice. Risks come out too high for high-risk women and too low for low-risk women. A multivariable logistic model estimates the joint effects properly.</p>`,
       scenario: `<p>Women who come in with early contractions get a quick bedside test. It predicts whether they will deliver within 7 days. Other findings are known at the bedside too. A doctor suggests simply multiplying their published likelihood ratios.</p>`,
-      widgets: `<div data-widget="bayes2x2"></div>`,
+      widgets: `<div data-widget="bayes2x2" data-try="Set sensitivity 70%, specificity 90% and prevalence 17%, then drop prevalence to 5% and see which numbers change and which stay fixed."></div>`,
       tasks: [4, 5],
       takeaway: 'A test is a one-predictor logistic model; its odds ratio describes the test and its intercept describes the setting. Do not multiply the likelihood ratios of linked findings.'
     },
@@ -323,7 +368,7 @@ registerModule({
     {
       id: 't5',
       title: 'Why multiplying linked findings misleads',
-      level: 'Analyze',
+      level: 'Analyse',
       scenario: `<p>Illustrative (synthetic). Among women with early contractions in another unit, 10% deliver within 7 days. Three bedside findings have published LR+ values: a short cervix 4, a positive swab test 3, and six or more contractions an hour 2. One woman has all three.</p>`,
       questions: [
         '<b>(a)</b> Use naive Bayes (multiply the LRs) to work out her chance of delivery within 7 days.',

@@ -4,355 +4,486 @@ registerModule({
   part: 'Development',
   title: 'Additivity and linearity',
   book: 'Ch. 12',
-  minutes: 60,
-  summary: 'How to examine the two main regression assumptions, additivity (interactions) and linearity (non-linear terms), without letting the search for better fit cause overfitting.',
+  minutes: 70,
+  summary: 'How to check the two main assumptions of a regression model, additivity (no interactions) and linearity (straight-line effects), without letting the search for a better fit cause overfitting.',
   objectives: [
-    'Explain the additivity assumption and why it depends on the scale (odds versus risk).',
-    'Interpret an interaction term and distinguish quantitative from qualitative interactions.',
-    'Calculate the number of two-way interactions among k predictors and the number expected to be significant by chance.',
-    'Describe how an overall interaction test limits multiple testing, and apply smart coding of interactions.',
-    'Compare restricted cubic splines, fractional polynomials and generalised additive models in multivariable models and their degrees of freedom.',
-    'Judge whether extra flexibility is worthwhile using validated rather than apparent performance, and list the book\'s measures against overfitting.'
+    'Explain why additivity depends on the scale',
+    'Read an interaction term as changing effects',
+    'Count interactions and expected chance findings',
+    'Use an overall test and smart coding',
+    'Choose flexibility for continuous predictors in advance',
+    'Prefer validated over apparent performance'
+  ],
+  format: 'cases',
+  reading: [
+    { cite: "Harrell FE Jr, Lee KL, Mark DB (1996). Multivariable prognostic models: issues in developing models, evaluating assumptions and adequacy, and measuring and reducing errors. Statistics in Medicine 15:361-387.", url: "https://doi.org/10.1002/(SICI)1097-0258(19960229)15:4<361::AID-SIM168>3.0.CO;2-4", note: "The classic account of how to check linearity and additivity, spend degrees of freedom sensibly and avoid overfitted models." },
+    { cite: "Royston P, Altman DG, Sauerbrei W (2006). Dichotomizing continuous predictors in multiple regression: a bad idea. Statistics in Medicine 25:127-141.", url: "https://doi.org/10.1002/sim.2331", note: "Explains clearly why cutting a continuous predictor such as gestational age or cervical length into groups throws away information." },
+    { cite: "Collins GS, Ogundimu EO, Cook JA, et al. (2016). Quantifying the impact of different approaches for handling continuous predictors on the performance of a prognostic model. Statistics in Medicine 35:4124-4135.", url: "https://doi.org/10.1002/sim.6986", note: "Shows with real data how dichotomising, categorising, splines and fractional polynomials change model performance." },
+    { cite: "Efthimiou O, Seo M, Chalkou K, et al. (2024). Developing clinical prediction models: a step-by-step guide. BMJ 386:e078276.", url: "https://doi.org/10.1136/bmj-2023-078276", note: "A recent, practical walk-through of the whole development process that places non-linear terms and interactions within the modelling workflow." }
+  ],
+  essentials: `
+<ul>
+<li>A logistic model adds the effects of the predictors on the log-odds scale. This is the <b>additivity</b> assumption: the odds ratios of different predictors multiply. Whether two predictors "interact" depends on the scale: effects that are constant on the odds scale differ on the risk scale.</li>
+<li>An <b>interaction term</b> (the product of two predictors) means the effect of one predictor depends on the value of the other. Correlation between two predictors is not interaction.</li>
+<li>With k predictors there are k × (k − 1) ÷ 2 possible two-way interactions. Ten predictors give 45, and about 2 of them will be "significant" at 5% by chance alone.</li>
+<li>Consider only interactions that are plausible in advance. Test all interactions of one predictor together first (an <b>overall test</b>), or use a strict p-value such as 0.01.</li>
+<li>An interaction found in a small sample often fails in new data. Code it so that it cannot give implausible effects, and judge it by validated, not apparent, performance.</li>
+<li>For continuous predictors, decide in advance how much flexibility each may use (for example a 3-knot spline, 2 df, for strong predictors in smaller data). Every extra term costs degrees of freedom.</li>
+<li>A model with a higher apparent χ² is not automatically better. A "wrong but useful" additive model often predicts as well as a flexible one.</li>
+</ul>`,
+  story: 'Throughout the course you follow the maternity team of a district hospital as it works on one problem: preterm birth (before 37 weeks). The hospital and its data are fictional and synthetic. The team now has a main-effects model fitted at the booking visit. In this module it asks whether some predictors work differently together, whether straight lines are good enough for age, BMI and haemoglobin, and how to check without fooling itself. You do not need the earlier modules for this story.',
+  defs: {
+    'additivity': 'The assumption that the effects of predictors simply add up on the scale of the model, the log odds in logistic regression.',
+    'interaction term': 'A term made by multiplying two predictors, which lets the effect of one depend on the value of the other.',
+    'quantitative interaction': 'An interaction in which an effect has the same direction in both groups but a different size.',
+    'qualitative interaction': 'An interaction in which an effect reverses direction, harmful in one group and protective in the other.',
+    'overall test': 'One test of all the interactions of a predictor together, done before looking at any single interaction.',
+    'restricted cubic spline': 'A smooth curve made of joined pieces, forced to be straight beyond the outer knots; k knots use k − 1 degrees of freedom.',
+    'fractional polynomial': 'A curve made from one or two power terms of a predictor, such as the log or the square root, chosen from a fixed set.',
+    'generalised additive model': 'A model in which each continuous predictor gets a smooth curve, with a penalty that controls how wiggly it can be.',
+    'effective degrees of freedom': 'The flexibility a penalised smooth curve actually uses, which can be a fraction such as 2.8.'
+  },
+  explainers: [
+    (function () {
+      function ring(k, cx, cy, r) { var p = []; for (var i = 0; i < k; i++) { var a = -Math.PI / 2 + 2 * Math.PI * i / k; p.push([cx + r * Math.cos(a), cy + r * Math.sin(a)]); } return p; }
+      function net(k, red, d0) {
+        var p = ring(k, 280, 160, 92), s = '', n = 0, step = k > 10 ? 0.01 : 0.03;
+        for (var i = 0; i < k; i++) for (var j = i + 1; j < k; j++) { var isRed = red.indexOf(n) >= 0; s += EX.line([p[i], p[j]], { role: isRed ? 'err' : 'pred', w: isRed ? 3 : 1.2, d: isRed ? (d0 || 0) + 1.6 : (d0 || 0) + n * step, t: 0.5 }); n++; }
+        p.forEach(function (q, i) { s += '<circle cx="' + q[0].toFixed(1) + '" cy="' + q[1].toFixed(1) + '" r="6" class="ex-in fobs"' + EX.st(0.05 * i) + '/>'; });
+        return s;
+      }
+      return {
+        id: 'pairs',
+        title: 'Why testing every interaction finds some by chance',
+        scenes: [
+          { svg: EX.svg(EX.text(30, 30, '5 predictors: 5 × 4 ÷ 2 = 10 possible pairs', { bold: true }) + net(5, []) + EX.text(30, 285, 'Each dot is a predictor; each violet line is one interaction term', { size: 's', d: 1 })),
+            say: 'Each dot is a predictor in the preterm birth model. Each violet line is a possible interaction between two of them. With 5 predictors there are 5 times 4 divided by 2, which is 10 pairs.' },
+          { svg: EX.svg(EX.text(30, 30, '10 predictors: 10 × 9 ÷ 2 = 45 pairs', { bold: true }) + net(10, [])),
+            say: 'Double the predictors to 10 and the pairs jump to 45. The number of pairs grows with the square of the number of predictors.' },
+          { svg: EX.svg(EX.text(30, 30, 'No true interactions, each tested at 5%', { bold: true }) + net(10, [7, 31], 0) + EX.text(30, 285, '45 × 0.05 = 2.25 "significant" interactions expected by chance', { d: 1.8 })),
+            say: 'Suppose none of these interactions is real, and each is tested at the 5 per cent level. We still expect 45 times 0.05, about 2, to come out significant. The red lines are those false findings.' },
+          { svg: EX.svg(EX.text(30, 30, 'The team\'s 14 candidate terms: 91 pairs', { bold: true }) + net(14, [5, 29, 52, 77], 0) + EX.text(30, 285, 'About 4.6 false positives, and 91 extra df for about 234 events', { d: 1.8 })),
+            say: 'The team has 14 candidate terms. That gives 91 pairs, and about 4 or 5 false positives. Adding all of them would cost 91 degrees of freedom, with only about 234 preterm births.' },
+          { svg: EX.svg(EX.text(280, 96, 'Before testing interactions', { size: 'l', bold: true, anchor: 'middle' }) + EX.text(280, 140, 'Choose a few pairs that are plausible in advance', { anchor: 'middle', d: 0.5 }) + EX.text(280, 168, 'Test all interactions of one predictor together first', { anchor: 'middle', d: 1.0 }) + EX.text(280, 196, 'Or use p below 0.01: 45 × 0.01 = 0.45 chance findings', { anchor: 'middle', d: 1.5 }) + EX.text(280, 224, 'Keep a term only if validated performance improves', { anchor: 'middle', d: 2.0 })),
+            say: 'So choose a few pairs that make sense before seeing the data. Test all interactions of one predictor together first, or use a stricter p-value such as 0.01. Keep an interaction only if it improves validated performance.' }
+        ]
+      };
+    })(),
+    (function () {
+      var B = EX.box({ l: 80, t: 44, w: 420, h: 176, xlim: [18, 40], ylim: [-4, 1], xticks: [20, 25, 30, 35, 40], yticks: [-4, -3, -2, -1, 0, 1], xlabel: 'Maternal age (years)', ylabel: 'Log odds of preterm birth' });
+      function base(a) { return -3.6006 + 0.015 * (a - 27) * (a - 27); }
+      function main(a) { return base(a) + 0.9; }
+      function inter(a) { return base(a) + 0.9 + 0.1 * (a - 30); }
+      var ages = [19, 23, 27, 31, 35, 39];
+      var noH = EX.curve(B, base, 18, 40, { role: 'pred', d: 0.2 }) + EX.text(B.X(32), B.Y(base(32)) + 22, 'no hypertension', { size: 's', d: 0.4 });
+      return {
+        id: 'chance',
+        title: 'An interaction that does not survive new data',
+        scenes: [
+          { svg: EX.svg(EX.text(30, 24, 'Main effects only: hypertension adds 0.9 at every age', { bold: true }) + B.s + noH + EX.curve(B, main, 18, 40, { role: 'pred', d: 0.8 }) + EX.text(B.X(19), B.Y(main(19)) - 10, 'chronic hypertension', { size: 's', d: 1.2 }) + EX.text(30, 290, 'Illustrative (synthetic)', { size: 's', d: 1.4 })),
+            say: 'The main-effects model draws two curves for the log odds of preterm birth against age. Chronic hypertension adds the same 0.9 at every age, so the curves run parallel.' },
+          { svg: EX.svg(EX.text(30, 24, 'A sample of 400 women: the gap seems to grow with age', { bold: true }) + B.s + noH + EX.curve(B, inter, 18, 40, { role: 'pred', d: 0.6 }) + EX.text(B.X(36.6), B.Y(-0.25), 'hypertension, with age × HTN term', { size: 's', anchor: 'end', d: 1.2 }) + EX.text(30, 290, 'The curves cross at age 21: below it, hypertension looks protective', { size: 's', d: 1.6 })),
+            say: 'In a small sample of 400 women, an age by hypertension interaction reaches p of 0.04. The hypertension effect now grows by 0.1 per year of age. The curves cross at 21, so below that age hypertension seems to protect, which is not plausible.' },
+          { svg: EX.svg(EX.text(30, 24, 'New women, large sample: the gap stays about 0.9', { bold: true }) + B.s + noH + EX.curve(B, inter, 18, 40, { role: 'pred', draw: false }) + EX.pts(B, ages.map(function (a) { return [a, main(a)]; }), { role: 'obs', r: 5, d: 0.4, stagger: 0.15 }) + EX.gaps(B, ages.map(function (a) { return [a, main(a), inter(a)]; }), { d: 1.6 }) + EX.text(30, 290, 'Dots: observed in new women. Red: error of the interaction model', { size: 's', d: 1.8 })),
+            say: 'Now look at a large group of new women. The observed gap between the groups stays about 0.9 at every age. The red lines show the errors of the interaction model, largest for the youngest and oldest women.' },
+          { svg: EX.svg(EX.text(280, 92, 'The interaction fitted noise', { size: 'l', bold: true, anchor: 'middle' }) + EX.text(280, 134, 'Apparent fit rises a little in the 400 women', { anchor: 'middle', d: 0.5 }) + EX.text(280, 160, 'Predictions for new women get worse', { anchor: 'middle', d: 1.0 }) + EX.text(280, 196, 'Was it plausible in advance? Did an overall test agree?', { anchor: 'middle', d: 1.5 }) + EX.text(280, 222, 'Does validated performance improve?', { anchor: 'middle', d: 2.0 })),
+            say: 'The extra term raised the fit a little in the 400 women, but made predictions for new women worse. Before keeping an interaction, ask: was it plausible in advance, did an overall test support it, and does validated performance improve?' }
+        ]
+      };
+    })()
+  ],
+  cases: [
+    {
+      id: 'c1',
+      title: 'Do the predictors simply add up?',
+      aim: 'see why additivity depends on the scale, and calculate risks from a model with an interaction term.',
+      minutes: 15,
+      need: `
+<p>A logistic model has a <b>linear predictor</b>, lp = a + b<sub>1</sub>x<sub>1</sub> + b<sub>2</sub>x<sub>2</sub> + …. The b's are the <b>main effects</b>. Writing the model this way assumes <b>additivity</b>: effects add on the log-odds scale, so their odds ratios multiply.</p>
+<p><b>The scale matters.</b> Suppose a treatment lowers the risk of preterm birth from 20 to 10 per 100 women in a high-risk group, and from 10 to 5 per 100 in a lower-risk group. The relative risk is 0.5 in both. The odds are 0.25, 0.111 and 0.053, so the odds ratios are 0.111 ÷ 0.25 = 0.44 and 0.053 ÷ 0.111 = 0.47: nearly the same. On the odds scale no interaction is needed. But the absolute benefit is 10 per 100 in one group and 5 per 100 in the other. A model that is additive on the log-odds scale is not additive on the risk scale.</p>
+<p><b>Interaction terms.</b> An <b>interaction term</b> is the product x<sub>1</sub> × x<sub>2</sub>, added with its own coefficient. It means the effect of one predictor depends on the value of the other, so you cannot read that effect alone. Example: lp = −2.0 + 0.8 × bacteriuria + 0.6 × tobacco − 0.5 × (bacteriuria × tobacco). In women who do not use tobacco the odds ratio for bacteriuria is e<sup>0.8</sup> = 2.23; in tobacco users it is e<sup>0.8 − 0.5</sup> = e<sup>0.3</sup> = 1.35.</p>
+<ul>
+<li>A <b>quantitative interaction</b> changes the size of an effect but not its direction (as here, both odds ratios above 1). A <b>qualitative interaction</b> reverses it. Qualitative ones matter more for interpreting effects.</li>
+<li>Correlation is not interaction. Two predictors can be correlated without interacting, and uncorrelated predictors can interact.</li>
+</ul>`,
+      scenario: `<p>Illustrative (synthetic). A colleague says that bacteriuria seems to matter less in women who use tobacco, and that because tobacco users are often from low-income households, "tobacco and low income interact". The obstetrician adds that vaginal progesterone "works better in high-risk women, because it prevents more births".</p>`,
+      widgets: '',
+      tasks: [0, 1],
+      takeaway: 'An interaction means one effect depends on another predictor, and whether you see one depends on the scale; correlation is a different thing.'
+    },
+    {
+      id: 'c2',
+      title: 'Which interactions, and how many tests?',
+      aim: 'count the possible interactions, the chance findings among them, and limit the multiple testing.',
+      minutes: 15,
+      need: `
+<p>Subject knowledge should guide which interactions to study, but it helps less than for main effects: it is hard to argue why two predictors would not add on the log-odds scale. Types that often deserve a look include severity × treatment, centre × predictors, calendar time × predictors, age × predictors, follow-up time × predictors (non-proportional effects in survival) and season × predictors.</p>
+<p>A trial claim that a treatment "works in younger but not older women" needs an <b>interaction test</b> of the difference in effect, not one p-value in each subgroup. Even planned subgroup analyses are secondary findings.</p>
+<p><b>Counting.</b> With k predictors there are k × (k − 1) ÷ 2 two-way interactions:</p>
+<div class="formula">number of pairs = k × (k − 1) ÷ 2      expected chance findings = 0.05 × number of pairs</div>
+<p>Example: 10 predictors give 10 × 9 ÷ 2 = 45 pairs. If none is real, 0.05 × 45 = 2.25 are expected to be significant at 5%.</p>
+<p><b>Two ways to limit this.</b> (1) An <b>overall test</b>: test all interactions of one predictor (say all age interactions) together, with several df; look at single terms only if it is significant. (2) A strict p-value for single interactions, such as 0.01. In the book's GUSTO-I subsample (785 patients, 52 deaths) the overall age-interaction test gave p = 0.14, yet one single term, age × tachycardia, had p = 0.03. Looking only at single tests, you would have kept it.</p>
+<div data-explainer="pairs"></div>`,
+      scenario: `<p>Illustrative (synthetic). A junior doctor proposes to test every pair among the team's 14 candidate terms "to be thorough", and to keep any interaction with p &lt; 0.05. In a related trial report, progesterone is said to work in women under 25 (p = 0.03) but not in older women (p = 0.40).</p>`,
+      widgets: `<div data-widget="interactionCount" data-try="Move the slider from 8 to 14 predictors and watch the expected number of false positives pass 4."></div>`,
+      tasks: [2, 3],
+      takeaway: 'The number of possible interactions grows with the square of the predictors, so test a few plausible ones, with an overall test or a strict p-value.'
+    },
+    {
+      id: 'c3',
+      title: 'A tempting interaction',
+      aim: 'code an interaction so it cannot give implausible effects, and judge whether it improves prediction.',
+      minutes: 20,
+      need: `
+<p>The usual coding is the product term together with both main effects. The fitted pattern can be strange. In the book's GUSTO-I example, the lines for log odds of death against age, with and without tachycardia, crossed at about 55 years, so tachycardia looked protective in younger patients. That is not plausible.</p>
+<p><b>Smart coding</b> uses subject knowledge to avoid fitting noise. Options, from simple to flexible:</p>
+<ul>
+<li>(a) main effects only (parallel lines);</li>
+<li>(b) the simple product term (lines that cross);</li>
+<li>(c) separate age slopes below and above the crossing age, with no effect of the other predictor below it (three age slopes);</li>
+<li>(d) one age slope plus an extra effect of the other predictor that starts only above the crossing age (two age slopes).</li>
+</ul>
+<p>(c) and (d) fit about equally well, but (d) uses fewer parameters. The cut-point is itself chosen from the data; the aim is only to rule out an implausible effect.</p>
+<p><b>Does it help prediction?</b> In the book's example every interaction version raised the apparent c (0.828 to 0.831 or 0.832), but in 20,318 new patients the main-effects model was best (0.805 against 0.796 to 0.798). In the large data the interaction was significant in the opposite direction (p = 0.002). The small-sample finding was chance.</p>
+<div data-explainer="chance"></div>`,
+      scenario: `<p>Illustrative (synthetic). In a random 400 women from the booking data, the team adds an age × chronic hypertension term to the main-effects model. It has p = 0.04. The fitted hypertension effect is 0.9 on the log-odds scale at age 30 and grows by 0.1 per year of age. A manuscript from another group, reviewed the same week, has kept three interactions found by testing every pair.</p>`,
+      widgets: '',
+      tasks: [4, 5],
+      takeaway: 'An interaction that looked significant in a small sample often reverses in new data; code it plausibly, and keep it only if validated performance improves.'
+    },
+    {
+      id: 'c4',
+      title: 'Straight lines or curves for several predictors?',
+      aim: 'decide how much flexibility each continuous predictor gets, and compare models on fit penalised for complexity.',
+      minutes: 20,
+      need: `
+<p>With several continuous predictors in one model, every curve uses degrees of freedom (df). Three tools are common:</p>
+<ul>
+<li><b>Restricted cubic splines</b> (RCS): 3, 4 or 5 knots use 2, 3 or 4 df. Five knots fit most shapes, but five for every predictor overfits. Decide in advance: in smaller data use linear terms or 3 knots, and give more flexibility to the strongest predictors (larger χ²).</li>
+<li><b>Fractional polynomials</b> (FP): FP1 has one power term (2 df counting the search), FP2 has two (4 df). The multivariable procedure (mfp) works backward, predictor by predictor: a 4-df test for any effect, a 3-df test for non-linearity (FP2 against a line) and a 2-df test of FP2 against FP1.</li>
+<li><b>Generalised additive models</b> (GAM): smooth curves with a penalty, which sets the <b>effective degrees of freedom</b>. Choosing the smoothness by generalised cross-validation (GCV) gives the best apparent fit but uses more df, and its p-values are only approximate.</li>
+</ul>
+<p><b>Comparing models.</b> A more flexible model always fits its own data better. A rough guide is χ² − 2 × df: higher is better. Worked example (illustrative): a linear model with χ² 120 on 8 df scores 120 − 16 = 104; a spline model with χ² 131 on 14 df scores 131 − 28 = 103. The splines add 11 for 6 df, which gives p = 0.088: no clear gain. The final judge is validated performance, for example by bootstrap with every modelling step repeated.</p>`,
+      scenario: `<p>Illustrative (synthetic). The team's statistician wants to know whether maternal age needs a curve, and how much flexibility age, BMI and haemoglobin should each get. In ptb_dev the true effect of age is U-shaped, lowest near 27 years. A second manuscript claims a GAM is the best model because it had the highest likelihood-ratio statistic.</p>`,
+      widgets: `<div data-widget="codingExplorer" data-try="Compare Linear, Quadratic and the 5-knot spline at subsample 2000, then set the subsample to 200 and see that the extra knots still add almost nothing to the χ²."></div>`,
+      tasks: [6, 7],
+      takeaway: 'Give each continuous predictor a flexibility chosen in advance, and accept extra terms only when they pay for their degrees of freedom in validated performance.'
+    }
   ],
   sections: [
     {
-      id: 's1',
+      id: 'n1',
       title: 'Additivity, scale and interaction terms',
       html: `
-<p>Every model in this course has a <b>linear predictor</b> at its core:</p>
-<div class="formula">lp = β<sub>1</sub> × x<sub>1</sub> + β<sub>2</sub> × x<sub>2</sub> + … + β<sub>i</sub> × x<sub>i</sub></div>
-<p>The β's are <b>main effects</b>. Writing the model this way assumes <b>additivity</b>: the contributions of the predictors are added on the scale of the linear predictor. In logistic regression that scale is the log odds, so the odds ratios e<sup>β</sup> of different predictors are <b>multiplied</b> to obtain the odds of the outcome. In Cox regression, hazard ratios are multiplied in the same way. The assumption, then, is that effects are multiplicative on the odds (or hazard) scale.</p>
-<h3>The scale matters</h3>
-<p>Consider a treatment that reduces risk from 20% to 10% in a high-risk stratum, and from 10% to 5% in a lower-risk stratum. The relative risk is 0.5 in both. The odds ratios are also similar:</p>
-<div class="callout eg"><b>Worked example (book numbers)</b>
-<p>Odds at 20% = 0.20 / 0.80 = 0.250; odds at 10% = 0.10 / 0.90 = 0.111; odds at 5% = 0.05 / 0.95 = 0.0526. OR for 20% to 10% = 0.111 / 0.250 = 0.44. OR for 10% to 5% = 0.0526 / 0.111 = 0.47. On the odds scale the effect is nearly constant, so no interaction is needed. On the absolute scale the benefit is 10 percentage points in one stratum and 5 in the other, so the absolute benefit clearly depends on baseline risk.</p></div>
-<p>Whether two predictors interact therefore depends on the scale on which the model is written. A model that is additive on the log-odds scale is not additive on the risk scale.</p>
-<h3>Interaction terms</h3>
-<p>An <b>interaction term</b> is the product of two predictors, x<sub>1</sub> × x<sub>2</sub>, added to the model with its own coefficient. This is a two-way (first-order) interaction. A product of three, x<sub>1</sub> × x<sub>2</sub> × x<sub>3</sub>, is a three-way (second-order) interaction; higher-order interactions are rarely considered. The meaning is that <b>the effect of one predictor depends on the value of another</b>. The effect of a predictor that takes part in an interaction cannot be read alone: you need the value of the other predictor.</p>
-<ul>
-<li>A <b>quantitative</b> interaction means the effect has the same direction in both groups but a different strength. A <b>qualitative</b> interaction means the effect reverses direction. For interpreting effects, qualitative interactions matter more; for predictive performance the distinction is less relevant.</li>
-<li><b>Correlation is not interaction.</b> Some researchers look for interactions between correlated predictors. Correlation says nothing about how the predictors' effects on the outcome depend on each other, and two uncorrelated predictors can interact.</li>
-</ul>
-<div class="callout mch"><b>Illustrative (synthetic): bacteriuria and tobacco in preterm birth</b><p>Suppose the log odds of preterm birth is −2.0 + 0.8 × bacteriuria + 0.6 × tobacco − 0.5 × (bacteriuria × tobacco). The odds ratio for bacteriuria in non-users of tobacco is e<sup>0.8</sup> = 2.23. In tobacco users it is e<sup>0.8 − 0.5</sup> = e<sup>0.3</sup> = 1.35. The effect of bacteriuria depends on tobacco use. The interaction is quantitative, since both ORs exceed 1.</p></div>
-<p class="src">Source: Ch. 12, §12.1</p>
-`
+<p>The linear predictor lp = β<sub>1</sub>x<sub>1</sub> + … + β<sub>i</sub>x<sub>i</sub> assumes additivity of main effects on the log-odds (logistic) or log-hazard (Cox) scale, so effects are multiplicative on the odds or hazard. Book example: a risk reduction from 20% to 10% and from 10% to 5% has relative risk 0.5 in both strata and odds ratios 0.44 and 0.47, but absolute benefits of 10 and 5 percentage points. Whether an interaction exists depends on the scale.</p>
+<p>An interaction term x<sub>1</sub> × x<sub>2</sub> is a two-way (first-order) interaction; x<sub>1</sub> × x<sub>2</sub> × x<sub>3</sub> is three-way (second-order), rarely considered. A predictor in an interaction has no single effect. Quantitative interactions change size; qualitative interactions change direction and matter more for interpretation than for predictive performance. Correlation between predictors says nothing about interaction.</p>
+<p class="src">Source: Ch. 12, §12.1</p>`
     },
     {
-      id: 's2',
-      title: 'Which interactions deserve consideration',
+      id: 'n2',
+      title: 'Interactions that deserve consideration',
       html: `
-<p>As with main effects, prior knowledge should guide which interactions to study. Clinical insight about physiology is of limited help, because a model with main effects only assumes that predictors act multiplicatively on the odds or hazard scale, and it is difficult to reason why two predictors would not act additively on the log-odds scale. Interactions identified in earlier studies could be assessed. The book follows Harrell in listing types of interaction that often warrant consideration:</p>
 <table class="data">
 <tr><th>Interaction</th><th>Possible meaning</th></tr>
-<tr><td>Severity of disease × treatment</td><td>Less benefit with less severe disease</td></tr>
-<tr><td>Place × treatment</td><td>Benefit varies by treatment centre</td></tr>
+<tr><td>Severity × treatment</td><td>Less benefit with less severe disease</td></tr>
+<tr><td>Place × treatment</td><td>Benefit varies by centre</td></tr>
 <tr><td>Place × predictors</td><td>Predictor effects vary by centre or region</td></tr>
-<tr><td>Calendar time × treatment</td><td>Learning curves for some treatments</td></tr>
-<tr><td>Calendar time × predictors</td><td>Increasing or decreasing impact of predictors over the years</td></tr>
-<tr><td>Age × predictors</td><td>Older subjects are less affected by risk factors, or more affected by certain disease types</td></tr>
-<tr><td>Follow-up time × predictors</td><td>Non-proportional effects in survival, often a decreasing effect over time</td></tr>
-<tr><td>Season × predictors</td><td>Seasonal effect of predictors</td></tr>
+<tr><td>Calendar time × treatment</td><td>Learning curves</td></tr>
+<tr><td>Calendar time × predictors</td><td>Effects change over the years</td></tr>
+<tr><td>Age × predictors</td><td>Older subjects less affected by risk factors, or more by some disease types</td></tr>
+<tr><td>Follow-up time × predictors</td><td>Non-proportional effects in survival, often decreasing</td></tr>
+<tr><td>Season × predictors</td><td>Seasonal effects</td></tr>
 </table>
-<p class="src">Ch. 12, Table 12.1</p>
-<h3>Treatment interactions</h3>
-<p>The benefit of a treatment may depend on severity: less relative benefit in less severe disease, or the reverse (in oncology, a surgical cure is possible only in patients without distant metastases). Even if the <i>relative</i> benefit is constant, the <i>absolute</i> benefit depends on baseline risk. An analysis of tPA treatment after myocardial infarction in GUSTO-I modelled the absolute benefit as a strong function of the patient's risk profile, assuming a constant relative effect. Treatment effects can also depend on the setting where the patient was treated, as with surgical mortality in oesophageal cancer, and on learning curves, modelled with treatment × calendar time.</p>
-<p>In randomised trials, subgroup effects are often reported, for example whether treatment works better in older than younger patients. Such claims should be supported by an <b>interaction test</b> for the difference in effect, not by one p-value in older and another in younger patients. Even pre-specified subgroup analyses need cautious interpretation because of multiple testing, and are best seen as secondary analyses that motivate further study.</p>
-<h3>Place and time</h3>
-<p>Predictor definitions and effects may differ between centres and over time, which limits generalisability (Module 14). Studies of traumatic brain injury found predictor effects surprisingly consistent even when definitions varied across studies, and in GUSTO-I, where data collection was standardised, predictor × place interactions were small.</p>
-<p>"Time" has several forms: calendar time, patient age and follow-up time. In survival analysis it is usual to assume proportional effects over follow-up (the Cox model). This assumption is equivalent to assuming no interaction between the predictors and follow-up time. It may fail, for example in breast cancer, where the effect of stage of disease was absent beyond 10 years.</p>
-<div class="callout book"><b>Book example: 25 years of mechanical valve replacement (1,449 valves)</b><p>Early mortality (&lt;30 days) was 5%. Survival at 5, 10 and 15 years was 80%, 63% and 49%. A Poisson regression model was used to disentangle the effects of calendar time, age and follow-up time. There was a substantial drop in early and late mortality around the introduction of cardioplegia, but no strong interaction with calendar time. For several predictors the effects were non-proportional: older age, urgent operation, ascending aorta surgery, operation in an earlier calendar year, male sex and previous cardiac surgery were more important in the early years of follow-up, whereas concomitant bypass surgery and mitral valve surgery had more or less constant effects. Source: Ch. 12, §12.1.4.</p></div>
-<p class="src">Source: Ch. 12, §12.1.1 to §12.1.4</p>
-`
+<p>Table 12.1 (after Harrell). Even a constant relative treatment effect gives an absolute benefit that depends on baseline risk (book example: tPA in GUSTO-I). Treatment effects may vary by setting (surgical mortality in oesophageal cancer) and over calendar time. Subgroup claims need an interaction test, and even pre-specified subgroup analyses are secondary. Predictor effects were surprisingly consistent across traumatic brain injury studies, and predictor × place interactions were small in GUSTO-I. Proportional hazards means no interaction with follow-up time; it may fail (breast cancer stage had no effect beyond 10 years).</p>
+<div class="callout book"><b>Book example: mechanical heart valves (1,449 valves, 25 years)</b><p>Early mortality 5%; survival 80%, 63% and 49% at 5, 10 and 15 years. Poisson regression separated calendar time, age and follow-up: mortality dropped around the introduction of cardioplegia, with no strong calendar-time interaction. Older age, urgent operation, ascending aorta surgery, earlier calendar year, male sex and previous cardiac surgery mattered more early in follow-up; concomitant bypass and mitral valve surgery had roughly constant effects.</p></div>
+<p class="src">Source: Ch. 12, §12.1.1-12.1.4</p>`
     },
     {
-      id: 's3',
-      title: 'Selecting interactions without drowning in multiple tests',
+      id: 'n3',
+      title: 'Selecting and coding interactions',
       html: `
-<p>Typical prediction models have 5 to 10 predictors, and the number of possible two-way interactions grows with the square of that number. With k predictors there are k × (k − 1) / 2 two-way interactions. If each is tested at the 5% level and no true interactions exist, the expected number of "significant" interactions by chance is 0.05 times that number.</p>
-<div class="formula">Number of two-way interactions = k × (k − 1) / 2</div>
-<div class="callout eg"><b>Worked example</b>
 <table class="data">
-<tr><th>Predictors k</th><th>Two-way interactions</th><th>Expected false-positive at p &lt; 0.05</th></tr>
+<tr><th>Predictors k</th><th>Two-way interactions</th><th>Expected false positives at 5%</th></tr>
 <tr><td>5</td><td>10</td><td>0.5</td></tr>
 <tr><td>10</td><td>45</td><td>2.25</td></tr>
 <tr><td>20</td><td>190</td><td>9.5</td></tr>
 <tr><td>30</td><td>435</td><td>21.75</td></tr>
 </table>
-<p>Ten binary predictors allow 10 × 9 / 2 = 45 interactions and about 2 significant results are expected even if the truth is perfect additivity.</p></div>
-<div data-widget="interactionCount"></div>
-<ul class="try">
-<li>Move the predictor slider to 14 and note the number of two-way interactions, the expected number of false positives at α = 0.05 and the extra df.</li>
-<li>Move it to 5, 10, 20 and 30 and see how fast the numbers grow.</li>
-</ul>
-<h3>Two ways to limit the multiple-testing problem</h3>
-<ol>
-<li><b>Overall interaction test.</b> First test all interactions of one predictor (for example all interactions with age) together in one test with several df. If that test is not significant, stop; if it is, examine specific interactions. This limits multiple testing at the price of lower power for any single interaction.</li>
-<li><b>A stringent p-value</b> for individual interaction tests, for example 0.01.</li>
-</ol>
-<div class="callout book"><b>Book example: age interactions in GUSTO-I subsample (n = 785, 52 deaths)</b><p>All interactions with age were fitted and tested together with a Wald test: p = 0.14, not significant. Yet one of them, age × tachycardia (heart rate above 80, HRT), had p = 0.03, not adjusted for the many tests. Someone looking only at individual tests would be tempted to include it. The estimated interaction was positive: the effect of age on mortality was stronger in patients with tachycardia, equivalently tachycardia appeared more harmful at higher ages. Source: Ch. 12, §12.2.1.</p></div>
-<div class="callout warn"><b>Critical:</b><p>Searching for interactions in a small dataset and keeping the ones that look significant is a form of data dredging. The interactions that are found can easily be noise that will not reproduce, as the next section shows with real numbers. An overall test, or prior plausibility, should come first.</p></div>
-<p class="src">Source: Ch. 12, §12.2 and Q12.1</p>
-`
-    },
-    {
-      id: 's4',
-      title: 'Estimating interactions sensibly, and whether they improve prediction',
-      html: `
-<h3>Smart coding</h3>
-<p>The standard way to include an interaction is the product term x<sub>1</sub> × x<sub>2</sub>, together with both main effects. The estimated pattern can be counterintuitive. In the age × tachycardia example, the fitted lines (log odds of death against age) cross at about 55 years: tachycardia looks protective below that age, which is implausible. The book suggests incorporating subject-specific knowledge to avoid keeping noise: code the interaction so that no tachycardia effect is allowed below age 55. This cut-point is itself data-driven, but the aim is to avoid a biologically implausible effect. The alternatives are:</p>
-<ul>
-<li>(a) main effects only (parallel lines);</li>
-<li>(b) the simple interaction (lines that cross);</li>
-<li>(c) separate age effects for patients aged under 55 (no tachycardia effect) and for those aged 55 and over, with and without tachycardia (three age slopes);</li>
-<li>(d) one age effect plus an extra tachycardia × age effect only above 55 (two age slopes).</li>
-</ul>
-<p>Models (c) and (d) are barely different in fit but (d) uses fewer parameters. A smart coding also makes it easier to obtain standard errors and confidence intervals for predictors in interaction with others.</p>
-<h3>Do interactions improve predictions?</h3>
-<p>The models were developed in the subsample (n = 785) and tested in an independent part of GUSTO-I (n = 20,318) as shown in Table 1.</p>
-<div class="callout book"><b>Book example: c statistic of models with and without an age × tachycardia interaction</b>
+<p>Limit multiple testing with an overall test per predictor or a stringent p (0.01). Book example: GUSTO-I subsample (n = 785, 52 deaths), overall age-interaction Wald test p = 0.14, but age × tachycardia p = 0.03 (positive: age more harmful with tachycardia). Fitted lines crossed near 55 years; smart coding allowed no tachycardia effect below 55.</p>
 <table class="data">
-<tr><th>Model</th><th>df</th><th>Apparent (n = 785)</th><th>Validation (n = 20,318)</th></tr>
+<tr><th>Book example: model</th><th>df</th><th>Apparent c (n = 785)</th><th>Validated c (n = 20,318)</th></tr>
 <tr><td>Main effects only</td><td>8</td><td>0.828</td><td>0.805</td></tr>
-<tr><td>Main effects + age × tachycardia</td><td>9</td><td>0.831</td><td>0.796</td></tr>
-<tr><td>One age effect below 55, two age effects from 55</td><td>9</td><td>0.832</td><td>0.798</td></tr>
-<tr><td>Tachycardia effect only for ages above 55</td><td>8</td><td>0.832</td><td>0.798</td></tr>
+<tr><td>+ age × tachycardia</td><td>9</td><td>0.831</td><td>0.796</td></tr>
+<tr><td>One age effect below 55, two from 55</td><td>9</td><td>0.832</td><td>0.798</td></tr>
+<tr><td>Tachycardia effect only above 55</td><td>8</td><td>0.832</td><td>0.798</td></tr>
 </table>
-<p>Source: Ch. 12, Table 12.2. All predictors are dichotomised.</p></div>
-<p>The apparent c rises with every interaction version, but in the new data the main-effects model is the best. The reason is in the validation data: the interaction between age and tachycardia is statistically significant there (p = 0.002, 1,428 deaths) but in the <b>opposite direction</b>: tachycardia has less effect at older ages. The positive interaction in the subsample was a chance finding. Including interactions in an unstructured way can damage predictive ability.</p>
-<div class="callout key"><b>Summary points from the chapter</b>
-<ul>
-<li>An interaction term means the effect of a predictor depends on the value of another.</li>
-<li>Which interactions to consider depends on context, though some types warrant particular consideration (Table above).</li>
-<li>For interpretation, use smart coding and remove counterintuitive effects such as a predictor protective for some patients.</li>
-<li>Model performance does not necessarily increase with an interaction term.</li>
-<li>Pre-specifying some interaction terms may be preferable to exploratory selection.</li>
-</ul></div>
-<p class="src">Source: Ch. 12, §12.2.2 to §12.2.4</p>
-`
+<p>Table 12.2. In the validation data the interaction was significant (p = 0.002, 1,428 deaths) but negative. Unstructured interactions can damage prediction; pre-specifying a few may be better than exploratory selection. Smart coding also eases standard errors for predictors in interactions.</p>
+<p class="src">Source: Ch. 12, §12.2</p>`
     },
     {
-      id: 's5',
+      id: 'n4',
       title: 'Non-linearity in multivariable models',
       html: `
-<p>Module 6 described flexible functions for a single predictor. Here several continuous predictors are in the model together, and each flexible term consumes degrees of freedom. Three approaches are available (Table 1).</p>
 <table class="data">
 <tr><th>Approach</th><th>Characteristic</th><th>Multivariable strategy</th></tr>
-<tr><td>Restricted cubic splines (RCS)</td><td>Cubic splines restricted to be linear in the tails</td><td>Keep the complexity defined a priori, or based on univariable or multivariable findings</td></tr>
-<tr><td>Fractional polynomials (FP)</td><td>One or two power terms</td><td>Search iteratively for the best transformation of each predictor</td></tr>
-<tr><td>Splines in a generalised additive model (GAM)</td><td>Smoothing controlled by a penalty (effective df)</td><td>Effective df set by the analyst, or by generalised cross-validation (GCV)</td></tr>
+<tr><td>RCS</td><td>Cubic splines, linear in the tails</td><td>Complexity set a priori, or from univariable or multivariable findings</td></tr>
+<tr><td>FP</td><td>One or two power terms</td><td>Iterative search for the best transformation per predictor</td></tr>
+<tr><td>GAM splines</td><td>Smoothness controlled by a penalty (effective df)</td><td>Effective df set by the analyst or by GCV</td></tr>
 </table>
-<p class="src">Ch. 12, Table 12.3</p>
-<h3>Multivariable RCS</h3>
-<p>With 3, 4 or 5 knots an RCS uses 2, 3 or 4 df. Five knots are enough to capture many patterns, but giving every continuous predictor 5 knots may be unwise because the total flexibility will cause overfitting. The strategy is to decide a priori how much flexibility each predictor may use. In small datasets one may use only linear terms or 3-knot splines (2 df), unless prior information suggests that a non-linear effect is needed. Alternatively different RCS complexities can be examined in univariable or multivariable analyses and a number of knots chosen per predictor. It may be reasonable to choose the complexity from each predictor's χ² statistic, with more flexibility for the stronger predictors.</p>
-<h3>Multivariable fractional polynomials</h3>
-<p>As defined in Module 6, FP1 functions have 1 power (2 df counting the search) and FP2 functions have two (4 df). The <b>mfp</b> procedure is a special backward-stepwise algorithm. It starts from a full model with all continuous predictors linear, and considers the predictors in order of decreasing significance. For each predictor, in turn:</p>
-<ol>
-<li>Search for the best of 44 candidate transformations (FP1 and FP2) and compare it with omitting the predictor: a 4-df test for "any effect".</li>
-<li>If significant, compare the best FP2 with a straight line: a 3-df test for non-linearity.</li>
-<li>Compare the best FP2 with the best FP1: a 2-df test for "simplification".</li>
-</ol>
-<p>The chosen form is retained and the cycle repeated over all predictors until the functions and the variables do not change. The procedure aims to preserve the overall type I error. The price is that it is slightly conservative when the relationship is really linear, since the overall effect is tested with 4 df.</p>
-<h3>GAM</h3>
-<p>In a GAM, smooth functions based on splines are penalised for lack of smoothness. The penalty reduces the effective df used by each predictor. The optimum smoothness can be chosen by a prediction-error criterion such as GCV, which selects statistically optimal transformations for several predictors at once, but at the cost of more effective df. Because the search for the amount of smoothing is not counted, p-values from GCV-optimised GAMs are only approximate. GAM splines can serve as a reference against which simpler parametric transformations (FP or RCS) are compared.</p>
-<div data-widget="codingExplorer"></div>
-<ul class="try">
-<li>Reduce the random subsample to the smallest value and compare the 5-knot spline with the quadratic and 3-knot codings. Note how the 5-knot curve behaves at the age extremes.</li>
-<li>Increase the subsample to the largest value and see whether the extra flexibility now pays off in AIC.</li>
-</ul>
-<p class="src">Source: Ch. 12, §12.3</p>
-`
+<p>Table 12.3. RCS with 3, 4, 5 knots use 2, 3, 4 df; choose complexity per predictor, possibly by its χ². The <b>mfp</b> algorithm starts from all-linear, takes predictors in order of decreasing significance, and for each: best of 44 FP1/FP2 forms against omission (4 df), FP2 against linear (3 df), FP2 against FP1 (2 df). It cycles until stable, preserving the overall type I error, and is slightly conservative when the truth is linear. GAM with GCV optimises several smooths at once but spends more effective df, and its p-values ignore the smoothing search. GAM curves are a useful reference for simpler FP or RCS forms.</p>
+<p class="src">Source: Ch. 12, §12.3</p>`
     },
     {
-      id: 's6',
-      title: 'Case study: non-linear terms in testicular cancer',
+      id: 'n5',
+      title: 'Case study: testicular cancer',
       html: `
-<p>The book illustrates the options in a dataset of 544 patients treated with chemotherapy for testicular cancer. The outcome is benign tissue (necrosis) in the residual mass. There are six predictors: three binary (teratoma elements, elevated AFP, elevated HCG) and three continuous (pre-chemotherapy LDH, standardised by dividing by the local upper limit of normal as "LDHst"; the post-chemotherapy mass size; and the reduction in mass size during chemotherapy).</p>
-<h3>Univariable shapes</h3>
-<p>Earlier work used RCS curves to examine each predictor and then chose simple transformations by eye: logarithm for LDHst, square root for post-chemotherapy size and linear for reduction in size. The fractional polynomial procedure agreed in the main: LDH showed an effect (p = 0.02 for "any effect") but no significant non-linearity (p = 0.48). For post-chemotherapy size there was clear non-linearity (p = 0.0002), with no significant improvement of FP2 over FP1 (p = 0.46), the chosen FP1 being logarithmic rather than square root. For reduction in size a linear term was adequate (non-linearity p = 0.64).</p>
-<h3>Multivariable models</h3>
-<p>Table 12.5 of the book compares codings of the three continuous predictors; the 3 in "3 + 12" counts the binary predictors.</p>
-<div class="callout book"><b>Book example: model χ² of alternative codings (testicular cancer, n = 544)</b>
+<p>Book example: 544 patients after chemotherapy; outcome benign tissue (necrosis). Predictors: teratoma elements, elevated AFP, elevated HCG (binary); standardised pre-chemotherapy LDH (LDHst), post-chemotherapy mass size, and reduction in size (continuous). Univariably, RCS plots suggested log LDHst, square-root post-size and linear reduction. FP agreed in the main: LDH any effect p = 0.02, non-linearity p = 0.48; post-size non-linear p = 0.0002, FP2 against FP1 p = 0.46 (FP1 logarithmic); reduction linear (p = 0.64).</p>
 <table class="data">
 <tr><th>Strategy</th><th>df</th><th>Model χ²</th><th>χ² − 2 × df</th></tr>
 <tr><td>All linear</td><td>3 + 3 = 6</td><td>205</td><td>193</td></tr>
-<tr><td>FP2 for each, no selection</td><td>3 + 12 = 15</td><td>222</td><td>192</td></tr>
-<tr><td>FP2 with selection at p &lt; 0.20 (1/reduction, log post-size, LDHst)</td><td>3 + 3 selected forms (search df not counted)</td><td>213</td><td>not computed</td></tr>
-<tr><td>RCS, 4 knots for each</td><td>3 + 9 = 12</td><td>231</td><td>207</td></tr>
-<tr><td>Visual approximation (log LDHst, linear reduction, square root post-size)</td><td>3 + 3 chosen forms (search df not counted)</td><td>212</td><td>not computed</td></tr>
-<tr><td>GAM, 3 df each (pre-specified)</td><td>3 + 9 = 12</td><td>232</td><td>208</td></tr>
-<tr><td>GAM, GCV-optimised</td><td>3 + (2.8 + 4.6 + 3.9) = 14.3</td><td>240</td><td>211.4</td></tr>
+<tr><td>FP2 each, no selection</td><td>3 + 12 = 15</td><td>222</td><td>192</td></tr>
+<tr><td>FP, selection p &lt; 0.20</td><td>3 + 3 forms</td><td>213</td><td>n/a</td></tr>
+<tr><td>RCS 4 knots each</td><td>3 + 9 = 12</td><td>231</td><td>207</td></tr>
+<tr><td>Visual approximation</td><td>3 + 3 forms</td><td>212</td><td>n/a</td></tr>
+<tr><td>GAM, 3 df each</td><td>3 + 9 = 12</td><td>232</td><td>208</td></tr>
+<tr><td>GAM, GCV</td><td>3 + (2.8 + 4.6 + 3.9) = 14.3</td><td>240</td><td>211.4</td></tr>
 </table>
-<p>Source: Ch. 12, Table 12.5. The last column is computed here to apply the χ² − 2 × df rule of Module 6 (apparent performance only).</p></div>
-<ul>
-<li>With linear terms only (6 df) the model χ² is 205, and Nagelkerke R² is 41.9% apparent and 40.3% internally validated.</li>
-<li>The full FP2 model (15 df) reaches 222: a gain of 17 for 9 extra df, borderline significant (p = 0.049).</li>
-<li>RCS with 4 knots each (12 df) reaches 231, a gain of 26 over linear for 6 extra df, which is statistically significant (p &lt; 0.001).</li>
-<li>The visual approximation reached 212, and FP1 transformations 213: nearly as good with far fewer df.</li>
-<li>GAM with pre-specified 3 df per predictor (232) is much the same as RCS (231). GCV-optimised GAM reaches the highest χ² (240) by spending more effective df.</li>
-</ul>
-<p>The more complex GAM shapes were doubtful. For post-chemotherapy size the multivariable function implied an implausible increase in log odds of necrosis with very large masses, and for reduction in size the curve was wiggly between 20% and 100%. The smooth functions may not be smooth enough from a pathophysiological point of view, and external validation could show whether the "optimal" transformations are merely overfitted.</p>
-<p>All these χ² values are apparent performance. A rigorous internal validation that repeats every modelling step is needed to see whether any real gain remains after correction for optimism. If that is impossible, a fully independent validation set (split-sample or external) may be needed.</p>
-<p class="src">Source: Ch. 12, §12.4</p>
-`
+<p>Table 12.5 (last column computed here; search df not counted for selected forms). Linear: Nagelkerke R² 41.9% apparent, 40.3% validated. FP2 gained 17 for 9 df (p = 0.049); RCS gained 26 for 6 df (p &lt; 0.001); FP1 and visual forms reached 212 to 213 with far fewer df. GCV-GAM shapes were doubtful: log odds rising with very large masses, and a wiggly curve for reduction between 20% and 100%. All values are apparent; a validation that repeats every step is needed.</p>
+<p class="src">Source: Ch. 12, §12.4</p>`
     },
     {
-      id: 's7',
+      id: 'n6',
       title: 'Concluding advice: a "wrong but useful" model',
       html: `
-<p>Additivity and linearity can be seen as essential assumptions, and one might argue for assessing them thoroughly. When the aim is to estimate the effect of one predictor, this makes sense. When the aim is prediction, thorough assessment increases the risk of overfitting: we are tempted to extend the model with interaction and non-linear terms whenever the data suggest them, and may end up with a model that performs worse in future patients than a parsimonious model. The alternative is to accept a "wrong but useful" model that gives well-calibrated, discriminating predictions even if it violates some underlying assumptions.</p>
-<p>In the book's examples, performance did not increase impressively with more flexible terms. Strong qualitative interactions or U-shaped non-linearity may be rare, so the increase in predictive performance from interactions and non-linear terms is often modest in medical examples.</p>
-<h3>Recommendations</h3>
+<p>Thorough checking of additivity and linearity suits effect estimation; for prediction it invites overfitting. In medical examples, gains from interactions and non-linear terms are often modest, since strong qualitative interactions and U-shapes are rare.</p>
 <table class="data">
 <tr><th>Approach</th><th>Description</th></tr>
-<tr><td>Limit the number of interaction and non-linear terms</td><td>Consider only interactions that are a priori plausible (Table 12.1 in the book), and non-linear terms only for predictors with a presumed strong and likely non-linear effect</td></tr>
-<tr><td>Use overall testing</td><td>One overall test per interacting predictor (for example all age interactions) before looking at individual terms</td></tr>
-<tr><td>Compare flexible with simple models</td><td>Compare the <i>validated</i> performance, for example by bootstrap, of the flexible model (interactions, non-linearities, or a neural network or GAM) with a simple additive linear model</td></tr>
-<tr><td>Extra shrinkage</td><td>Apply stronger shrinkage (factor below 1) or more penalty in penalised ML to interaction and non-linear terms, to compensate for testimation bias</td></tr>
+<tr><td>Limit interaction and non-linear terms</td><td>Only a priori plausible interactions; non-linear terms only for strong, likely non-linear predictors</td></tr>
+<tr><td>Overall testing</td><td>One overall test per interacting predictor before single terms</td></tr>
+<tr><td>Compare flexible with simple</td><td>Validated (bootstrap) performance of flexible models (interactions, non-linearity, neural network, GAM) against a simple additive linear model</td></tr>
+<tr><td>Extra shrinkage</td><td>Stronger shrinkage or penalty for interaction and non-linear terms, against testimation bias</td></tr>
 </table>
-<p class="src">Ch. 12, Table 12.6</p>
-<p>The reasoning behind the first measure is that interactions should be considered mainly in studies with relatively many events compared with the number of terms. In smaller datasets one may rely on the additivity assumption and say that the model estimates average (marginal) effects over subgroups, knowing that a relevant high-order interaction can never be excluded. Interaction terms also complicate model presentation, so they should be left out unless relevant to the specific prediction problem.</p>
-<p>The search for interactions and non-linearities makes the effective df of the flexible model larger than the df in the final fitted model. FP procedures recognise this by testing FP1 with 2 df and FP2 with 4 df. GCV-optimised GAMs do not count it in their p-values.</p>
-<h3>How other methods treat interactions</h3>
-<ul>
-<li>Naive Bayes estimation uses univariable effects and assumes additivity; interactions are not studied.</li>
-<li>Tree models assume high-order interactions by default, and neural networks, with their flexibility, can fit specific patterns in a dataset. A tree can therefore be used to <i>explore</i> interactions; those that stand out can then be assessed for significance in a regression model.</li>
-</ul>
-<div class="callout key"><b>Key idea</b><p>A model with a higher apparent χ² is not automatically a better prediction model. Prefer extra terms only when they are plausible a priori and show an improvement in <i>validated</i> performance.</p></div>
-<p class="src">Source: Ch. 12, §12.5</p>
-`
+<p>Table 12.6. In smaller data, rely on additivity and interpret effects as averages over subgroups. Interactions also complicate presentation. The search makes the effective df larger than the fitted df; FP counts this (FP1 2 df, FP2 4 df), GCV-GAM does not. Naive Bayes assumes additivity; trees assume high-order interactions and neural networks fit specific patterns, so a tree can explore interactions to be tested in regression.</p>
+<p class="src">Source: Ch. 12, §12.5</p>`
     }
   ],
   keyPoints: [
-    'Regression models are additive on the log-odds (or log-hazard) scale: effects are multiplicative on the odds scale, and the verdict on interaction depends on the scale.',
-    'An interaction means the effect of one predictor depends on another; correlation between predictors is not interaction.',
-    'With k predictors there are k(k − 1)/2 two-way interactions: 45 for 10 predictors, of which about 2 are significant at 5% by chance.',
-    'Use an overall interaction test (or p &lt; 0.01) and a priori plausibility; subgroup claims in trials need an interaction test.',
-    'In GUSTO-I the age × tachycardia interaction (p = 0.03 in n = 785, overall p = 0.14) improved apparent c but lowered validated c (0.805 to 0.796) and reversed direction in the validation data.',
-    'For non-linearity, allocate flexibility a priori by predictor strength (RCS 3 to 5 knots = 2 to 4 df), or use mfp with 4-, 3- and 2-df tests, or a penalised GAM.',
-    'Compare flexible and simple models on validated, not apparent, performance; the highest apparent χ² (240 for GCV-GAM) is not the best choice automatically.',
-    'Limit terms, use overall tests and shrink interaction and non-linear terms more; aim for a "wrong but useful" model.'
+    'Logistic models are additive on the log-odds scale; whether two predictors interact depends on the scale.',
+    'An interaction means one predictor\'s effect depends on another; correlation is not interaction.',
+    'k predictors give k(k − 1)/2 two-way interactions: 45 for 10 predictors, about 2 significant at 5% by chance.',
+    'Use a priori plausibility, an overall test per predictor or p < 0.01; subgroup claims need an interaction test.',
+    'In GUSTO-I an age × tachycardia interaction raised apparent c but lowered validated c (0.805 to 0.796) and reversed direction in new data.',
+    'Code interactions to avoid implausible effects, such as a risk factor that looks protective at some ages.',
+    'Allocate flexibility to continuous predictors in advance (RCS 3 to 5 knots = 2 to 4 df); mfp uses 4-, 3- and 2-df tests.',
+    'Compare flexible and simple models on validated performance; the highest apparent χ² is not automatically best.'
   ],
   quiz: [
     {
-      q: 'Treatment reduces risk from 20% to 10% in a high-risk stratum and from 10% to 5% in a low-risk stratum. Which statement is correct?',
+      q: 'Progesterone lowers the risk of preterm birth from 20% to 10% in women with a previous preterm birth and from 10% to 5% in other women. Which statement is correct?',
       options: [
-        'There is a strong interaction because the absolute reduction differs between strata.',
-        'The odds ratios (0.44 and 0.47) are similar, so no interaction is needed on the odds scale, though the absolute benefit differs (10 vs 5 percentage points).',
-        'The relative risk is 0.5 in one stratum and 0.25 in the other.',
+        'There is a strong interaction, because the absolute reduction differs.',
+        'The odds ratios (0.44 and 0.47) are similar, so no interaction is needed on the odds scale, though the absolute benefit differs (10 against 5 per 100 women).',
+        'The relative risk is 0.5 in one group and 0.25 in the other.',
         'Additivity can be judged without choosing a scale.'
       ],
       answer: 1,
-      why: 'Odds ratios are 0.111/0.250 = 0.44 and 0.0526/0.111 = 0.47, nearly constant, while the relative risk is 0.5 in both. The absolute benefit depends on baseline risk even when the relative effect is constant. Whether an interaction exists depends on the scale on which additivity is assumed, so the first and fourth options are wrong.'
+      why: 'The odds ratios are 0.111 ÷ 0.25 = 0.44 and 0.053 ÷ 0.111 = 0.47, nearly constant, and the relative risk is 0.5 in both groups. The absolute benefit depends on baseline risk even when the relative effect is constant. Whether an interaction exists depends on the scale, so the first and fourth options are wrong.'
     },
     {
-      q: 'A logistic model has log odds = −2.0 + 0.8 × B + 0.6 × T − 0.5 × (B × T), where B is bacteriuria and T is tobacco use (both 0/1). What is the odds ratio for bacteriuria among tobacco users?',
+      q: 'A model has log odds = −2.2 + 1.0 × B + 0.5 × T − 0.6 × (B × T), where B is bacteriuria and T tobacco use (both 0 or 1). What is the odds ratio for bacteriuria in tobacco users?',
       options: [
-        '2.23',
-        '1.82',
-        '0.61',
-        '1.35'
-      ],
-      answer: 3,
-      why: 'Among users (T = 1) the log odds change by 0.8 − 0.5 = 0.3 when B goes from 0 to 1, so OR = e^0.3 = 1.35. The value 2.23 (e^0.8) is the OR among non-users. The value 0.61 is e^−0.5, the ratio of the two ORs, not the OR itself.'
-    },
-    {
-      q: 'A model has 10 binary candidate predictors. If every two-way interaction is tested at p below 0.05 and none truly exists, how many significant interactions are expected by chance?',
-      options: [
-        'About 0.5 (out of 10 tests)',
-        'About 5 (out of 100 tests)',
-        'About 2 (2.25 out of 45 tests)',
-        'None, since the main effects are in the model'
-      ],
-      answer: 2,
-      why: 'There are 10 × 9 / 2 = 45 two-way interactions and 5% of 45 is 2.25. Ten is the number of main effects, not of pairs, and 100 would count each pair twice and include squares. Having main effects in the model does not protect against false-positive interaction tests.'
-    },
-    {
-      q: 'In the GUSTO-I subsample (n = 785), adding an age × tachycardia interaction raised the apparent c from 0.828 to 0.831. In the independent validation data (n = 20,318) c fell from 0.805 to 0.796. What is the best explanation?',
-      options: [
-        'The validation data were too large to be informative.',
-        'The model with the interaction used too few df.',
-        'Tachycardia is not related to mortality.',
-        'The interaction was a chance finding in the small subsample; in the validation data it was significant in the opposite direction.'
-      ],
-      answer: 3,
-      why: 'In the validation data the age × tachycardia interaction had p = 0.002 but was negative, whereas in the subsample it was positive. An interaction fitted to noise adds optimism and harms performance in new patients. The other options are not supported: a large validation set is the most informative, and the interaction model used one more df, not fewer.'
-    },
-    {
-      q: 'In a multivariable model with several continuous predictors, which strategy does the book recommend for non-linear terms?',
-      options: [
-        'Give every continuous predictor 5 knots to make sure no non-linearity is missed.',
-        'Decide a priori how much flexibility each predictor may use, for example more for predictors with larger χ², with 3 knots (2 df) in smaller datasets.',
-        'Always choose the transformation with the highest apparent model χ².',
-        'Use only dichotomised predictors to avoid assumptions.'
+        '2.72',
+        '1.49',
+        '0.55',
+        '1.65'
       ],
       answer: 1,
-      why: 'Too much flexibility for each predictor leads to overfitting, so the complexity is set a priori, often from predictor strength. The highest apparent χ² rewards overfitting (the GCV-optimised GAM in the testicular cancer example reached 240 with more effective df). Dichotomising discards information (Module 6).'
+      why: 'In users (T = 1) the log odds rise by 1.0 − 0.6 = 0.4 when B goes from 0 to 1, so the odds ratio is e^0.4 = 1.49. The value 2.72 (e^1.0) is the odds ratio in non-users, 0.55 (e^−0.6) is the ratio of the two odds ratios, and 1.65 (e^0.5) is the tobacco effect.'
     },
     {
-      q: 'Three codings of continuous predictors were compared in a development sample: all linear (8 df, χ² = 120), 4-knot splines (14 df, χ² = 131) and a GCV-optimised GAM (19 effective df, χ² = 140). Which conclusion is justified?',
+      q: 'The team tests every two-way interaction among 12 binary predictors at p < 0.05. If none is real, how many significant interactions should it expect?',
       options: [
-        'After subtracting 2 × df the three are nearly equal (104, 103 and 102), so validated performance should decide whether extra flexibility is worthwhile.',
-        'The GAM is best because its χ² is highest.',
-        'The spline model is best because it is intermediate in complexity.',
-        'The linear model must be rejected because the spline model is significantly better.'
+        'About 0.6',
+        'About 3.3',
+        'About 7.2',
+        'None, because the main effects are in the model'
+      ],
+      answer: 1,
+      why: 'There are 12 × 11 ÷ 2 = 66 pairs, and 0.05 × 66 = 3.3. Using 12 tests gives 0.6, and using 12 × 12 = 144 tests gives 7.2; both count wrongly. Main effects in the model do not protect against chance findings among the interaction tests.'
+    },
+    {
+      q: 'An overall test of all age interactions in the preterm model gives p = 0.21, but age × tobacco alone has p = 0.04. What should the team do?',
+      options: [
+        'Add age × tobacco, because it is significant.',
+        'Add all age interactions, because one is significant.',
+        'Not add it: the overall test does not support age interactions, and a single p = 0.04 among several tests is likely chance.',
+        'Replace tobacco by the interaction term.'
+      ],
+      answer: 2,
+      why: 'The overall test is done first to protect against multiple testing; if it is not significant, single terms are not examined. In the book\'s GUSTO-I example the same pattern (overall p = 0.14, single p = 0.03) gave an interaction that reversed in new data. Dropping a main effect while keeping its interaction breaks the hierarchy of the model.'
+    },
+    {
+      q: 'The preterm model has three continuous predictors: age (strong, U-shaped), haemoglobin (moderate) and height (weak). There are about 230 events. Which strategy fits the book\'s advice?',
+      options: [
+        'Give every continuous predictor a 5-knot spline so no curve is missed.',
+        'Decide in advance: a 3-knot spline or quadratic for age, and simpler terms for the weaker predictors.',
+        'Try many codings for each and keep the one with the highest apparent χ².',
+        'Dichotomise all three to avoid any assumption about shape.'
+      ],
+      answer: 1,
+      why: 'Flexibility should be allocated in advance, more for strong predictors with a known non-linear shape. Five knots everywhere spends many df and overfits. Choosing by the highest apparent χ² rewards overfitting, and dichotomising throws information away.'
+    },
+    {
+      q: 'Three codings were compared in preterm data: all linear (6 df, χ² = 95), 3-knot splines (9 df, χ² = 101) and 5-knot splines (18 df, χ² = 116). Which conclusion is justified?',
+      options: [
+        'After subtracting 2 × df the scores are 83, 83 and 80, so the extra flexibility does not pay for itself and validated performance should decide.',
+        'The 5-knot model is best, because its χ² is highest.',
+        'The 3-knot model is best, because it is in the middle.',
+        'The linear model must be rejected, because the 5-knot model has a higher χ².'
       ],
       answer: 0,
-      why: 'The χ² − 2 × df values are 120 − 16 = 104, 131 − 28 = 103 and 140 − 38 = 102, so the extra flexibility does not pay for itself in this comparison. The spline gain of 11 on 6 df has p = 0.088, not significant at 5%. The highest apparent χ² simply reflects the most effective df.'
+      why: 'χ² − 2 × df gives 95 − 12 = 83, 101 − 18 = 83 and 116 − 36 = 80. The highest raw χ² reflects the most df. Being in the middle is not a criterion, and a higher χ² alone does not reject the simpler model.'
     }
   ],
   tasks: [
     {
-      id: 't1',
-      title: 'Interaction arithmetic: ORs, risks and chance findings',
-      level: 'Apply',
-      scenario: `<p><b>Illustrative (synthetic).</b> A model for preterm birth includes bacteriuria (B, 0/1) and tobacco use (T, 0/1). The log odds is −2.0 + 0.8 × B + 0.6 × T − 0.5 × B × T. For comparison, the additive model without the interaction term has the same intercept and main effects. Risk = 1 / (1 + e<sup>−lp</sup>). The team also considers 9 binary predictors in all and proposes to test every pairwise interaction.</p>`,
+      id: 't0',
+      title: 'Scale, correlation and interaction',
+      level: 'Understand',
+      scenario: `<p>Illustrative (synthetic). Use the colleague's and the obstetrician's statements in the case: (1) "tobacco and low income interact, because tobacco users are often from low-income households"; (2) "progesterone works better in high-risk women, because it prevents more births". In the trial, progesterone lowered preterm birth from 20% to 10% in women with a previous preterm birth and from 10% to 5% in others.</p>`,
       questions: [
-        '<b>(a)</b> Compute the predicted risk for the four combinations of B and T from the model with the interaction.',
-        '<b>(b)</b> Give the odds ratio for bacteriuria among non-users and among users of tobacco, and the OR comparing both exposures with neither.',
-        '<b>(c)</b> Compute the risk for B = 1 and T = 1 from the additive model. Compare the risk differences for bacteriuria in non-users and in users under the interaction model.',
-        '<b>(d)</b> How many two-way interactions can be tested among 9 predictors, and how many are expected to be significant at 5% by chance? What strategy would limit the problem?'
+        '<b>(a)</b> Calculate the relative risk, the odds ratio and the risk difference in each group.',
+        '<b>(b)</b> Is statement 2 right? On which scale is there an interaction, and on which is there not?',
+        '<b>(c)</b> What is wrong with statement 1?',
+        '<b>(d)</b> Would an odds ratio for bacteriuria of 2.23 in non-users and 1.35 in users be a quantitative or a qualitative interaction?'
       ],
-      answer: `<p><b>(a)</b> lp for B = 0, T = 0: −2.0, risk = 1 / (1 + e<sup>2.0</sup>) = 0.119. B = 1, T = 0: −2.0 + 0.8 = −1.2, risk 0.232. B = 0, T = 1: −2.0 + 0.6 = −1.4, risk 0.198. B = 1, T = 1: −2.0 + 0.8 + 0.6 − 0.5 = −1.1, risk 0.250.</p>
-<p><b>(b)</b> Among non-users: OR = e<sup>0.8</sup> = 2.23. Among users: OR = e<sup>0.8 − 0.5</sup> = e<sup>0.3</sup> = 1.35. Both exposures versus neither: e<sup>0.8 + 0.6 − 0.5</sup> = e<sup>0.9</sup> = 2.46. The ratio of the two ORs for bacteriuria is e<sup>−0.5</sup> = 0.61, which is the interaction on the odds-ratio scale (a quantitative interaction, since both ORs exceed 1).</p>
-<p><b>(c)</b> Additive model, B = 1 and T = 1: lp = −2.0 + 0.8 + 0.6 = −0.6, risk = 0.354, versus 0.250 with the interaction. Under the interaction model the risk difference for bacteriuria is 0.232 − 0.119 = 0.112 in non-users and 0.250 − 0.198 = 0.052 in users. Note that even in the additive model the risk difference would not be the same in both strata (0.112 vs 0.157), because additivity on the log-odds scale is not additivity on the risk scale.</p>
-<p><b>(d)</b> 9 × 8 / 2 = 36 interactions; 0.05 × 36 = 1.8 are expected to be significant by chance. To limit this: consider only a priori plausible interactions; use an overall test (all interactions of a given predictor together) before looking at individual terms; or use a stringent p-value such as 0.01 (expected 0.36 false positives for 36 tests). Any interaction retained should be compared by validated performance with the simple model and shrunk more than the main effects.</p>`
+      answer: `<p><b>(a)</b> Previous preterm birth: RR = 10 ÷ 20 = 0.5; odds 0.20 ÷ 0.80 = 0.25 and 0.10 ÷ 0.90 = 0.111, OR = 0.111 ÷ 0.25 = 0.44; risk difference 10 per 100 women. Others: RR = 5 ÷ 10 = 0.5; odds 0.111 and 0.05 ÷ 0.95 = 0.053, OR = 0.053 ÷ 0.111 = 0.47; risk difference 5 per 100.</p>
+<p><b>(b)</b> Partly. The relative effect is the same (RR 0.5, OR about 0.45), so there is no interaction on the relative scales. The absolute benefit is twice as large in the high-risk group, so on the risk-difference scale there is an interaction. "Prevents more births" is true in absolute terms, but it follows from the higher baseline risk, not from a stronger relative effect.</p>
+<p><b>(c)</b> It describes correlation between two predictors, not interaction. Interaction is about whether the effect of one on preterm birth depends on the other. Correlated predictors may not interact, and uncorrelated ones may.</p>
+<p><b>(d)</b> Quantitative: bacteriuria raises the odds in both groups, only by different amounts. A qualitative interaction would need it to raise the odds in one group and lower them in the other.</p>`
+    },
+    {
+      id: 't1',
+      title: 'Risks from a model with an interaction',
+      level: 'Apply',
+      scenario: `<p>Illustrative (synthetic). lp = −2.0 + 0.8 × B + 0.6 × T − 0.5 × B × T, with B = bacteriuria and T = tobacco use (0 or 1). The additive model has the same intercept and main effects but no product term. Risk = 1 ÷ (1 + e<sup>−lp</sup>).</p>`,
+      questions: [
+        '<b>(a)</b> Calculate the risk for the four combinations of B and T in the interaction model.',
+        '<b>(b)</b> Give the odds ratio for bacteriuria in non-users and in users, and for both exposures against neither.',
+        '<b>(c)</b> Calculate the risk for B = 1, T = 1 in the additive model. Compare the risk differences for bacteriuria in the two models.'
+      ],
+      answer: `<p><b>(a)</b> B = 0, T = 0: lp = −2.0, risk = 1 ÷ (1 + e<sup>2.0</sup>) = 0.119. B = 1, T = 0: lp = −1.2, risk 0.232. B = 0, T = 1: lp = −1.4, risk 0.198. B = 1, T = 1: lp = −2.0 + 0.8 + 0.6 − 0.5 = −1.1, risk 0.250.</p>
+<p><b>(b)</b> Non-users: e<sup>0.8</sup> = 2.23. Users: e<sup>0.8 − 0.5</sup> = e<sup>0.3</sup> = 1.35. Both against neither: e<sup>0.8 + 0.6 − 0.5</sup> = e<sup>0.9</sup> = 2.46. The ratio of the two bacteriuria odds ratios is e<sup>−0.5</sup> = 0.61: this is the interaction on the odds-ratio scale.</p>
+<p><b>(c)</b> Additive model, B = 1 and T = 1: lp = −2.0 + 0.8 + 0.6 = −0.6, risk 0.354 (against 0.250 with the interaction). Risk differences for bacteriuria: interaction model 0.232 − 0.119 = 0.112 in non-users and 0.250 − 0.198 = 0.052 in users; additive model 0.112 and 0.354 − 0.198 = 0.157. Even the additive model gives different risk differences, because additivity on the log-odds scale is not additivity on the risk scale.</p>`
     },
     {
       id: 't2',
-      title: 'Interaction count and flexibility in the preterm-birth data',
-      level: 'Analyze',
-      scenario: `<p>Use the interaction counter and the coding explorer. The synthetic dataset <b>ptb_dev</b> (<span data-live="ptb_dev_events"></span> events in <span data-live="ptb_dev_n"></span> women) has 14 candidate terms.</p>`,
+      title: 'How many interactions could the team test?',
+      level: 'Apply',
+      scenario: `<p>Use the interaction counter in this case. The team's development data (ptb_dev) have 2,000 women and <span data-live="ptb_dev_events"></span> preterm births (about 234), and 14 candidate terms.</p>`,
       questions: [
-        '<b>(a)</b> In the interaction counter set k to 14. Report the number of two-way interactions, the expected false positives at α = 0.05, and the extra df if all were added. Compare the extra df with the number of events.',
-        '<b>(b)</b> In the coding explorer, compare quadratic, 3-knot and 5-knot spline codings of maternal age at the full sample and at the smallest subsample. Record AIC.',
-        '<b>(c)</b> The true relation between age and the log odds in this dataset is a parabola. What do you expect the AIC ranking to be, and why does the 5-knot spline look worse at small n?',
-        '<b>(d)</b> What does this suggest about using the most flexible coding for every predictor?'
+        '<b>(a)</b> Set k = 9 and then k = 14. Record the number of two-way interactions and the expected false positives at α = 0.05.',
+        '<b>(b)</b> For k = 14, what is the total df with all interactions added, and the events per df?',
+        '<b>(c)</b> How many false positives would you expect among the 91 pairs at p &lt; 0.01?',
+        '<b>(d)</b> Suggest two interactions that might be worth pre-specifying for this model, and say why.'
       ],
-      answer: `<p><b>(a)</b> For k = 14: 14 × 13 / 2 = 91 two-way interactions, with 0.05 × 91 = 4.55 expected false positives. Each product term costs at least 1 df, so adding all would add at least 91 df to the 15 df of the main-effects model (the age terms use 2 df each, so the true cost is higher). With roughly 240 events (an incidence of about 12%), the EPV would fall to about 240 / 106 = 2, far below 10. The true model has no interaction terms at all, so every interaction found would be noise.</p>
-<p><b>(b) and (c)</b> The quadratic (2 df) matches the data-generating form, so it should have the best or near-best AIC at both sample sizes, because it fits the shape with the fewest parameters. The 3-knot spline (2 df) gives a similar curve and similar AIC. The 5-knot spline (4 df) is able to follow the parabola but spends 2 extra df for no gain, so its AIC is slightly worse in the full sample; at the smallest subsample the extra parameters fit random fluctuations, producing a wiggly curve especially in the tails where there are few women, and the AIC penalty and the instability are more visible.</p>
-<p><b>(d)</b> Flexibility has a cost in df and in stability. Following the chapter, allocate flexibility a priori, give the strongest predictors the most, use 3 knots (2 df) in smaller datasets, and judge the benefit by validated performance, not apparent fit.</p>`
+      answer: `<p><b>(a)</b> k = 9: 9 × 8 ÷ 2 = 36 pairs, 0.05 × 36 = 1.8 expected false positives. k = 14: 14 × 13 ÷ 2 = 91 pairs, 0.05 × 91 = 4.55.</p>
+<p><b>(b)</b> The widget gives 14 + 91 = 105 df (in fact a little more, since age uses 2 df). With about 234 events, that is 234 ÷ 105 = 2.2 events per df, far below 10. The model would be badly overfitted. In these synthetic data the true model has no interactions at all, so every interaction found would be noise.</p>
+<p><b>(c)</b> 0.01 × 91 = 0.91, about one, instead of about 4 or 5.</p>
+<p><b>(d)</b> Examples of the book's types: age × a predictor (risk factors may act differently in teenagers or older women), or calendar time or clinic × a predictor (recording or care may differ). Any choice should be made before looking at the outcome data, tested with an overall test, and kept only if validated performance improves.</p>`
     },
     {
       id: 't3',
-      title: 'Evaluate a flexible-model claim in a preterm-birth study',
-      level: 'Evaluate',
-      scenario: `<p><b>Illustrative (synthetic).</b> Researchers develop a model for preterm birth in 900 women (110 events) with 3 continuous predictors (age, BMI, Hb) and 5 binary predictors. They report apparent model χ² values: all predictors linear (8 df): 120; RCS with 4 knots for each continuous predictor (14 df): 131; GAM with GCV-optimised smoothing (19 effective df): 140. They write: "Because the GAM had the highest likelihood-ratio statistic, it was selected as the final model." In addition they tested all 28 pairwise interactions among the 8 predictors, found 3 with p &lt; 0.05, and added them to the model. They report that "the interaction terms were highly significant (all p &lt; 0.05) in the final model." No internal validation was performed.</p>`,
+      title: 'Overall tests and subgroup claims',
+      level: 'Understand',
+      scenario: `<p>Illustrative (synthetic). (1) In the team's model, an overall Wald test of all interactions with age (6 df) gives p = 0.21. One of them, age × tobacco, has p = 0.04 on its own. (2) A trial report says: "Progesterone reduced preterm birth in women under 25 (p = 0.03) but not in women aged 25 or more (p = 0.40). Progesterone should be given only to younger women."</p>`,
       questions: [
-        '<b>(a)</b> Calculate χ² − 2 × df for the three models and the test of spline versus linear, using a chi-square of 11 on 6 df (p = 0.088) and of the GAM versus linear, χ² of 20 on 11 df (p = 0.045).',
-        '<b>(b)</b> How many significant interactions would you expect by chance among 28 tests at 5%?',
-        '<b>(c)</b> List the problems and recommended remedies, point by point.'
+        '<b>(a)</b> Why is the overall test done first, and what should the team conclude from (1)?',
+        '<b>(b)</b> What is the flaw in the reasoning of (2)? What analysis is needed?',
+        '<b>(c)</b> If the interaction test in (2) were p = 0.30, what would you conclude?'
       ],
-      answer: `<p><b>(a)</b> Linear: 120 − 2 × 8 = 104. Spline: 131 − 2 × 14 = 103. GAM: 140 − 2 × 19 = 102. The three are nearly identical once df are accounted for, and the highest value is for the simplest model. The spline-versus-linear test (χ² = 131 − 120 = 11 on 14 − 8 = 6 df, p = 0.088) is not significant at 5%. The GAM-versus-linear test (20 on 11 df) has p = 0.045, borderline, and the p-value is only approximate because the search for the smoothing parameter is ignored.</p>
-<p><b>(b)</b> 28 × 0.05 = 1.4 expected false-positive interactions. Finding 3 is therefore not much more than expected by chance, and the pattern is consistent with chance alone.</p>
-<p><b>(c) Point-by-point.</b></p>
+      answer: `<p><b>(a)</b> Testing six age interactions one by one gives six chances of a false positive. One test of all six together keeps the overall error rate at 5%. With overall p = 0.21 the team stops there and does not add age × tobacco; a single p = 0.04 among six tests is easily chance. In the book's GUSTO-I example the same pattern (overall p = 0.14, single p = 0.03) gave an interaction that reversed in new data.</p>
+<p><b>(b)</b> A significant result in one subgroup and a non-significant one in the other do not show that the effects differ; the older group may simply have less power. The claim needs an interaction test (treatment × age group) for the difference in effect, ideally pre-specified, and even then it is a secondary finding.</p>
+<p><b>(c)</b> No evidence that the effect differs by age. The best estimate is the overall treatment effect for all women, with the absolute benefit depending on each woman's baseline risk.</p>`
+    },
+    {
+      id: 't4',
+      title: 'Recode an implausible interaction',
+      level: 'Analyse',
+      scenario: `<p>Illustrative (synthetic). In 400 women the age × chronic hypertension term has p = 0.04. The fitted log odds ratio for hypertension is 0.9 + 0.1 × (age − 30). In the main-effects model it is 0.9 at every age.</p>`,
+      questions: [
+        '<b>(a)</b> Calculate the log odds ratio and odds ratio for hypertension at ages 18, 25, 30 and 40 under the interaction model.',
+        '<b>(b)</b> At what age is the hypertension effect zero? What does the model imply below that age, and is that plausible?',
+        '<b>(c)</b> Write a smarter coding, in the spirit of the book\'s option (d), that cannot make hypertension protective. How many parameters does it use compared with the simple product model?',
+        '<b>(d)</b> What evidence would you need before keeping any version of the interaction?'
+      ],
+      answer: `<p><b>(a)</b> Age 18: 0.9 + 0.1 × (−12) = −0.3, OR e<sup>−0.3</sup> = 0.74. Age 25: 0.9 − 0.5 = 0.4, OR 1.49. Age 30: 0.9, OR 2.46. Age 40: 0.9 + 1.0 = 1.9, OR 6.69.</p>
+<p><b>(b)</b> 0.9 + 0.1 × (age − 30) = 0 gives age = 30 − 9 = 21. Below 21 the model says hypertension lowers the risk of preterm birth. That is not plausible: it is a by-product of forcing a straight-line change through the data.</p>
+<p><b>(c)</b> Keep the age terms, and replace both the hypertension main effect and the product by one term, hypertension × max(0, age − 21). Hypertension then has no effect up to age 21 and an effect that grows above it (with a coefficient of 0.1 per year, 0.9 at age 30), so with a positive coefficient it can never look protective. This uses one parameter for hypertension: the same number as the main-effects model and one fewer than the product model, which needs both the main effect and the product. The book's option (c), separate age slopes below and above the cut-point, uses as many parameters as the product model (9 df each in the book's Table 12.2, against 8 for option (d)). The cut at 21 comes from the data, so it adds some optimism.</p>
+<p><b>(d)</b> A plausible reason in advance, an overall test of age interactions that is significant, and better validated performance (bootstrap with the interaction search repeated, or external data such as ptb_val) than the main-effects model. If kept, it should be shrunk more than the main effects.</p>`
+    },
+    {
+      id: 't5',
+      title: 'Review a model with data-dredged interactions',
+      level: 'Evaluate',
+      scenario: `<p>Illustrative (synthetic). A manuscript develops a preterm birth model in 900 women (110 events) with 8 predictors. "We tested all 28 pairwise interactions and added the 3 with p &lt; 0.05. In the final model all interactions were highly significant (p &lt; 0.05). One of them shows that tobacco use is protective in women in their first pregnancy. The apparent c rose from 0.74 to 0.77, which confirms the value of the interactions. No internal validation was done."</p>`,
+      questions: [
+        '<b>(a)</b> How many significant interactions would you expect by chance among 28 tests at 5%?',
+        '<b>(b)</b> Calculate the df of the final model and its events per df.',
+        '<b>(c)</b> List the problems and the remedies, point by point.'
+      ],
+      answer: `<p><b>(a)</b> 0.05 × 28 = 1.4. Finding 3 is close to what chance alone gives.</p>
+<p><b>(b)</b> 8 main effects + 3 interactions = 11 df; 110 ÷ 11 = 10 events per df, before counting the 28 tests that chose the three, which raise the effective df well above 11.</p>
+<p><b>(c)</b></p>
 <ol>
-<li><b>Selecting the model with the highest apparent χ².</b> The GAM wins because it spends the most effective df, which rewards overfitting. The chapter advises comparing the <i>validated</i> performance of flexible and simple models (bootstrap), and shows an example in which GCV-GAM reached the highest χ² (240) while its shapes were implausible. Remedy: bootstrap-validated c, calibration slope and χ² − 2 × df.</li>
-<li><b>No gain from non-linearity.</b> After the df penalty the flexible models are no better than the linear model, so the evidence favours the simpler model (a "wrong but useful" model).</li>
-<li><b>Interactions chosen from 28 individual tests.</b> Three of 28 is about the number expected by chance (1.4). No overall test, no a priori plausibility and no correction for multiple testing were used. Remedy: overall interaction test per predictor, a stricter p-value such as 0.01, and restriction to plausible interactions (Table 12.1).</li>
-<li><b>Interaction "highly significant" in the final model.</b> P-values for terms chosen because they looked significant are exaggerated (testimation bias). In the book's GUSTO-I example a p = 0.03 interaction in a small subsample reversed its direction in the validation data (p = 0.002, negative) and lowered validated c. Remedy: shrink such terms more or omit them.</li>
-<li><b>No internal validation.</b> With 110 events, an EPV of 10 supports about 11 df, whereas the final model has 19 effective df plus 3 interactions = 22 df (EPV 5), so substantial overfitting is expected. Remedy: bootstrap the whole modelling process, including the search for interactions and the GCV smoothing, and report optimism-corrected performance.</li>
+<li><b>Testing every pair.</b> No a priori plausibility, no overall test and no stricter p. Remedy: pre-specify a few plausible interactions; use an overall test per predictor or p &lt; 0.01.</li>
+<li><b>"Highly significant in the final model".</b> Terms chosen because they were significant will look significant again: their p-values and coefficients are biased by the selection (testimation bias). Remedy: do not interpret these p-values; shrink interaction terms more than main effects.</li>
+<li><b>A qualitative interaction that makes tobacco protective.</b> Implausible, and a typical sign of fitting noise. Remedy: smart coding that rules out a protective effect, or drop the term.</li>
+<li><b>Apparent c as proof.</b> Apparent c always rises when terms are added. In the book's GUSTO-I example, apparent c rose with an interaction but validated c fell from 0.805 to 0.796. Remedy: compare validated performance with the main-effects model.</li>
+<li><b>No internal validation.</b> Remedy: bootstrap with the whole interaction search repeated in each sample, report optimism-corrected c and calibration slope, and validate externally.</li>
 </ol>
-<div class="callout warn"><b>Critical:</b><p>The final model combines the most flexible functions with data-dredged interactions, uses an EPV of about 5, and has not been validated. Its apparent performance is not a reliable estimate of what will be seen in new women.</p></div>`
+<div class="callout warn"><b>Critical:</b><p>The three interactions are consistent with chance, one is implausible, and none has been validated. The paper's claim that they improve the model is not supported.</p></div>`
+    },
+    {
+      id: 't6',
+      title: 'Compare flexible and simple codings',
+      level: 'Apply',
+      scenario: `<p>Illustrative (synthetic). The second manuscript develops a model in 900 women (110 events) with 3 continuous predictors (age, BMI, haemoglobin) and 5 binary ones. Apparent model χ²: all linear (8 df) 120; 4-knot splines for each continuous predictor (14 df) 131; GAM with GCV smoothing (19 effective df) 140. "Because the GAM had the highest likelihood-ratio statistic, it was selected." Use: χ² of 11 on 6 df has p = 0.088; χ² of 20 on 11 df has p = 0.045.</p>`,
+      questions: [
+        '<b>(a)</b> Calculate χ² − 2 × df for the three models.',
+        '<b>(b)</b> Test the splines against linear, and the GAM against linear. Why is the GAM p-value only approximate?',
+        '<b>(c)</b> How many df does 110 events support at 10 events per df? Comment on the GAM.',
+        '<b>(d)</b> What should the authors have done?'
+      ],
+      answer: `<p><b>(a)</b> Linear: 120 − 16 = 104. Splines: 131 − 28 = 103. GAM: 140 − 38 = 102. Once df are counted, the simplest model scores highest.</p>
+<p><b>(b)</b> Splines against linear: 131 − 120 = 11 on 14 − 8 = 6 df, p = 0.088, not significant. GAM against linear: 140 − 120 = 20 on 19 − 8 = 11 df, p = 0.045, borderline. The GAM p-value ignores the search for the smoothing parameter, so it is too small.</p>
+<p><b>(c)</b> 110 ÷ 10 = 11 df. The GAM uses 19 effective df, an EPV of 110 ÷ 19 = 5.8. Its extra fit is likely to be noise, as with the book's GCV-GAM in testicular cancer, which had the highest χ² (240) but implausible shapes.</p>
+<p><b>(d)</b> Decide flexibility in advance (for example a 3-knot spline only for age, which is known to be U-shaped, and linear terms for the others), and compare flexible and simple models on bootstrap-validated c and calibration slope, repeating every step. A "wrong but useful" additive model is likely to do as well.</p>`
+    },
+    {
+      id: 't7',
+      title: 'How much flexibility does maternal age need?',
+      level: 'Analyse',
+      scenario: `<p>Use the coding explorer in this case. It fits maternal age alone to <b>ptb_dev</b> and reports LR χ², model df and AIC (lower is better). The subsample of a given size is the same every time.</p>`,
+      questions: [
+        '<b>(a)</b> At subsample 2,000, record χ², df and AIC for Linear, Quadratic, and splines with 3, 4 and 5 knots. Calculate χ² − 2 × df for each.',
+        '<b>(b)</b> Why does the linear model do so badly here?',
+        '<b>(c)</b> Set the subsample to 200 and record AIC for the same codings. How do the extra knots fare now?',
+        '<b>(d)</b> What does this suggest for coding age in the full model?'
+      ],
+      answer: `<p><b>(a)</b> Subsample 2,000 (234 events):</p>
+<table class="data">
+<tr><th>Coding</th><th>χ²</th><th>df</th><th>χ² − 2 × df</th><th>AIC</th></tr>
+<tr><td>Linear</td><td>1.2</td><td>1</td><td>−0.8</td><td>1446.4</td></tr>
+<tr><td>Quadratic</td><td>88.0</td><td>2</td><td>84.0</td><td>1361.6</td></tr>
+<tr><td>RCS 3 knots</td><td>84.2</td><td>2</td><td>80.2</td><td>1365.5</td></tr>
+<tr><td>RCS 4 knots</td><td>86.3</td><td>3</td><td>80.3</td><td>1365.3</td></tr>
+<tr><td>RCS 5 knots</td><td>87.8</td><td>4</td><td>79.8</td><td>1365.8</td></tr>
+</table>
+<p>The quadratic is best: it matches the true shape with 2 df. Extra knots add a little χ² but not enough to pay for their df.</p>
+<p><b>(b)</b> The true effect is U-shaped, lowest near 27. A straight line through a U is almost flat, so it misses nearly all the information (χ² 1.2 against 88.0). Here linearity is a poor assumption, and the age curve is a strong, plausible non-linear effect that deserves flexibility.</p>
+<p><b>(c)</b> Subsample 200 (21 events): AIC 137.9 (linear), 122.3 (quadratic), 122.3 (3 knots), 124.1 (4 knots), 126.1 (5 knots). Each extra knot adds almost no χ² (18.1 to 18.3) but costs 2 AIC points per df, so the 4-knot and 5-knot splines are 1.8 and 3.8 points behind the quadratic. With only 21 events the curve is learned from about a tenth of the information, so any extra wiggle a flexible spline shows is likely to be noise.</p>
+<p><b>(d)</b> Give age a curve chosen in advance, a quadratic or a 3-knot spline (2 df), because it is a strong predictor with a known U-shape. Do not spend 4 df on a 5-knot spline, and use linear terms for weaker predictors unless there is a reason otherwise. Confirm the choice with validated performance.</p>`
     }
   ]
 });

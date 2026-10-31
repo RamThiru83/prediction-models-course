@@ -7,224 +7,239 @@ registerModule({
   minutes: 75,
   summary: 'How to obtain an honest estimate of how a prediction model will perform in new patients, first within the development setting (internal validation) and then in other settings (external validation).',
   objectives: [
-    'Distinguish internal validity (reproducibility) from external validity (generalisability) and place each in the superpopulation framework.',
-    'Compare apparent, split-sample, cross-validation and bootstrap validation on bias, stability and ability to reflect model uncertainty.',
-    'Calculate an optimism-corrected c statistic and calibration slope from bootstrap results.',
-    'Classify an external validation study as temporal, geographic or fully independent and name the transportability aspect it tests.',
-    'Diagnose likely reasons for poor performance at external validation from a study description.',
-    'Justify why the final model should be estimated on all available data after validation.'
+    'Tell internal from external validity',
+    'Explain why apparent performance is optimistic',
+    'Compare split-sample, cross-validation and bootstrap',
+    'Calculate bootstrap optimism-corrected performance',
+    'Classify and diagnose an external validation',
+    'Fit the final model on all data'
+  ],
+  format: 'cases',
+  reading: [
+    { cite: "Steyerberg EW, Harrell FE Jr, Borsboom GJ, et al. (2001). Internal validation of predictive models: efficiency of some procedures for logistic regression analysis. Journal of Clinical Epidemiology 54:774-781.", url: "https://doi.org/10.1016/s0895-4356(01)00341-9", note: "Compares split-sample, cross-validation and bootstrap validation and recommends the bootstrap." },
+    { cite: "Steyerberg EW, Harrell FE Jr (2016). Prediction models need appropriate internal, internal-external, and external validation. Journal of Clinical Epidemiology 69:245-247.", url: "https://doi.org/10.1016/j.jclinepi.2015.04.005", note: "A short commentary that explains when each validation strategy is appropriate, including internal-external validation across centres." },
+    { cite: "Smith GCS, Seaman SR, Wood AM, et al. (2014). Correcting for optimistic prediction in small data sets. American Journal of Epidemiology 180:318-324.", url: "https://doi.org/10.1093/aje/kwu140", note: "Compares optimism corrections for the c statistic and shows why sample splitting and leave-one-out cross-validation perform poorly." },
+    { cite: "Collins GS, Dhiman P, Ma J, et al. (2024). Evaluation of clinical prediction models (part 1): from development to external validation. BMJ 384:e074819.", url: "https://doi.org/10.1136/bmj-2023-074819", note: "First of the 2024 BMJ series; sets out how performance is evaluated across development, internal validation and external validation." }
+  ],
+  essentials: `
+<ul>
+<li>A model is built for future women, not for the women in the data set. <b>Validation</b> asks how good the predictions are in women who did not help to build the model.</li>
+<li><b>Internal validation</b> checks performance in new women from the same setting (reproducibility). <b>External validation</b> checks it in other, related settings: another period, another hospital, other investigators (generalisability).</li>
+<li><b>Apparent performance</b>, measured in the development data, is too good (optimistic). In those data the calibration slope is always exactly 1, so it tells you nothing.</li>
+<li>Splitting the data at random into a development part and a test part is wasteful and unstable. It works only when the sample is so large that you hardly need it.</li>
+<li><b>Cross-validation</b> uses more of the data, but can hide how unstable variable selection is.</li>
+<li>The <b>bootstrap</b> is preferred: refit the whole modelling process in many resamples, measure how much each model flatters itself, and subtract that <b>optimism</b>. Every step, including selection, must be replayed.</li>
+<li>Models often do worse in other settings because of small single-centre development, overfitting, different definitions or units, missing predictors, or true differences between populations.</li>
+<li>Validation tests the modelling process. The final model is fitted on all the data.</li>
+</ul>`,
+  story: 'Throughout the course you follow the maternity team of a district hospital as it works on one problem: preterm birth. The hospital and its data are fictional and synthetic. The team has fitted its booking-visit model for preterm birth before 37 weeks on 2,000 women (ptb_dev, 234 preterm births). In this module it asks how well the model will predict for the next women: first within its own hospital, by splitting and resampling its data, and then at a tertiary referral hospital in a later period (ptb_val). It also reviews a report that calls a random split "external validation". You do not need the earlier modules for this story.',
+  defs: {
+    'internal validation': 'Estimating how well a model will work in new people from the same setting, using only the development data.',
+    'external validation': 'Testing a model in people from another period, place or study team than the ones it was built on.',
+    'apparent performance': 'How well a model performs in the same data used to fit it; this is too optimistic.',
+    'optimism': 'How much better a model looks in its own data than in new data from the same setting.',
+    'split-sample validation': 'Dividing the data at random into a part for fitting the model and a part for testing it.',
+    'cross-validation': 'Fitting the model on all but one part of the data and testing it on the part left out, in turn for every part.',
+    'bootstrap sample': 'A sample of the same size as the data, drawn with replacement, so some people appear more than once and others not at all.',
+    'calibration slope': 'The slope of observed against predicted log-odds in new data; below 1 means the predictions are too extreme.',
+    'calibration-in-the-large': 'Whether the average predicted risk matches the observed rate; 0 is ideal, positive means risks are underestimated.',
+    'transportability': 'Whether a model keeps working when moved to a different time, place, data collection method or patient spectrum.'
+  },
+  explainers: [
+    {
+      id: 'boot',
+      title: 'How the bootstrap measures optimism',
+      scenes: [
+        { svg: EX.svg(EX.text(40, 40, 'The team\'s data: 2,000 women (each dot is 50 women)', { size: 'm', bold: true }) +
+            EX.dots(40, { x: 70, y: 90, cols: 20, gap: 22, r: 7, stagger: 0.02 }) +
+            EX.text(40, 180, 'Model fitted on these women and tested on the same women', { d: 1.0 }) +
+            EX.text(40, 210, 'Apparent c statistic = 0.760', { bold: true, d: 1.6 }) +
+            EX.text(40, 250, 'The model was tuned to these women, so 0.760 is too good.', { size: 's', d: 2.2 })),
+          say: 'The team fits its model on 2,000 women and tests it on the same women. The c statistic is 0.760. But the coefficients were chosen to fit these women, so this apparent value is too good.' },
+        { svg: EX.svg((function () {
+            var cnt = [1, 0, 2, 1, 0, 1, 3, 0, 1, 2, 0, 1, 1, 0, 2, 1, 0, 1, 2, 0, 1, 0, 3, 1, 0, 2, 1, 1, 0, 2, 0, 1, 1, 0, 2, 3, 0, 1, 2, 0];
+            var s = EX.text(40, 40, 'A bootstrap sample: draw 2,000 women with replacement', { size: 'm', bold: true });
+            for (var i = 0; i < 40; i++) { var x = 40 + i * 12.5; s += EX.rect(x, 232, 10, 3, { role: 'muted', d: 0.2 }); for (var k = 0; k < cnt[i]; k++) s += EX.rect(x, 216 - k * 18, 10, 14, { role: 'obs', d: 0.5 + 0.03 * i + 0.2 * k }); }
+            return s + EX.text(40, 262, 'Each column is one woman: some drawn twice or more, 14 of 40 not at all', { size: 's', d: 2.4 }) +
+              EX.text(40, 282, 'On average about 63 in 100 women appear at least once', { size: 's', d: 2.8 });
+          })()),
+          say: 'Now draw a new sample of 2,000 women from the data, with replacement. Some women are drawn twice or three times. Others are not drawn at all. About 63 in every 100 women appear at least once.' },
+        { svg: EX.svg(EX.text(40, 40, 'Repeat every modelling step in the bootstrap sample', { size: 'm', bold: true }) +
+            EX.text(40, 80, 'Axis starts at 0.70', { size: 's' }) +
+            EX.line([[200, 90], [200, 250]], { role: 'muted', draw: false }) + EX.text(200, 270, '0.70', { size: 's', anchor: 'middle' }) + EX.text(500, 270, '0.80', { size: 's', anchor: 'middle' }) +
+            EX.text(40, 125, 'Apparent (original)', {}) + EX.rect(200, 110, 180, 22, { role: 'obs' }) + EX.text(388, 126, '0.760', { size: 's' }) +
+            EX.text(40, 175, 'Bootstrap model on', { d: 0.6 }) + EX.text(40, 192, 'its own sample', { d: 0.6 }) + EX.rect(200, 162, 243, 22, { role: 'pred', grow: true, d: 0.8 }) + EX.text(451, 178, '0.781', { size: 's', d: 1.4 })),
+          say: 'In this bootstrap sample the team repeats the whole strategy: the same coding, the same selection, the same fitting. The new model is tested on its own bootstrap sample and scores 0.781. It flatters itself, just as the original model did.' },
+        { svg: EX.svg(EX.text(40, 40, 'Test the bootstrap model on the original 2,000 women', { size: 'm', bold: true }) +
+            EX.line([[200, 90], [200, 250]], { role: 'muted', draw: false }) + EX.text(200, 270, '0.70', { size: 's', anchor: 'middle' }) + EX.text(500, 270, '0.80', { size: 's', anchor: 'middle' }) +
+            EX.text(40, 125, 'On its own sample', {}) + EX.rect(200, 110, 243, 22, { role: 'pred' }) + EX.text(451, 126, '0.781', { size: 's' }) +
+            EX.text(40, 175, 'On the original', { d: 0.5 }) + EX.rect(200, 162, 123, 22, { role: 'obs', grow: true, d: 0.6 }) + EX.text(220, 205, '0.741', { size: 's', d: 1.2 }) +
+            EX.rect(323, 162, 120, 22, { role: 'err', grow: true, d: 1.6 }) + EX.text(330, 205, 'optimism 0.781 − 0.741 = 0.040', { size: 's', role: 'err', d: 2.0 })),
+          say: 'Then apply that bootstrap model to the original women, who play the part of new women. Its c statistic falls to 0.741. The drop, 0.781 minus 0.741, is 0.040. That is the optimism for this one bootstrap sample.' },
+        { svg: EX.svg((function () {
+            var o = [0.040, 0.026, 0.054, 0.024, 0.046], s = EX.text(40, 40, 'Repeat 100 to 200 times and average the optimism', { size: 'm', bold: true });
+            for (var i = 0; i < 5; i++) s += EX.text(40, 92 + i * 32, 'Sample ' + (i + 1), { d: 0.3 * i }) + EX.rect(160, 78 + i * 32, o[i] * 5000, 20, { role: 'err', grow: true, d: 0.3 * i + 0.1 }) + EX.text(170 + o[i] * 5000, 93 + i * 32, o[i].toFixed(3), { size: 's', d: 0.3 * i + 0.5 });
+            return s + EX.text(40, 270, 'Mean optimism of these five = 0.190 ÷ 5 = 0.038', { bold: true, d: 2.0 });
+          })()),
+          say: 'Do this many times, usually 100 to 200. Each bootstrap sample gives its own optimism. Here five of them give 0.040, 0.026, 0.054, 0.024 and 0.046. Their average is 0.038.' },
+        { svg: EX.svg(EX.text(40, 40, 'Subtract the mean optimism from the apparent value', { size: 'm', bold: true }) +
+            EX.line([[200, 70], [200, 150]], { role: 'muted', draw: false }) + EX.text(200, 168, '0.70', { size: 's', anchor: 'middle' }) + EX.text(500, 168, '0.80', { size: 's', anchor: 'middle' }) +
+            EX.text(40, 105, 'Apparent 0.760', {}) + EX.rect(200, 90, 66, 22, { role: 'obs' }) + EX.rect(266, 90, 114, 22, { role: 'err', d: 0.5 }) +
+            EX.text(40, 140, 'Corrected 0.722', { bold: true, d: 1.0 }) + EX.rect(200, 125, 66, 22, { role: 'obs', grow: true, d: 1.1 }) +
+            EX.text(40, 215, '0.760 − 0.038 = 0.722: the honest estimate for new women', { d: 1.8 }) +
+            EX.text(40, 245, 'Replay every step, including selection, or optimism is understated', { size: 's', d: 2.4 })),
+          say: 'Finally subtract the mean optimism from the apparent value: 0.760 minus 0.038 gives 0.722. That is the honest estimate for new women from this hospital. It only works if every modelling step, including selection, was repeated in each sample.' }
+      ]
+    }
+  ],
+  cases: [
+    {
+      id: 'c1',
+      title: 'How good will the model be for the next women?',
+      aim: 'tell internal from external validity, see why apparent performance is optimistic, and judge a random split of the data.',
+      minutes: 15,
+      need: `
+<p>The data used to build a model are only a means to learn about women who will be seen later. <b>Validation</b> asks how good the predictions are in women who did not contribute to the model.</p>
+<p>Think of all pregnant women booking for antenatal care as a <b>superpopulation</b>. It is made of <b>settings</b>: this district hospital now, a referral hospital later, a clinic network elsewhere. The model is built on a sample from one setting.</p>
+<ul>
+<li><b>Internal validity</b> (reproducibility): does the model work for new women from the same setting? <b>Internal validation</b> estimates this from the development data alone.</li>
+<li><b>External validity</b> (generalisability): does it work in other settings that are <i>plausibly related</i>, where it would be reasonable to use it? <b>External validation</b> needs new data from those settings. Which settings are plausibly related is a matter of clinical judgement, not statistics.</li>
+</ul>
+<p><b>Apparent performance</b> is measured in the same data used to fit the model. The coefficients were chosen to fit those women as well as possible, so it is <b>optimistic</b>. It is stable, because all the data are used. In the development data a model fitted by maximum likelihood always has a <b>calibration slope</b> of exactly 1 and <b>calibration-in-the-large</b> of 0, so these values carry no information.</p>
+<p><b>Split-sample validation</b> divides the data at random, for example two-thirds to fit and one-third to test. <b>Worked example:</b> 2,000 women with 234 preterm births, split 2/3 : 1/3. The test third has about 667 women and 78 preterm births. With 78 events, a c statistic of 0.72 has a standard error of about 0.034, so its 95% interval runs from about 0.65 to 0.79. The model itself is fitted on only about 156 events instead of 234. Even the share of preterm births differs by chance: in a random half of the women (1,000 of the 2,000) it will usually lie anywhere between 10.3% and 13.1%, around the overall 11.7%. The book's verdict: a method "that works when we do not need it".</p>`,
+      scenario: `<p>The team's statistician fitted the booking model on all 2,000 women and reports a c statistic of 0.76 and a calibration slope of 1.00 in the same data. A colleague suggests holding back a random third of the women "to validate it properly".</p>`,
+      widgets: '',
+      tasks: [0, 1],
+      takeaway: 'Apparent performance is optimistic and the apparent calibration slope is always 1; a random split tests internal validity only, and wastes data.'
+    },
+    {
+      id: 'c2',
+      title: 'Resampling: cross-validation and the bootstrap',
+      aim: 'calculate optimism-corrected performance with the bootstrap, and compare it with cross-validation and a single split.',
+      minutes: 20,
+      need: `
+<p><b>Cross-validation.</b> Divide the data at random into k equal parts (folds). Fit the model on k − 1 folds and test it on the fold left out. Repeat k times, so every woman is tested once. <b>Worked example:</b> the 2,000 women are split into 10 folds of 200. Round 1 fits on folds 2 to 10 (1,800 women) and tests on fold 1, and so on. Each fit uses 90% of the data, against 50% to 67% in a split sample. The result still depends on the random folds, so stable results may need the whole procedure repeated, for example 50 times. Leaving out one woman at a time is the <b>jack-knife</b>. Cross-validation can hide the instability of variable selection: each development set overlaps heavily with the full data, so nearly the same predictors are picked every time.</p>
+<p><b>The bootstrap.</b> A <b>bootstrap sample</b> has the same size as the data but is drawn with replacement. Drawing from the data mimics drawing new samples from the population.</p>
+<ol>
+<li>Fit the model on the original data: apparent c (c<sub>app</sub>).</li>
+<li>Draw a bootstrap sample and repeat <b>every</b> modelling step in it (coding, selection, shrinkage). Its c in the bootstrap sample is c<sub>boot</sub>.</li>
+<li>Apply that model to the original data: c<sub>test</sub>. Optimism = c<sub>boot</sub> − c<sub>test</sub>.</li>
+<li>Repeat 100 to 200 times (one study needed 500 to reach a plateau).</li>
+</ol>
+<div class="formula">corrected c = c<sub>app</sub> − mean(c<sub>boot</sub> − c<sub>test</sub>)</div>
+<div data-explainer="boot"></div>
+<p>The same works for R², the Brier score and the calibration slope. The apparent slope is 1, so the corrected slope is the mean slope of the bootstrap models in the original data, an estimate of the shrinkage needed. The bootstrap is stable, uses all the data for the final model, and reflects the extra optimism from selection, but only for steps that are replayed.</p>`,
+      scenario: `<p>The statistician runs a bootstrap validation of the booking model, repeating the whole strategy in each sample. The team also wants to see, by simulation, how the four approaches compare when the true performance is known.</p>`,
+      widgets: `<div data-widget="validationLab" data-try="Leave the development size at 500 and press Run 20 replications, then set the size to 250 and run again, watching the gap between the apparent estimates and the true c line."></div>`,
+      tasks: [2, 3],
+      takeaway: 'Bootstrap optimism correction is the preferred internal validation, provided every modelling step is repeated in every bootstrap sample.'
+    },
+    {
+      id: 'c3',
+      title: 'Testing the model in another hospital',
+      aim: 'classify an external validation, calculate calibration-in-the-large, and diagnose why a model performs poorly elsewhere.',
+      minutes: 20,
+      need: `
+<p>Internal validation always resamples the development data at random. External validation uses women who <b>differ in some respect</b>. Four aspects of <b>transportability</b> can be tested:</p>
+<ul>
+<li><b>Historic (temporal)</b>: a later period.</li>
+<li><b>Geographic</b>: other hospitals or regions.</li>
+<li><b>Methodological</b>: data collected differently, for example gestational age by last menstrual period instead of early ultrasound.</li>
+<li><b>Spectrum</b>: women more or less ill on average, for example a model from a referral centre or a trial used in a general clinic.</li>
+</ul>
+<p>Who validates matters too. Good results from independent investigators in their own setting are more convincing than results from the developers. Fully independent validations often look less favourable. In multi-centre data, <b>leave-one-centre-out</b> validation is a geographic validation. Each centre is small, so look for general consistency, and treat one striking centre as a reason for more validation there, not as proof that the model fails.</p>
+<p><b>Calibration-in-the-large</b> asks whether the average predicted risk matches the observed rate. <b>Worked example:</b> 1,000 new women, 150 preterm births (15%), mean predicted risk 12%. Observed odds = 0.15 ÷ 0.85 = 0.176; predicted odds = 0.12 ÷ 0.88 = 0.136. Ratio 1.29, log ratio 0.26: risks are underestimated. Formally the intercept a is estimated in logit(P(y = 1)) = a + offset(lp), and the slope b in logit(P(y = 1)) = a + b × lp.</p>
+<p><b>Why models fail elsewhere.</b> Weak development (small, single centre, stepwise selection without shrinkage, so predictions are too extreme), different coding of predictors or outcome, different units, mistakes in applying a published formula (check units and the intercept), predictors not available at validation, and true differences in case-mix or predictor effects (Module 14).</p>`,
+      scenario: `<p>Illustrative (synthetic). The booking model is sent to a tertiary referral hospital for use in a later period. Its first report shows many more preterm births than predicted, and a second hospital reports predicted risks close to zero for every woman.</p>`,
+      widgets: '',
+      tasks: [4, 5],
+      takeaway: 'External validation tests transportability over time, place, methods and spectrum; check definitions, units and the intercept before blaming the model.'
+    },
+    {
+      id: 'c4',
+      title: 'What has been validated, and the final model',
+      aim: 'see that validation tests the modelling process, compare internal and external results in the course data, and critique a validation report.',
+      minutes: 20,
+      need: `
+<p>Every internal validation method validates the <b>modelling process</b>, not one fixed set of coefficients. The bootstrap asks: if we applied this whole strategy to a new sample from the same population, how well would the resulting model predict? So:</p>
+<ul>
+<li>After a split-sample validation, the final model is still <b>fitted on all the data</b>. If selection was used in the random part, it is repeated on the full data, even if the chosen predictors change.</li>
+<li>Bootstrapping a stepwise model often shows that the final selected model appears in only a few bootstrap samples. That uncertainty belongs in the optimism.</li>
+<li>Validating only the final selected model, as if it had been planned in advance, understates optimism. In one book study the optimism in c was 0.07 with all steps replayed, but 0.01 when the final model was treated as fixed.</li>
+<li>Informal steps (merging categories after looking at outcome rates, choosing cut-points) cannot be replayed. At least bootstrap the full model with all candidate predictors.</li>
+<li>With very many candidates relative to the sample, as in genetic marker studies, even the bootstrap may underestimate optimism.</li>
+</ul>
+<p>If external validation shows adequate performance, the development and validation data can be combined to fit the final model, with a setting-specific intercept if needed.</p>
+<p><b>In the course data.</b> ptb_dev (n = <span data-live="ptb_dev_n"></span>, <span data-live="ptb_dev_events"></span> preterm births, <span data-live="ptb_dev_incidence"></span>) comes from a district hospital. ptb_val (n = <span data-live="ptb_val_n"></span>, <span data-live="ptb_val_events"></span> preterm births, <span data-live="ptb_val_incidence"></span>) comes from a referral hospital in a later period: a temporal and geographic validation with a different spectrum. The full model on <span data-live="ptb_cc_n"></span> complete cases has apparent c <span data-live="ptb_full_apparent_c"></span>, bootstrap optimism <span data-live="ptb_full_optimism_c"></span>, corrected c <span data-live="ptb_full_corrected_c"></span> and shrinkage factor <span data-live="ptb_full_shrinkage"></span>. On ptb_val: c <span data-live="ptb_val_c"></span>, slope <span data-live="ptb_val_slope"></span>, calibration-in-the-large <span data-live="ptb_val_citl"></span>.</p>`,
+      scenario: `<p>The team runs its own internal and external validation in the Analysis Lab. Then the research committee forwards a report from a tertiary centre that claims its preterm birth model is "externally validated".</p>`,
+      widgets: `<div data-widget="datasetCard" data-set="ptb_val"></div>
+<div data-widget="analysisLab" data-try="Keep dataset ptb_dev, complete case, no selection and no shrinkage, press Run analysis, then compare the bootstrap-corrected c and slope with the external results on ptb_val."></div>`,
+      tasks: [6, 7],
+      takeaway: 'Validation tests the whole modelling process; internal validation cannot detect differences between settings, and the final model is fitted on all available data.'
+    }
   ],
   sections: [
     {
-      id: 's1',
-      title: 'What validation is for',
+      id: 'n1',
+      title: 'Internal and external validity',
       html: `
-<p>A prediction model is built to give valid predictions for <i>future</i> patients. The data set used to develop it has no interest in itself; it is only a means of learning about patients who will be seen later. Validation is therefore an essential part of the modelling process. The question it answers is simple: how good are the predictions when the model is used on patients who did not contribute to its estimation?</p>
-
-<h3>Two kinds of validity</h3>
-<p>Think of a <b>superpopulation</b>, for example all pregnant women booking for antenatal care. It consists of several <b>settings</b>: a district hospital in one period, a referral hospital in another, a primary care network elsewhere. We develop the model on a sample from one setting (setting 1).</p>
-<ul>
-<li><b>Internal validity</b> (reproducibility): does the model perform as claimed for patients from the same setting as the development sample? <b>Internal validation</b> is the process of estimating this, using only the development data.</li>
-<li><b>External validity</b> (generalisability, transportability): does the model perform adequately in other settings that are <i>plausibly related</i>, that is, parts of the same superpopulation to which it would be reasonable to apply the model? <b>External validation</b> estimates this using fully independent samples from settings 2, 3 and onwards.</li>
-</ul>
-<p>Which populations are "plausibly related" is a matter of subject knowledge and study design judgement, not statistics. Settings may differ in how patients are selected (referral centre versus a general setting), in time, and in how predictors and outcome are defined. The more often, and the more diverse the settings in which a model has been validated, the more confidence we have in its generalisability, as with any scientific hypothesis.</p>
-
-<figure>
-<svg viewBox="0 0 520 170" width="100%" role="img" aria-label="Superpopulation with settings and samples">
-<rect x="10" y="8" width="500" height="34" rx="6" fill="none" stroke="currentColor"/>
-<text x="260" y="30" text-anchor="middle" font-size="13" fill="currentColor">Superpopulation: women booking for antenatal care</text>
-<g font-size="12" fill="currentColor" text-anchor="middle">
-<rect x="20" y="62" width="140" height="28" rx="5" fill="none" stroke="var(--accent)"/><text x="90" y="81">Setting 1 (development)</text>
-<rect x="190" y="62" width="140" height="28" rx="5" fill="none" stroke="currentColor"/><text x="260" y="81">Setting 2</text>
-<rect x="360" y="62" width="140" height="28" rx="5" fill="none" stroke="currentColor"/><text x="430" y="81">Setting i</text>
-<rect x="20" y="110" width="140" height="28" rx="5" fill="none" stroke="var(--accent)"/><text x="90" y="129">Sample 1, model built</text>
-<rect x="190" y="110" width="140" height="28" rx="5" fill="none" stroke="currentColor"/><text x="260" y="129">Sample 2</text>
-<rect x="360" y="110" width="140" height="28" rx="5" fill="none" stroke="currentColor"/><text x="430" y="129">Sample i</text>
-<text x="90" y="160" fill="var(--accent)">internal validation</text>
-<text x="345" y="160" fill="var(--muted)">external validation</text>
-</g>
-</svg>
-</figure>
-
-<h3>What is measured</h3>
-<p>Validation re-estimates the performance measures introduced earlier, now in data the model has not been fitted to:</p>
-<ul>
-<li><b>c statistic</b>: the probability that a randomly chosen patient with the outcome has a higher predicted risk than a randomly chosen patient without it (0.5 = no discrimination, 1 = perfect).</li>
-<li><b>Calibration-in-the-large</b>: does the average predicted risk equal the observed outcome frequency? Estimated as the intercept <span class="m">a</span> in logit(P(y=1)) = a + offset(lp), where lp is the model's linear predictor; ideal value 0.</li>
-<li><b>Calibration slope</b>: the coefficient <span class="m">b</span> in logit(P(y=1)) = a + b × lp; ideal value 1. A slope below 1 means predictions are too extreme (low risks too low, high risks too high), the signature of overfitting.</li>
-<li>Overall measures (Nagelkerke R², Brier score) and clinical usefulness (net benefit) can be validated in the same way.</li>
-</ul>
-<div class="callout key"><b>Key idea</b><p>In the development sample, a model fitted by maximum likelihood always has a calibration slope of exactly 1 and calibration-in-the-large of 0. These values carry no information. Only validation tells us how far predictions will drift in new patients.</p></div>
-<p class="src">Source: Ch. 17, §17.1 (Fig. 17.1)</p>
-`
+<p>Models are built for future patients; validation is an essential part of modelling. Internal validity (reproducibility) concerns patients from the same setting as the development sample; external validity (generalisability, transportability) concerns plausibly related settings within a superpopulation (Fig. 17.1). Settings differ in patient selection, time, and predictor and outcome definitions. The more often and the more diverse the settings in which a model is validated, the more confidence in its generalisability.</p>
+<p>Measures validated: the c statistic; calibration-in-the-large (a in logit(P(y = 1)) = a + offset(lp), ideal 0); the calibration slope (b in logit(P(y = 1)) = a + b × lp, ideal 1; below 1 signals overfitting); Nagelkerke R², Brier score and net benefit. In the development data the maximum likelihood fit gives slope 1 and intercept 0 by construction.</p>
+<p class="src">Source: Ch. 17, §17.1 (Fig. 17.1)</p>`
     },
     {
-      id: 's2',
-      title: 'Apparent and split-sample validation',
+      id: 'n2',
+      title: 'Apparent, split-sample and cross-validation',
       html: `
-<p>Internal validation methods differ in which part of the data is used to fit the model and which part to test it. The table summarises the four common approaches.</p>
 <table class="data">
-<thead><tr><th>Method</th><th>Model developed on</th><th>Performance tested on</th></tr></thead>
+<thead><tr><th>Method</th><th>Developed on</th><th>Tested on</th></tr></thead>
 <tbody>
-<tr><td>Apparent</td><td>Original sample, 100%</td><td>Same original sample, 100%</td></tr>
-<tr><td>Split-sample</td><td>Random 50–67% of the sample</td><td>The remaining 50–33%</td></tr>
-<tr><td>Cross-validation</td><td>From 2 × 50% up to 10 × 90% of the sample</td><td>The left-out parts (2 × 50% to 10 × 10%)</td></tr>
-<tr><td>Jack-knife (leave-one-out)</td><td>N × (N − 1 patients)</td><td>Each patient once</td></tr>
+<tr><td>Apparent</td><td>Original sample, 100%</td><td>Same sample, 100%</td></tr>
+<tr><td>Split-sample</td><td>Random 50-67%</td><td>Remaining 50-33%</td></tr>
+<tr><td>Cross-validation</td><td>2 × 50% to 10 × 90%</td><td>Left-out parts (2 × 50% to 10 × 10%)</td></tr>
+<tr><td>Jack-knife</td><td>N × (N − 1)</td><td>Each patient once</td></tr>
 <tr><td>Bootstrap</td><td>Bootstrap samples of size N</td><td>Original sample, 100%</td></tr>
-</tbody>
-</table>
-
-<h3>Apparent validation</h3>
-<p>Performance is calculated in the same data used to estimate the coefficients. Because the coefficients were chosen to fit these data as well as possible, the estimate is <b>optimistic</b> (biased upwards). It is, however, <b>stable</b>: 100% of the data is used both for fitting and for testing. With very large samples and few predictors, the optimism is small and apparent performance is close to the truth.</p>
-
-<h3>Split-sample validation</h3>
-<p>The sample is randomly divided into a development part and a test part, typically 50:50 or 2/3:1/3. It imitates an external validation study, but the split is at random, so both parts come from the same setting. It tests internal validity only.</p>
-<p>Its problems are several:</p>
-<ul>
-<li><b>Imbalance by chance.</b> Random halves can differ noticeably in outcome frequency and predictor distributions, more so for rare or skewed predictors. A practical partial remedy is to stratify the split by outcome and key predictors.</li>
-<li><b>Variance.</b> The model is fitted on part of the data, so its coefficients are less stable; and the test part is small, so its performance estimate is imprecise.</li>
-<li><b>Temptation.</b> An unlucky split may show poor performance, and an investigator may be tempted to repeat the split until the results look better.</li>
-<li><b>Bias.</b> It measures the performance of a model built on part of the data, whereas we want to know the performance of the model built on all of it.</li>
-</ul>
-<div class="callout book"><b>Book example</b><p>In a GUSTO-I subsample of 429 patients with acute myocardial infarction, 30-day mortality was 5.6% (24/429), but a random 50% part could easily show 4% and the other half 7%. Shock occurred in only 1.6% (7/429), so a random development half might contain no patient with shock at all.</p></div>
-<p>Simulation studies show that split-sample validation becomes reasonable only with rather large samples, but with large samples the apparent performance is already a good guide. The book summarises this as a method "that works when we do not need it". It should be replaced by more efficient internal validation (bootstrapping) and by genuine external validation.</p>
-<div class="callout mch"><b>Illustrative (synthetic)</b><p>A district hospital cohort has 2000 women and 234 preterm births. A 2/3:1/3 random split leaves about 78 preterm births in the test third, so the c statistic and calibration slope in that third are estimated with wide uncertainty, while the model itself is fitted on only about 156 events.</p></div>
-<p class="src">Source: Ch. 17, §17.2.1–17.2.2 (Table 17.1)</p>
-`
+</tbody></table>
+<p>Apparent validation is optimistic but stable; with large samples and few predictors the optimism is small. Split-sample validation suffers from chance imbalance (partly remedied by stratifying the split), variance in both fitting and testing, the temptation to re-split, and bias (it assesses a model built on part of the data). Simulations show it is reasonable only for large samples, where apparent performance is already a good guide.</p>
+<div class="callout book"><b>Book example</b><p>GUSTO-I subsample of 429 patients: 30-day mortality 5.6% (24/429), but a random half could show 4% and the other 7%. Shock occurred in 1.6% (7/429), so a development half might contain no patient with shock.</p></div>
+<p>k-fold cross-validation uses more data per fit but depends on the random folds; repeat it (for example 50 × 10-fold). It may not reflect uncertainty from automated selection.</p>
+<div class="callout book"><b>Book example</b><p>GUSTO-I subsample of 785 patients (52 deaths): 10-fold cross-validation of backward stepwise selection suggested a stable choice of four predictors (shock, age over 65, high-risk infarction, tachycardia); bootstrapping showed much wider variability in the selected predictors.</p></div>
+<p class="src">Source: Ch. 17, §17.2.1-17.2.3 (Table 17.1)</p>`
     },
     {
-      id: 's3',
-      title: 'Cross-validation',
-      html: `
-<p>Cross-validation extends the split-sample idea to gain stability. In <b>k-fold cross-validation</b> the data are divided at random into k parts of equal size. The model is developed on k − 1 parts and tested on the part left out; this is repeated k times so that every patient is used once for testing. The performance estimate is the average over the k test parts.</p>
-<div class="callout eg"><b>Worked example: 10-fold cross-validation</b><p>A cohort of 1500 women is divided at random into 10 folds of 150. Round 1: fit the model on folds 2–10 (1350 women), calculate the c statistic in fold 1. Round 2: fit on folds 1 and 3–10, test on fold 2. After 10 rounds every woman has received exactly one "out-of-sample" prediction. The cross-validated c is the mean of the 10 fold-specific values (or the c calculated on all 1500 out-of-sample predictions). Each fit uses 90% of the data, compared with 50–67% in a split-sample design.</p></div>
-<h3>Strengths and limitations</h3>
-<ul>
-<li>A larger share of the data (for example 90%) is used to fit each model, which is an advantage over split-sample validation.</li>
-<li>The result still depends on the random division into folds. Truly stable results may require repeating the whole procedure many times, for example 50 repetitions of 10-fold cross-validation ("multi-fold cross-validation").</li>
-<li>The extreme form leaves out one patient at a time (the <b>jack-knife</b>). With large numbers of patients this is not efficient.</li>
-<li>Cross-validation may <b>not reflect all sources of model uncertainty</b>, in particular uncertainty created by automated variable selection. Each development set overlaps heavily with the full sample (with the jack-knife it differs by one patient), so largely the same predictors are selected each time and the instability of selection is hidden.</li>
-</ul>
-<div class="callout book"><b>Book example</b><p>In a GUSTO-I subsample of 785 patients (52 deaths), 10-fold cross-validation of a backward stepwise procedure suggested a stable selection of four "important" predictors (shock, age over 65, high-risk infarction, tachycardia). Bootstrapping the same procedure showed much wider variability in which predictors were selected.</p></div>
-<div class="callout warn"><b>Pitfall</b><p>A stable cross-validation result does not prove that a stepwise-selected model is stable. Cross-validation tends to understate how much the selected set of predictors would change in another sample from the same population.</p></div>
-<p class="src">Source: Ch. 17, §17.2.3</p>
-`
-    },
-    {
-      id: 's4',
+      id: 'n3',
       title: 'Bootstrap validation',
       html: `
-<p>A <b>bootstrap sample</b> is drawn with replacement from the original sample and has the same size N. Some patients appear more than once and others not at all (on average about 63.2% of the original patients appear at least once). Drawing bootstrap samples from the original sample mimics drawing new samples from the underlying population.</p>
-<h3>The optimism-correction procedure</h3>
-<ol>
-<li>Fit the model on the original sample and calculate its <b>apparent</b> performance (for example c<sub>app</sub>).</li>
-<li>Draw a bootstrap sample of size N.</li>
-<li>Develop a model in the bootstrap sample, <b>repeating every modelling step</b> (coding decisions, selection, shrinkage). Calculate its performance in the bootstrap sample (c<sub>boot</sub>).</li>
-<li>Apply this bootstrap model to the original sample and calculate its performance there (c<sub>test</sub>).</li>
-<li>Optimism for this replicate = c<sub>boot</sub> − c<sub>test</sub>.</li>
-<li>Repeat steps 2–5 many times; 100–200 replicates are often sufficient, although one simulation study reached a plateau only after 500.</li>
-<li>Optimism-corrected performance = c<sub>app</sub> − mean optimism.</li>
-</ol>
-<div class="formula">c<sub>corrected</sub> = c<sub>app</sub> − mean(c<sub>boot</sub> − c<sub>test</sub>)</div>
-<p>The same procedure applies to R², the Brier score and the calibration slope. For the slope, the apparent value is 1 by construction, so the corrected slope equals the mean slope of the bootstrap models when applied to the original sample. This value estimates the shrinkage factor needed.</p>
-<h3>Why the bootstrap is preferred</h3>
-<ul>
-<li><b>Stable</b>: models are developed and tested on samples of size N, as in apparent validation. Estimating the optimism adds a little uncertainty, which is negligible with enough replicates.</li>
-<li><b>Honest about model uncertainty</b>: because selection is replayed in each bootstrap sample, simulations show the bootstrap can reflect the extra optimism created by variable selection.</li>
-<li><b>Efficient</b>: all data are used to develop the final model.</li>
-</ul>
-<h3>The limitation: steps that cannot be replayed</h3>
-<p>Only automated strategies can be replayed: fitting a prespecified full model, or an automated stepwise rule. Many analyses include informal steps such as collapsing categories, truncating outliers after inspection, judging linearity from a plot, or trying some interactions. When these cannot be repeated, a reasonable approximation is to bootstrap at least the full model with all candidate predictors. For example, if 30 candidates were screened univariately at p &lt; 0.50 and then reduced by backward selection at p &lt; 0.20, one can validate the full 30-predictor model, or replay the backward selection at p &lt; 0.20 while ignoring the univariate screen.</p>
-<div class="callout warn"><b>Critical:</b><p>Validating only the finally selected model, as if it had been specified in advance, ignores all selection steps and understates optimism. In one study the bootstrap optimism in the c statistic was 0.07 when all modelling steps were replayed, against 0.01 when the final model was treated as predefined. A reported "internally validated" c that skipped the selection steps cannot be trusted.</p></div>
-<div data-widget="validationLab"></div>
-<ul class="try">
-<li>Set the development sample size to 250 and run 20 replications. Compare where the apparent c sits relative to the true c, and how widely the split-sample estimates scatter compared with the bootstrap estimates.</li>
-<li>Increase the development sample size to 1200 and run again. Observe how the gap between apparent and true c narrows and how the spread of every method shrinks.</li>
-<li>At n = 250, compare 10-fold cross-validation with bootstrap correction: which has the smaller spread around the true value?</li>
-</ul>
-<p class="src">Source: Ch. 17, §17.2.4; Ch. 5, §5.3</p>
-`
+<p>A bootstrap sample of size N is drawn with replacement; on average 63.2% of patients appear at least once. Procedure: apparent performance; develop the model in a bootstrap sample, repeating every modelling step; performance there and in the original sample; optimism = difference; repeat 100-200 times (one simulation plateaued at 500); corrected = apparent − mean optimism. The same applies to R², Brier score and the calibration slope, whose corrected value estimates the shrinkage factor.</p>
+<p>Strengths: stable (fits and tests on size N), reflects selection when it is replayed, all data used for the final model. Limitation: only automated steps can be replayed. Approximation: bootstrap the full model with all candidates. For example, if 30 candidates were screened univariately at p &lt; 0.50 and reduced by backward selection at p &lt; 0.20, validate the full 30-predictor model, or replay the backward step while ignoring the screen.</p>
+<div class="callout warn"><b>Critical</b><p>Treating the selected model as prespecified understates optimism: 0.07 with all steps replayed against 0.01 in one study.</p></div>
+<p class="src">Source: Ch. 17, §17.2.4; Ch. 5, §5.3</p>`
     },
     {
-      id: 's5',
+      id: 'n4',
       title: 'Types of external validation',
       html: `
-<p>Internal validation always splits or resamples the development data at random. External validation, by contrast, uses patients who <b>differ in some respect</b> from the development patients. Four aspects of transportability can be tested:</p>
-<ul>
-<li><b>Historic (temporal)</b>: performance in a different, usually more recent, period.</li>
-<li><b>Geographic (spatial)</b>: performance in other hospitals or regions.</li>
-<li><b>Methodological</b>: performance when data are collected differently, for example comorbidity taken from claims data instead of patient charts.</li>
-<li><b>Spectrum</b>: performance in patients who are on average more (or less) advanced in their disease, or have a somewhat different disease; for example a model developed in secondary care applied in primary care, or a model from a randomised trial applied to a broader, less selected population.</li>
-</ul>
-<p>A second dimension is <b>who</b> does the validation. Adequate performance found by independent investigators in their own setting is more convincing than the same result from the developers.</p>
-<table class="data">
-<thead><tr><th>Type</th><th>Characteristics</th></tr></thead>
-<tbody>
-<tr><td>Temporal validation</td><td>More recent patients, often prospectively collected; may be the most recent part of the development data set aside</td></tr>
-<tr><td>Geographic validation</td><td>Multi-site testing; "leave-one-centre-out" cross-validation in collaborative data</td></tr>
-<tr><td>Fully independent validation</td><td>Other investigators at another site</td></tr>
-</tbody>
-</table>
-<p>Mixed forms occur. A testicular cancer model was validated in 172 patients: 100 more recently treated patients from the development hospitals (temporal) and 72 from a hospital not involved in development (geographic).</p>
-<div class="callout book"><b>Book example: temporal validation</b><p>A model for Lynch syndrome mutations was developed in 898 patients tested in 2000–2003 and validated in 1016 tested in 2003–2004. Mutation prevalence was 15% at validation against 14% at development, with a mean predicted probability of 13%. A slightly higher intercept (+0.25, about 25% higher odds) corrected this. The c statistic stayed about 0.80. The final model was estimated on the combined 1914 patients.</p></div>
-<h3>Geographic validation</h3>
-<p>Geographic validation can be seen as cross-validation in which the splits are made by centre instead of at random. It is often possible in collaborative studies and is more meaningful than random cross-validation. Its weakness is that each centre's validation sample may be small, so results are easily over-interpreted ("the model is not valid in hospital X"). Emphasis should be on <b>general consistency</b> across centres; a striking finding in one centre suggests the need for further validation there before use.</p>
-<div class="callout book"><b>Book example: geographic validation</b><p>A testicular cancer model validated centre by centre in six groups showed c statistics around 0.8 in all, with no significant miscalibration by the Hosmer-Lemeshow test except in one centre.</p></div>
-<h3>Fully independent validation</h3>
-<p>Other investigators may use slightly different predictor and outcome definitions and select patients differently. Such validations often give less favourable results than temporal or geographic ones.</p>
-<div class="callout book"><b>Book example: fully independent validation</b><p>Three nomograms for indolent prostate cancer, developed in clinical patients, were validated in 247 men from a screening programme. Mean predicted probabilities were 24%, 22% and 15%, while 49% actually had indolent cancer: a large calibration-in-the-large problem. Discrimination was a little lower than at development (areas under the ROC curve 0.61, 0.72, 0.76 against 0.64, 0.74, 0.79). A new intercept, with coefficients kept close to their original values, addressed the problem.</p></div>
-<p class="src">Source: Ch. 17, §17.3 (Tables 17.2–17.6, Fig. 17.6)</p>
-`
+<p>Aspects of transportability: historic, geographic, methodological (for example comorbidity from claims data instead of charts) and spectrum (secondary to primary care; trial to unselected population). Temporal validation uses more recent patients, possibly the latest part of the data set aside; geographic validation uses other sites, for example leave-one-centre-out; fully independent validation is by other investigators at another site.</p>
+<div class="callout book"><b>Book examples</b><p>Testicular cancer: 172 validation patients, 100 more recent from the development hospitals (temporal) and 72 from another hospital (geographic). Lynch syndrome: developed in 898 patients tested 2000-2003, validated in 1,016 tested 2003-2004; prevalence 15% against 14%, mean predicted 13%; an intercept increase of +0.25 (odds about 28% higher) corrected this; c stayed about 0.80; final model on all 1,914. Testicular cancer in six groups: c about 0.8 in all, significant miscalibration (Hosmer-Lemeshow) in one centre only. Three nomograms for indolent prostate cancer in 247 screened men: mean predicted 24%, 22% and 15% against 49% observed; areas under the ROC curve 0.61, 0.72, 0.76 against 0.64, 0.74, 0.79 at development; a new intercept, with coefficients kept close to the originals, solved the problem.</p></div>
+<p>Geographic validation is more meaningful than random cross-validation, but centre samples are small: emphasise general consistency.</p>
+<p class="src">Source: Ch. 17, §17.3 (Tables 17.2-17.6, Fig. 17.6)</p>`
     },
     {
-      id: 's6',
-      title: 'Why models fail at external validation',
+      id: 'n5',
+      title: 'Reasons for poor external performance',
       html: `
-<p>Poor external performance has two families of explanation: weaknesses in how the model was developed, and genuine differences between the development and validation settings.</p>
-<h3>Inadequate development</h3>
-<ul>
-<li>A small development sample, or patients from a single centre. A review of more than 25 models in traumatic brain injury noted this pattern.</li>
-<li>Suboptimal analysis: stepwise selection in a small sample with many candidate predictors, and no shrinkage to compensate for overfitting. Such models have coefficients that are too large on average, so predictions are too extreme in new patients (calibration slope below 1).</li>
-</ul>
-<h3>Differences between settings</h3>
-<ul>
-<li><b>Coding of predictors and outcome.</b> Definitions that differ slightly between centres change the meaning of a coefficient.</li>
-<li><b>Units of measurement.</b> Laboratory values in mg/dL in one setting and mmol/L in another were already recognised as a transport problem for a jaundice rule in the 1980s.</li>
-<li><b>Errors in applying a published model.</b> If a model is published as a nomogram with non-linear terms, deriving the formula is difficult and mistakes are likely. The units and the intercept require special attention; contacting the developers can prevent errors.</li>
-<li><b>Predictors unavailable at validation.</b> A constant (mean or median) can be substituted, but this limits performance. A Dutch aneurysm surgery model performed poorly in a UK trial where two of its seven predictors were missing, and better in a Rotterdam series where all but one were available.</li>
-<li><b>True differences</b> in case-mix and in predictor effects. Module 14 analyses these patterns systematically.</li>
-</ul>
-<div class="callout mch"><b>Illustrative (synthetic)</b><p>A preeclampsia model developed in a tertiary hospital uses "urine protein ≥ 2+ on dipstick" and mean arterial pressure from an automated device. A district hospital validates it using a laboratory protein/creatinine ratio and manual sphygmomanometry, and enters the haemoglobin coefficient (developed in g/dL) with values in g/L. The first two are methodological transportability issues that can weaken coefficients; the third is a unit error that produces nonsense predictions for every woman. Before blaming the model, check definitions, units and the intercept used.</p></div>
-<div class="callout warn"><b>Critical:</b><p>A unit or coding mismatch between development and validation (g/L entered into a coefficient estimated per g/dL, or a 0/1 predictor coded 1/2) invalidates every prediction. Always reconstruct the linear predictor for a few typical patients and check that the predicted risks are plausible before computing any validation statistic.</p></div>
-<p class="src">Source: Ch. 17, §17.3.5</p>
-`
+<p><b>Inadequate development:</b> small samples or a single centre (noted in a review of more than 25 models in traumatic brain injury); stepwise selection with many candidates and no shrinkage, giving coefficients that are too large and a calibration slope below 1.</p>
+<p><b>Differences between settings:</b> coding of predictors and outcome; units (mg/dL against mmol/L, a transport problem for a jaundice rule in the 1980s); errors in applying a published model, especially from a nomogram with non-linear terms (check units and the intercept, contact the developers); predictors unavailable (a constant can be substituted, but performance suffers: a Dutch aneurysm surgery model did poorly in a UK trial missing two of its seven predictors, and better in a Rotterdam series missing one); true differences in case-mix and predictor effects (Module 14).</p>
+<div class="callout warn"><b>Critical</b><p>A unit or coding mismatch (g/L entered for a coefficient per g/dL, a 0/1 predictor coded 1/2) invalidates every prediction. Reconstruct the linear predictor for a few typical women and check that risks are plausible before computing any validation statistic.</p></div>
+<p class="src">Source: Ch. 17, §17.3.5</p>`
     },
     {
-      id: 's7',
-      title: 'Validating the process, and the final model',
+      id: 'n6',
+      title: 'Validating the process; the final model',
       html: `
-<h3>What is being validated</h3>
-<p>Any internal validation technique validates the <b>modelling process</b>, not one specific set of coefficients. The bootstrap asks: if we applied this whole strategy (coding, selection, estimation) to a new sample from the same population, how well would the resulting model predict? It follows that:</p>
-<ul>
-<li>After a split-sample validation (sometimes done to reassure readers sceptical of resampling), the final model should still be <b>estimated on the full sample</b>. Using only a random part wastes information; coefficients from the full sample are more stable.</li>
-<li>If stepwise selection was used in the random part, it should be repeated on the full sample, even if this changes the selected predictors.</li>
-<li>Bootstrap validation of stepwise models often shows that the final selected model appears in only a few bootstrap samples. This model uncertainty belongs in the optimism estimate.</li>
-<li>When the number of candidate predictors is very large relative to the sample size (as in genetic marker studies), even bootstrapping may underestimate optimism.</li>
-</ul>
-<h3>After external validation</h3>
-<p>If external validation has been performed and performance is adequate, the development and validation data may be combined to estimate the final model, as in the Lynch syndrome example. This assumes both samples come from the same population. If relevant differences are found, a setting-specific intercept or setting-specific interaction terms can be included.</p>
-<div class="callout mch"><b>Illustrative (synthetic): the course validation exercise</b><p>The course has two synthetic preterm-birth cohorts. <b>ptb_dev</b> (n = <span data-live="ptb_dev_n"></span>, <span data-live="ptb_dev_events"></span> preterm births, <span data-live="ptb_dev_incidence"></span>) comes from a district hospital antenatal clinic. <b>ptb_val</b> (n = <span data-live="ptb_val_n"></span>, <span data-live="ptb_val_events"></span> preterm births, <span data-live="ptb_val_incidence"></span>) comes from a tertiary referral hospital in a later period: a temporal and geographic validation with a different referral spectrum.</p>
-<p>The full 14-term model fitted on <span data-live="ptb_cc_n"></span> complete cases (<span data-live="ptb_cc_events"></span> events) has apparent c = <span data-live="ptb_full_apparent_c"></span>. Bootstrap validation gives optimism <span data-live="ptb_full_optimism_c"></span> and corrected c = <span data-live="ptb_full_corrected_c"></span>, with an estimated shrinkage factor of <span data-live="ptb_full_shrinkage"></span>. Applied to ptb_val, the model gives c = <span data-live="ptb_val_c"></span>, calibration slope <span data-live="ptb_val_slope"></span> and calibration-in-the-large <span data-live="ptb_val_citl"></span>.</p></div>
-<div data-widget="datasetCard" data-set="ptb_val"></div>
-<p>Read the three external numbers against the internal ones. A positive calibration-in-the-large means more preterm births occurred than predicted. A slope further below 1 than the bootstrap shrinkage factor suggests that more than overfitting is at work: predictor effects may be truly weaker in the referral setting. Module 14 explains how to separate case-mix effects from coefficient differences.</p>
-<div data-widget="analysisLab"></div>
-<ul class="try">
-<li>Open the Analysis Lab with dataset ptb_dev, select the 14 candidate terms with complete-case analysis, no selection and no shrinkage. Record the apparent and bootstrap-corrected c and slope, then run the external validation on ptb_val.</li>
-<li>Repeat with backward selection at p &lt; 0.05. Compare the bootstrap optimism (selection replayed) with the optimism of the full model, and compare both with the external results.</li>
-<li>Add uniform bootstrap shrinkage. Observe which external measure changes (slope) and which hardly changes (c).</li>
-</ul>
-<p class="src">Source: Ch. 17, §17.4</p>
-`
+<p>Internal validation assesses the modelling process. After a split-sample validation the final model is estimated on the full sample, repeating any selection. Bootstrap validation of stepwise models often shows the selected model in only a few bootstrap samples. With very many candidates relative to the sample size, even the bootstrap may underestimate optimism. After adequate external validation, development and validation data may be combined (as for Lynch syndrome), assuming one population; otherwise include a setting-specific intercept or interaction terms.</p>
+<p><b>In the course story:</b> in the synthetic data-generating process, the referral hospital has a higher baseline risk than the predictors explain, predictor effects about 20% weaker, and an older, higher-risk case-mix. None of these can be detected from ptb_dev alone.</p>
+<p class="src">Source: Ch. 17, §17.4</p>`
     }
   ],
   keyPoints: [
@@ -234,129 +249,210 @@ registerModule({
     'Cross-validation is more efficient than a single split but can understate the instability of variable selection.',
     'Bootstrap optimism correction is preferred, provided every modelling step, including selection, is replayed in each bootstrap sample.',
     'External validation can be temporal, geographic or fully independent; fully independent validations tend to be the least favourable.',
-    'Common causes of poor external performance: small single-centre development, stepwise selection without shrinkage, coding and unit differences, wrong intercept, missing predictors.',
+    'Poor external performance comes from small single-centre development, selection without shrinkage, coding and unit differences, a wrong intercept, missing predictors, or true differences.',
     'Validation assesses the modelling process; the final model is estimated on all available data.'
   ],
   quiz: [
     {
-      q: 'A team fits a logistic model for neonatal sepsis and reports, in the same data, a calibration slope of 1.00 and calibration-in-the-large of 0.00. What do these values tell you about calibration in new newborns?',
+      q: 'The team fits its preterm birth model and reports, in the same 2,000 women, a calibration slope of 1.00 and calibration-in-the-large of 0.00. What do these values say about calibration in the next women?',
       options: [
         'Calibration is excellent and no shrinkage is needed',
-        'Nothing; maximum likelihood fitting forces these values in the development data',
+        'Nothing: maximum likelihood fitting forces these values in the development data',
         'The model is overfitted, because a slope of exactly 1 is suspicious',
         'Calibration is good, provided the c statistic exceeds 0.7'
       ],
       answer: 1,
-      why: 'With maximum likelihood estimation the apparent calibration slope is 1 and the intercept 0 by construction, so they cannot reveal overfitting. The commonest error (option A) treats apparent calibration as evidence; only internal or external validation can estimate the slope in new patients. A slope of 1 is not itself a sign of overfitting, and the c statistic says nothing about calibration.'
+      why: 'With maximum likelihood the apparent slope is 1 and the intercept 0 by construction, so they cannot reveal overfitting. Treating them as evidence is the commonest error; only internal or external validation estimates the slope in new women. A slope of 1 is not a sign of overfitting either, and the c statistic says nothing about calibration.'
     },
     {
-      q: 'Bootstrap validation of a gestational diabetes model gives: apparent c 0.80; mean c of bootstrap models in their own bootstrap samples 0.82; mean c of the same bootstrap models in the original sample 0.77. What is the optimism-corrected c?',
+      q: 'Bootstrap validation of the booking model gives: apparent c 0.80; mean c of bootstrap models in their own samples 0.82; mean c of the same models in the original data 0.77. What is the optimism-corrected c?',
       options: ['0.75', '0.77', '0.78', '0.82'],
       answer: 0,
-      why: 'Optimism = 0.82 − 0.77 = 0.05; corrected c = apparent 0.80 − 0.05 = 0.75. Reporting 0.77 confuses the mean test performance with the corrected estimate: the test value comes from models built on bootstrap samples, while the correction is applied to the apparent performance of the original model.'
+      why: 'Optimism = 0.82 − 0.77 = 0.05; corrected c = 0.80 − 0.05 = 0.75. Reporting 0.77 confuses the mean test performance of the bootstrap models with the corrected estimate; the correction is applied to the apparent performance of the original model. 0.82 is the most optimistic number of all.'
     },
     {
       q: 'Which statement about split-sample validation is correct?',
       options: [
         'It tests external validity because the test part was not used for fitting',
         'It is the preferred method when the sample is small',
-        'It estimates the performance of a model built on only part of the data, with an imprecise estimate from the small test part',
+        'It assesses a model built on only part of the data, with an imprecise estimate from the small test part',
         'It reflects the instability of variable selection better than the bootstrap'
       ],
       answer: 2,
-      why: 'A random split tests internal validity only, uses part of the data for fitting (so it is biased for the full-sample model), and the small test part gives imprecise estimates. The misconception in option A is that "unseen data" equals external validation; a random split keeps both parts in the same setting. It is least suitable for small samples, and the bootstrap, not split-sample, best reflects selection instability.'
+      why: 'A random split keeps both parts in the same setting, so it tests internal validity only; "unseen data" is not the same as external validation. It is least suitable for small samples, and the bootstrap, not a single split, best reflects selection instability.'
     },
     {
-      q: 'An investigator screened 25 candidate predictors of postpartum haemorrhage univariately (p &lt; 0.20), then used backward selection, and finally bootstrapped the selected 5-predictor model as if it were prespecified. What is the main consequence?',
+      q: 'An investigator screened 25 candidate predictors of preterm birth univariately (p < 0.20), used backward selection, and then bootstrapped the selected 5-predictor model as if it had been planned in advance. What is the main consequence?',
       options: [
-        'The bootstrap optimism is overestimated because too few predictors are included',
-        'No consequence, provided at least 200 bootstrap replicates were used',
-        'The result is valid because bootstrapping always reflects model uncertainty',
+        'The optimism is overestimated because too few predictors are included',
+        'No consequence, provided at least 200 bootstrap samples were used',
+        'The result is valid because the bootstrap always reflects model uncertainty',
         'The optimism is underestimated because the selection steps were not replayed'
       ],
       answer: 3,
-      why: 'Optimism from selection is captured only when selection is repeated in every bootstrap sample. In one book example the optimism in c was 0.07 when all steps were replayed against 0.01 when the final model was treated as predefined. The misconception in option C is that the bootstrap is automatically honest; it reflects only the steps that are replayed. More replicates reduce Monte Carlo noise, not this bias.'
+      why: 'Optimism from selection is captured only when selection is repeated in every bootstrap sample. In one book study the optimism in c was 0.07 with all steps replayed against 0.01 with the final model treated as fixed. The bootstrap is honest only about the steps it replays, and more replicates reduce random noise, not this bias.'
     },
     {
-      q: 'A child pneumonia mortality model developed in a randomised trial is validated in an unselected district hospital population with milder and more varied illness. Which transportability aspect is mainly being tested?',
-      options: ['Spectrum transportability', 'Methodological transportability', 'Historic transportability', 'Internal validity'],
+      q: 'A model for preterm birth was developed in a trial of women admitted with threatened preterm labour. It is then tested in all women booking at district clinics, who are on average at much lower risk. Which aspect of transportability is mainly being tested?',
+      options: ['Spectrum', 'Methodological', 'Historic', 'Internal validity'],
       answer: 0,
-      why: 'Applying a model from a trial population to a broader, less selected population with a different severity distribution tests spectrum transportability. Methodological transportability concerns different data collection methods, historic concerns time periods, and internal validity concerns the development setting itself.'
+      why: 'Moving from a selected, higher-risk trial population to a broader, less selected population tests spectrum transportability. Methodological transportability concerns how data are collected, historic concerns time, and internal validity concerns the development setting itself.'
     },
     {
-      q: 'In a leave-one-centre-out validation across eight maternity units, one small unit (35 women, 6 events) shows clear miscalibration while the other seven are well calibrated. What is the most defensible interpretation?',
+      q: 'In a leave-one-centre-out validation of the preterm model across eight maternity units, one small unit (35 women, 6 preterm births) shows clear miscalibration while the other seven are well calibrated. What is the most defensible interpretation?',
       options: [
         'The model is invalid and should not be used anywhere',
         'The model is invalid in that unit and should be banned there',
-        'Emphasise the general consistency, treat the single unit as a signal needing further validation there, and avoid over-interpreting a small sample',
+        'Emphasise the general consistency, treat the one unit as a signal for further validation there, and avoid over-reading 6 events',
         'Remove the unit from the analysis because it is an outlier'
       ],
       answer: 2,
-      why: 'Geographic validation consists of many small subgroup analyses; differences will always occur with small numbers. The book advises emphasising general consistency, while a striking finding in one setting may justify further validation before use there. Option B over-interprets a result based on six events; deleting the unit (D) hides information.'
+      why: 'Geographic validation is a set of small subgroup analyses, so some differences will always occur by chance. The book advises emphasising general consistency, while a striking result in one setting justifies further validation before use there. Banning the model on 6 events over-interprets; deleting the unit hides information.'
     }
   ],
   tasks: [
     {
+      id: 't0',
+      title: 'Internal or external?',
+      level: 'Understand',
+      scenario: `<p>The team considers five ways to check its booking model, fitted on 2,000 women at the district hospital in 2022 to 2024: (i) compute the c statistic in the same 2,000 women; (ii) hold back a random third of the 2,000 women; (iii) bootstrap the whole modelling process; (iv) apply the model to women booking at the same hospital in 2025; (v) ask a team in another state to apply it to their own women.</p>`,
+      questions: [
+        '<b>(a)</b> Which are apparent, internal and external validation? For external ones, name the type.',
+        '<b>(b)</b> Why is (i) optimistic? Why is it nevertheless stable?',
+        '<b>(c)</b> The statistician reports a calibration slope of 1.00 in (i). What does it tell you?'
+      ],
+      answer: `<p><b>(a)</b> (i) apparent; (ii) internal (split sample); (iii) internal (bootstrap); (iv) external, temporal; (v) external, fully independent and geographic, and possibly methodological if their definitions differ.</p>
+<p><b>(b)</b> The coefficients were chosen to fit these exact women as well as possible, including their chance features, so performance in the same women is too good. It is stable because all 2,000 women are used for both fitting and testing.</p>
+<p><b>(c)</b> Nothing. A model fitted by maximum likelihood always has a slope of 1 and calibration-in-the-large of 0 in its own data. Only validation can show whether predictions will be too extreme in new women.</p>`
+    },
+    {
       id: 't1',
-      title: 'Bootstrap optimism and calibration-in-the-large by hand',
+      title: 'What a random split costs',
       level: 'Apply',
-      scenario: `<p>Illustrative (synthetic). A preterm-birth model is developed on a district hospital cohort. Its apparent c statistic is 0.760 (apparent calibration slope 1). Five bootstrap replicates are shown below (in practice at least 100 to 200 would be used). For each replicate the full modelling strategy was repeated in the bootstrap sample.</p>
+      scenario: `<p>Illustrative (synthetic). ptb_dev has 2,000 women and 234 preterm births. The model has 14 candidate predictors, which need 15 coefficients (age has a squared term). The colleague proposes a random 2/3 : 1/3 split.</p>`,
+      questions: [
+        '<b>(a)</b> About how many preterm births are in each part? Calculate the events per variable (EPV) for fitting on all the data and on the two-thirds part.',
+        '<b>(b)</b> With 78 preterm births and 589 other women in the test part, the standard error of a c statistic of 0.72 is about 0.034. Give the approximate 95% interval and comment.',
+        '<b>(c)</b> In a random half of the 2,000 women (1,000 women), the standard deviation of the observed preterm rate around 11.7% is about 0.72 percentage points. Between which values will the rate usually lie?',
+        '<b>(d)</b> The first split gives a c statistic of 0.66. What should the team not do next, and what should it do instead?'
+      ],
+      answer: `<p><b>(a)</b> Two-thirds: about 2/3 × 234 = 156 events; one-third: about 78. EPV on all data = 234 ÷ 15 = 15.6; on the two-thirds part = 156 ÷ 15 = 10.4. The model is fitted on less information and is less stable.</p>
+<p><b>(b)</b> 0.72 ± 1.96 × 0.034 = 0.72 ± 0.067, about 0.65 to 0.79. The test part cannot tell a weak model from a good one.</p>
+<p><b>(c)</b> 11.7% ± 1.96 × 0.72 = 11.7% ± 1.4, so from about 10.3% to 13.1%, by chance alone.</p>
+<p><b>(d)</b> It should not re-split until the result looks better; that is selective reporting and biases the estimate upwards. Instead, fit the model on all 2,000 women and estimate optimism with the bootstrap, then seek genuine external validation.</p>`
+    },
+    {
+      id: 't2',
+      title: 'Bootstrap optimism by hand',
+      level: 'Apply',
+      scenario: `<p>Illustrative (synthetic). The booking model has an apparent c of 0.760 (apparent calibration slope 1). Five bootstrap samples are shown (in practice 100 to 200 would be used). The full strategy was repeated in each.</p>
 <table class="data">
-<thead><tr><th>Replicate</th><th>c in bootstrap sample (c<sub>boot</sub>)</th><th>c in original sample (c<sub>test</sub>)</th><th>Calibration slope in original sample</th></tr></thead>
+<thead><tr><th>Sample</th><th>c<sub>boot</sub></th><th>c<sub>test</sub></th><th>Slope in original data</th></tr></thead>
 <tbody>
 <tr><td>1</td><td>0.781</td><td>0.741</td><td>0.86</td></tr>
 <tr><td>2</td><td>0.774</td><td>0.748</td><td>0.92</td></tr>
 <tr><td>3</td><td>0.790</td><td>0.736</td><td>0.80</td></tr>
 <tr><td>4</td><td>0.769</td><td>0.745</td><td>0.93</td></tr>
 <tr><td>5</td><td>0.786</td><td>0.740</td><td>0.84</td></tr>
-</tbody>
-</table>
-<p>The model is then applied to 1107 women at a referral hospital, of whom 185 have a preterm birth. The mean predicted risk in these women is 13.6%.</p>`,
+</tbody></table>`,
       questions: [
-        '<b>(a)</b> Calculate the optimism for each replicate, the mean optimism, and the optimism-corrected c statistic.',
-        '<b>(b)</b> Estimate the optimism-corrected calibration slope. What does it imply for the coefficients?',
-        '<b>(c)</b> Calculate the observed outcome frequency at the referral hospital, the ratio of observed to predicted odds, and its logarithm. Interpret the direction.',
-        '<b>(d)</b> Which of (a)–(c) estimates internal validity and which external validity?'
+        '<b>(a)</b> Calculate the optimism for each sample, the mean optimism and the corrected c statistic.',
+        '<b>(b)</b> Estimate the corrected calibration slope. What does it imply for the coefficients?',
+        '<b>(c)</b> The analyst had chosen 6 of 14 predictors by stepwise selection but bootstrapped only the final 6-predictor model. Would the optimism be larger or smaller than it should be?'
       ],
-      answer: `<p><b>(a)</b> Optimism = c<sub>boot</sub> − c<sub>test</sub>: 0.781 − 0.741 = 0.040; 0.774 − 0.748 = 0.026; 0.790 − 0.736 = 0.054; 0.769 − 0.745 = 0.024; 0.786 − 0.740 = 0.046. Mean optimism = (0.040 + 0.026 + 0.054 + 0.024 + 0.046)/5 = 0.190/5 = 0.038. Corrected c = 0.760 − 0.038 = <b>0.722</b>.</p>
-<p><b>(b)</b> The apparent slope in each bootstrap sample is 1, so the optimism in the slope is 1 − (mean test slope). Mean test slope = (0.86 + 0.92 + 0.80 + 0.93 + 0.84)/5 = 4.35/5 = 0.87. Optimism = 0.13 and the corrected slope is <b>0.87</b>. Predictions will be too extreme in new women from the same setting; multiplying the coefficients by about 0.87 (and re-estimating the intercept) would be expected to improve calibration.</p>
-<p><b>(c)</b> Observed frequency = 185/1107 = 0.167 (16.7%). Observed odds = 0.167/0.833 = 0.201; predicted odds = 0.136/0.864 = 0.157. Ratio = 0.201/0.157 = <b>1.27</b>; log ratio = <b>0.24</b>. More preterm births occurred than the model predicted: on average the model underestimates risk at the referral hospital (a calibration-in-the-large problem). The log ratio approximates the calibration-in-the-large intercept a, which is estimated formally by logistic regression with the linear predictor as offset.</p>
-<p><b>(d)</b> (a) and (b) are internal validation (same setting, resampled). (c) is external validation (a different hospital and period). Internal validation cannot detect the underestimation in (c), because it arises from differences between settings.</p>`
-    },
-    {
-      id: 't2',
-      title: 'Internal versus external performance with the course data',
-      level: 'Analyze',
-      scenario: `<p>Use the validation lab and the Analysis Lab with the synthetic preterm-birth cohorts. The development data (ptb_dev) come from a district hospital; the validation data (ptb_val) come from a tertiary referral hospital in a later period.</p>`,
-      questions: [
-        '<b>(a)</b> In the validation lab, run 20 replications at development sizes 250 and 1200. Describe how apparent, split-sample, 10-fold cross-validation and bootstrap estimates of c relate to the true c, and how their spread differs.',
-        '<b>(b)</b> In the Analysis Lab, fit the full 14-term model on ptb_dev (complete cases, no selection, no shrinkage). Report apparent c, bootstrap-corrected c and the shrinkage estimate, then the external c, calibration slope and calibration-in-the-large on ptb_val.',
-        '<b>(c)</b> Does internal validation predict the external results? Explain which discrepancies are expected and why.'
-      ],
-      answer: `<p><b>(a)</b> Expected pattern: apparent c lies above the true c, clearly so at n = 250 and only slightly at n = 1200. Split-sample estimates are centred near or below the truth (the model is built on only 2/3 of the data) and scatter widely. Ten-fold cross-validation and bootstrap correction are centred close to the true c with smaller spread; the bootstrap is usually the most stable. All spreads shrink as n increases. The lesson: optimism and instability are small-sample problems, and resampling methods use the data more efficiently than a single split.</p>
-<p><b>(b)</b> The lab reproduces the live course values: apparent c <span data-live="ptb_full_apparent_c"></span>, corrected c <span data-live="ptb_full_corrected_c"></span>, shrinkage <span data-live="ptb_full_shrinkage"></span>; on ptb_val c <span data-live="ptb_val_c"></span>, slope <span data-live="ptb_val_slope"></span>, calibration-in-the-large <span data-live="ptb_val_citl"></span>. (Small differences can arise from bootstrap randomness.)</p>
-<p><b>(c)</b> Internal validation predicts the effect of overfitting in the development setting only. In the synthetic data-generating process, the referral hospital has (i) a higher baseline risk of preterm birth than explained by the measured predictors, which produces a positive calibration-in-the-large (underestimation), (ii) true predictor effects about 20% weaker, which pushes the external slope below the internal shrinkage estimate, and (iii) an older, higher-risk case-mix, which changes the spread of predicted risks. None of these can be detected from the development data. Internal validation is a minimum requirement; it does not replace external validation.</p>`
+      answer: `<p><b>(a)</b> 0.781 − 0.741 = 0.040; 0.774 − 0.748 = 0.026; 0.790 − 0.736 = 0.054; 0.769 − 0.745 = 0.024; 0.786 − 0.740 = 0.046. Mean = 0.190 ÷ 5 = 0.038. Corrected c = 0.760 − 0.038 = <b>0.722</b>.</p>
+<p><b>(b)</b> The apparent slope is 1 in every bootstrap sample, so the corrected slope is the mean test slope: (0.86 + 0.92 + 0.80 + 0.93 + 0.84) ÷ 5 = 4.35 ÷ 5 = <b>0.87</b>. Predictions will be too extreme in new women; multiplying the coefficients by about 0.87 (and re-estimating the intercept) should improve calibration.</p>
+<p><b>(c)</b> Smaller than it should be. Selection adds optimism, which is captured only if the selection is repeated in each bootstrap sample (book example: 0.07 with all steps replayed against 0.01 without).</p>`
     },
     {
       id: 't3',
-      title: 'Critique a preeclampsia model validation',
+      title: 'Validation Lab: four methods compared',
+      level: 'Analyse',
+      scenario: `<p>Use the Validation Lab in this case. Each replication draws a new development sample from the synthetic district hospital setting, fits the 14-term model and estimates c four ways; the true c is measured in a large fresh sample. The default development size is 500.</p>`,
+      questions: [
+        '<b>(a)</b> Set the development size to 250 and press <b>Run 20 replications</b>. Record the mean error against the true c and the SD for each method.',
+        '<b>(b)</b> Set the size to 1200 and run again. What changes?',
+        '<b>(c)</b> At 250, which method has the smallest spread around the true value, and why does the split sample scatter most?',
+        '<b>(d)</b> What would you tell the colleague who wanted to hold back a third of the data?'
+      ],
+      answer: `<p>Exact values vary between runs, because each run uses new random samples.</p>
+<p><b>(a)</b> Expected pattern at n = 250: the apparent c lies clearly above the true c (positive mean error). The split-sample estimates are centred near or below the truth, because the model is built on only two-thirds of the data, and have the largest SD. Cross-validation (often slightly below) and the bootstrap (often slightly above) are close to the true c, with smaller SD.</p>
+<p><b>(b)</b> At n = 1200 the gap between apparent and true c shrinks, and the spread of every method falls. Optimism and instability are small-sample problems.</p>
+<p><b>(c)</b> Among the honest methods the bootstrap usually has the smallest spread and the smallest typical error (the apparent c may vary as little, but it is centred well above the truth). The split sample fits on a smaller part and tests on about 84 women (about 10 preterm births), so both the model and its test are noisy.</p>
+<p><b>(d)</b> A random split wastes data and gives an unstable estimate; with large samples it is unnecessary, with small ones it is unreliable. Fit on all the data, correct for optimism with the bootstrap, and spend effort on a genuine external validation.</p>`
+    },
+    {
+      id: 't4',
+      title: 'Calibration-in-the-large at the referral hospital',
+      level: 'Apply',
+      scenario: `<p>Illustrative (synthetic). The booking model is applied to 1,107 women at a referral hospital, of whom 185 deliver preterm. The mean predicted risk in these women is 13.6%. Internal validation had given a corrected c of 0.722 and a corrected slope of 0.87.</p>`,
+      questions: [
+        '<b>(a)</b> Calculate the observed preterm rate, the observed and predicted odds, their ratio and its logarithm. Interpret the direction.',
+        '<b>(b)</b> If the intercept is raised by 0.24, what becomes of a predicted risk of 10%?',
+        '<b>(c)</b> Which types of transportability does this hospital test?',
+        '<b>(d)</b> Could the internal validation have warned of this problem? Why?'
+      ],
+      answer: `<p><b>(a)</b> Observed rate = 185 ÷ 1,107 = 16.7%. Observed odds = 0.167 ÷ 0.833 = 0.201; predicted odds = 0.136 ÷ 0.864 = 0.157. Ratio = 0.201 ÷ 0.157 = <b>1.27</b>; log ratio = <b>0.24</b>. More preterm births occurred than predicted: the model underestimates risk here. The log ratio approximates the calibration-in-the-large intercept a, which is estimated formally by logistic regression with the linear predictor as offset.</p>
+<p><b>(b)</b> logit(0.10) = ln(0.10 ÷ 0.90) = −2.197. New value −2.197 + 0.24 = −1.957. Risk = 1 ÷ (1 + e<sup>1.957</sup>) = 12.4%.</p>
+<p><b>(c)</b> Temporal (a later period), geographic (another hospital) and spectrum (a referral population with more high-risk women).</p>
+<p><b>(d)</b> No. Internal validation resamples the development data and so measures only overfitting in the same setting. A different baseline risk at another hospital cannot be seen from the district hospital's data.</p>`
+    },
+    {
+      id: 't5',
+      title: 'Why does the model fail at the second hospital?',
+      level: 'Analyse',
+      scenario: `<p>Illustrative (synthetic). A second hospital applies the published booking model and reports predicted risks near zero for every woman. The model's linear predictor includes −0.35 (intercept) − 0.15 × haemoglobin (per g/dL), plus other terms that are 0 for a woman with no risk factors. On checking, you find:</p>
+<ul>
+<li>haemoglobin was entered in g/L (for example 110) rather than g/dL (11.0);</li>
+<li>gestational age was dated from the last menstrual period, not by early ultrasound;</li>
+<li>"previous preterm birth" was not recorded, so the hospital entered 0 for every woman;</li>
+<li>the hospital serves a mostly urban, younger population than the district hospital.</li>
+</ul>`,
+      questions: [
+        '<b>(a)</b> For a woman with haemoglobin 11 g/dL and no other risk factors, calculate the linear predictor and risk as intended, and as computed by the hospital.',
+        '<b>(b)</b> Classify each of the four findings (unit error, methodological, missing predictor, spectrum or case-mix) and say what each does to the predictions.',
+        '<b>(c)</b> What check should every validation team do before computing any statistic?'
+      ],
+      answer: `<p><b>(a)</b> Intended: lp = −0.35 − 0.15 × 11 = −2.00; risk = 1 ÷ (1 + e<sup>2.00</sup>) = 11.9%. As computed: lp = −0.35 − 0.15 × 110 = −16.85; risk = 1 ÷ (1 + e<sup>16.85</sup>) ≈ 0.000005%. <b>Critical:</b> the unit error alone makes every prediction meaningless.</p>
+<p><b>(b)</b> Haemoglobin in g/L: unit error, invalidates all predictions. Dating by last period: methodological; misclassifies the outcome, which tends to weaken apparent associations and lowers c. Previous preterm birth set to 0: a missing predictor replaced by a constant; risks for women with a past preterm birth are underestimated and discrimination is lost (a mean value would be a better constant, but performance still suffers). Younger urban population: a true case-mix (spectrum) difference, which can change the spread of risks and the baseline rate.</p>
+<p><b>(c)</b> Reconstruct the linear predictor for a few typical women, check units, coding and the intercept against the publication (and, if needed, with the developers), and confirm that the predicted risks are plausible.</p>`
+    },
+    {
+      id: 't6',
+      title: 'Internal against external in the Analysis Lab',
+      level: 'Analyse',
+      scenario: `<p>Use the Analysis Lab in this case. Its defaults are: dataset ptb_dev (validated on ptb_val), development size 2000, missing data complete case, selection none, shrinkage none, 100 bootstrap replications, with all 14 candidate predictors ticked.</p>`,
+      questions: [
+        '<b>(a)</b> Press <b>Run analysis</b> with the defaults. Record the apparent and bootstrap-corrected c, the shrinkage estimate, and the c, slope and calibration-in-the-large on ptb_val.',
+        '<b>(b)</b> Set selection to <b>Backward, p &lt; 0.05</b> and run again. Compare the bootstrap optimism (selection replayed) with that of the full model.',
+        '<b>(c)</b> Set selection back to none and shrinkage to <b>Uniform, bootstrap slope</b>. Which external measure changes, and which hardly changes?',
+        '<b>(d)</b> Does internal validation predict the external results? Explain the gaps.'
+      ],
+      answer: `<p><b>(a)</b> The lab reproduces the course values: apparent c <span data-live="ptb_full_apparent_c"></span>, corrected c <span data-live="ptb_full_corrected_c"></span>, shrinkage <span data-live="ptb_full_shrinkage"></span>; on ptb_val c <span data-live="ptb_val_c"></span>, slope <span data-live="ptb_val_slope"></span>, calibration-in-the-large <span data-live="ptb_val_citl"></span>. Small differences can come from bootstrap randomness.</p>
+<p><b>(b)</b> With selection replayed in every bootstrap sample, the optimism is usually similar to or larger than that of the full model, even though fewer predictors remain: selection adds instability, and the bootstrap counts it.</p>
+<p><b>(c)</b> Uniform shrinkage pulls the predictions towards the average, so the external calibration slope moves closer to 1. The external c hardly changes, because multiplying all coefficients by one factor does not change the ranking of women.</p>
+<p><b>(d)</b> Only partly. Internal validation predicts the effect of overfitting in the district hospital setting. In the synthetic data the referral hospital has a higher baseline risk than its predictors explain (positive calibration-in-the-large), predictor effects about 20% weaker (an external slope below the internal shrinkage factor), and an older, higher-risk case-mix. None of this can be seen in ptb_dev. Internal validation is a minimum, not a substitute for external validation.</p>`
+    },
+    {
+      id: 't7',
+      title: 'Critique a preterm birth validation report',
       level: 'Evaluate',
-      scenario: `<p>Illustrative (synthetic). A single tertiary centre reports a model for preterm preeclampsia from 640 women with 41 events. Twenty-eight candidate predictors (clinical, ultrasound and biomarkers) were examined. Predictors with univariate p &lt; 0.10 entered a forward stepwise procedure; categories of parity were merged after inspecting the outcome rates; mean arterial pressure was dichotomised at the value giving the largest odds ratio. The data were split at random into 70% development and 30% "external validation". The first split gave a validation c of 0.68, so the authors re-split and report the second split (c 0.84). They conclude that the model is "externally validated and ready for use in district hospitals". The final coefficients are those from the 70% part.</p>`,
+      scenario: `<p>Illustrative (synthetic). A single tertiary centre reports a model for preterm birth from 640 women with 41 preterm births. Twenty-eight candidate predictors (clinical, ultrasound and blood markers) were examined. Predictors with univariate p &lt; 0.10 entered forward stepwise selection; parity categories were merged after inspecting the outcome rates; cervical length was dichotomised at the value giving the largest odds ratio. The data were split at random into 70% development and 30% "external validation". The first split gave a validation c of 0.68, so the authors re-split and report the second split (c 0.84). They conclude that the model is "externally validated and ready for use in district hospitals". The final coefficients are those from the 70% part.</p>`,
       questions: [
         '<b>(a)</b> List the problems with the validation design and reporting.',
         '<b>(b)</b> Which development choices make poor performance in district hospitals likely?',
         '<b>(c)</b> Propose a better validation plan using only the methods in this module.'
       ],
-      answer: `<p><b>(a)</b> Validation problems:</p>
+      answer: `<p><b>(a)</b></p>
 <ol>
 <li>A random split is internal validation; calling it "external" is wrong. Both parts come from the same centre and period.</li>
-<li>Re-splitting after an unfavourable result and reporting the better split is selective reporting; the reported c (0.84) is biased upwards.</li>
-<li>The test part has only about 12 events (30% of 41), so any c statistic or calibration estimate from it is very imprecise.</li>
-<li>The split validates a model built on 70% of the data, while the final model should be estimated on all data.</li>
+<li><b>Critical:</b> re-splitting after a poor result and reporting the better split is selective reporting; the reported c of 0.84 is biased upwards.</li>
+<li>The test part has only about 12 preterm births (30% of 41 = 12.3), so its c and any calibration estimate are very imprecise.</li>
+<li>The split validates a model built on 70% of the data, while the final model should be fitted on all of it.</li>
 <li>No calibration (calibration-in-the-large, slope) is reported, only c.</li>
 </ol>
-<p><b>(b)</b> Development choices likely to cause poor transport: very few events for 28 candidates; univariate pre-screening plus stepwise selection, which overfits and gives unstable selection and inflated coefficients; data-driven merging of categories and a data-derived cut-point for blood pressure, both further sources of optimism; no shrinkage; a single tertiary centre with a referral spectrum unlike district hospitals; and biomarkers or ultrasound measures whose methods may differ elsewhere (methodological transportability).</p>
-<p><b>(c)</b> Better plan: fit the final model on all 640 women; estimate optimism by bootstrapping with every modelling step replayed in each sample (screening, selection, category merging, cut-point search), or, if some steps cannot be replayed, at least bootstrap the full model with all candidates; report corrected c and calibration slope and consider shrinkage. Then perform genuine external validation: temporal (later patients at the same centre) and, more importantly, geographic or fully independent validation in district hospitals, with predictor definitions and units checked and calibration-in-the-large and slope reported alongside c. Only consistent results across such settings support a claim of readiness for district use.</p>`
+<p><b>(b)</b> Very few events for 28 candidates (41 ÷ 28 = 1.5 events per candidate); univariate screening plus stepwise selection, giving unstable selection and coefficients that are too large; data-driven merging of categories and a data-derived cut-point, both further sources of optimism; no shrinkage; a single tertiary centre with a referral spectrum unlike district hospitals; and ultrasound and blood marker methods that may differ elsewhere (methodological transportability).</p>
+<p><b>(c)</b> Fit the final model on all 640 women. Estimate optimism with the bootstrap, replaying every step (screening, selection, category merging, cut-point search); if some steps cannot be replayed, at least bootstrap the full model with all candidates. Report corrected c and calibration slope, and consider shrinkage. Then do genuine external validation: temporal (later women at the same centre) and, above all, geographic or fully independent validation in district hospitals, with definitions and units checked and calibration-in-the-large and slope reported with c. Only consistent results across such settings support a claim of readiness for district use.</p>`
     }
   ]
 });

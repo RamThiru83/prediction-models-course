@@ -25,7 +25,7 @@ REPO = "RamThiru83/prediction-models-course"
 ZIP_URL = "https://codeload.github.com/%s/zip/refs/heads/main" % REPO
 IGNORE = {".DS_Store", ".sync-state.json"}
 API = "https://api.github.com/repos/%s" % REPO
-ALLOW = re.compile(r"^(index\.html|README\.md|favicon\.svg|pmc_schema\.sql|build\.js|src/[\w.-]+\.(js|css|b64)|content/[\w-]+\.js|tools/[\w-]+\.py|supabase/folded\.json)$")
+ALLOW = re.compile(r"^(index\.html|README\.md|favicon\.svg|pmc_schema\.sql|build\.js|src/[\w.-]+\.(js|css|b64)|content/[\w-]+\.js|tools/[\w-]+\.(py|js)|supabase/folded\.json|narration/[\w.-]+\.(mp3|json))$")
 
 
 def sha(b, rel=""):

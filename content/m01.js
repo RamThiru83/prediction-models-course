@@ -15,6 +15,12 @@ registerModule({
     'Put the seven modelling steps in order'
   ],
   format: 'cases',
+  reading: [
+    { cite: "Steyerberg EW, Moons KGM, van der Windt DA, et al. (2013). Prognosis Research Strategy (PROGRESS) 3: prognostic model research. PLoS Med 10:e1001381.", url: "https://doi.org/10.1371/journal.pmed.1001381", note: "An open-access overview of how prognostic models are developed, validated and tested for impact, which maps onto the roadmap." },
+    { cite: "Moons KGM, Kengne AP, Woodward M, et al. (2012). Risk prediction models: I. Development, internal validation, and assessing the incremental value of a new (bio)marker. Heart 98:683-690.", url: "https://doi.org/10.1136/heartjnl-2011-301246", note: "Walks through the consecutive steps of model development and internal validation in a form close to the seven-step roadmap." },
+    { cite: "Vickers AJ, Elkin EB (2006). Decision curve analysis: a novel method for evaluating prediction models. Med Decis Making 26:565-574.", url: "https://doi.org/10.1177/0272989X06295361", note: "Introduces net benefit across threshold probabilities, the clearest way to see how a risk estimate becomes a treatment decision." },
+    { cite: "Meertens LJE, van Montfort P, Scheepers HCJ, et al. (2018). Prediction models for the risk of spontaneous preterm birth based on maternal characteristics: a systematic review and independent external validation. Acta Obstet Gynecol Scand 97:907-920.", url: "https://doi.org/10.1111/aogs.13358", note: "A preterm birth example showing how published models were found to be biased, poorly discriminating and of little clinical benefit when validated." }
+  ],
   essentials: `
 <ul>
 <li>A prediction model gives a number: the <b>chance (or probability)</b>&nbsp;that something will happen to a person. Its main job is to get that number right for new people. This is called&nbsp;<b>estimation</b>.</li>
@@ -26,6 +32,46 @@ registerModule({
 <li>Building a model follows <b>seven steps</b>: check the data, decide how each predictor enters the model, choose the predictors, fit the model, measure how good it is, test it on new people, and present it so that others can use it. <b>Before step 1, write down the question</b>, and use only information that is available when the prediction is made.</li>
 </ul>`,
   story: 'Throughout the course, you follow the maternal and child health research team at a district hospital as it works on one problem: preterm birth. The hospital and its data are fictional and synthetic. In this module, the team plans its own model to predict preterm birth at the booking visit. You follow the project from defining the problem to using the predicted risks to inform a treatment decision to research uses, and finally to a review by the research committee. You do not need the primer for this story.',
+  defs: {
+    'prognostic': 'Looking forward: predicting something that will happen later, such as a preterm birth.',
+    'diagnostic': 'About the present: finding out whether a condition is there now.',
+    'moment of prediction': 'The point in time when the model is used, so only information known by then can go into it.',
+    'threshold': 'The risk at which treating and not treating are equally good; above it, treat.',
+    'number needed to treat': 'How many women must be treated to prevent one bad outcome.',
+    'events': 'The women who had the outcome, for example the preterm births; their number, not the number of women, limits a study.',
+    'power': 'How likely a study is to detect a real effect when there is one.',
+    'standard error': 'A measure of how much an estimate would vary from one sample to another.',
+    'internal validation': 'Checking a model on the kind of women it was built from, to see how much its own data flattered it.',
+    'external validation': 'Testing a model on women from other places or times.'
+  },
+  explainers: [
+    {
+      id: 'threshold',
+      title: 'The threshold: where treating starts to pay',
+      scenes: (function () {
+        var women = function (k) { return EX.dots(100, { x: 46, y: 70, cols: 10, gap: 16, r: 6, k: k, hrole: 'obs', hd: 0.6, stagger: 0.01 }); };
+        /* two bars: births prevented (observed benefit, solid) and side-effects caused (harm, muted) */
+        var bars = function (prev, harm, d) { var y0 = 250, u = 16; return EX.rect(395, y0 - prev * u, 50, prev * u, { role: 'obs', grow: true, d: d }) + EX.text(420, y0 + 18, 'prevented', { size: 's', anchor: 'middle', d: d }) + EX.text(420, y0 - prev * u - 8, String(prev), { bold: true, anchor: 'middle', d: d + 0.5 }) + EX.rect(475, y0 - harm * u, 50, harm * u, { role: 'muted', grow: true, d: d + 0.8 }) + EX.text(500, y0 + 18, 'side-effects', { size: 's', anchor: 'middle', d: d + 0.8 }) + EX.text(500, y0 - harm * u - 8, String(harm), { bold: true, anchor: 'middle', d: d + 1.3 }); };
+        var pc = function (v) { return Math.round(v * 100) + '%'; };
+        var B = EX.box({ l: 80, t: 50, w: 430, h: 190, xlim: [0, 0.2], ylim: [0, 10], xticks: [0, 0.05, 0.1, 0.15, 0.2], xfmt: pc, yticks: [0, 3, 5, 10], xlabel: 'a woman\'s risk of preterm birth', ylabel: 'per 100 women' });
+        var benefit = EX.line([[B.X(0), B.Y(0)], [B.X(0.2), B.Y(10)]], { role: 'obs', d: 0.4, t: 1.6 });
+        var harm = EX.rect(B.X(0), B.Y(3) - 1, B.X(0.2) - B.X(0), 2, { role: 'muted', rx: 0, d: 1.6 });
+        var cross = EX.rect(B.X(0.06) - 0.5, B.Y(3), 1, B.Y(0) - B.Y(3), { role: 'muted', rx: 0, d: 2.6 }) + EX.pts(B, [[0.06, 3]], { role: 'obs', r: 6, d: 2.6 });
+        return [
+          { svg: EX.svg(EX.text(40, 36, '100 women, each with a 10% risk of preterm birth', { size: 'm', bold: true }) + women(10) + EX.text(40, 262, 'Without treatment, 10 of them deliver early', { d: 1.2 })),
+            say: 'Take 100 women who each have a ten per cent risk of preterm birth. Without treatment, ten of them will deliver early. The ten solid dots are those births.' },
+          { svg: EX.svg(EX.text(40, 36, 'Treat all 100: the risk is halved', { size: 'm', bold: true }) + EX.dots(100, { x: 46, y: 70, cols: 10, gap: 14, r: 5, k: 5, hrole: 'obs', hd: 0.3, stagger: 0.01 }) + bars(5, 3, 1.0) + EX.text(40, 236, '10 − 5 = 5 births prevented', { d: 1.0 }) + EX.text(40, 258, '3 side-effects; net gain 2 per 100', { d: 2.0 }) + EX.text(40, 280, 'Treat. Number needed to treat = 100 ÷ 5 = 20', { bold: true, d: 2.8 })),
+            say: 'Treatment halves each woman\'s risk, so only five deliver early: five births prevented. But three of every hundred treated get a side-effect, which we count as about as bad as a preterm birth. Five minus three is a net gain of two per hundred: treat. Twenty women treated prevent one preterm birth.' },
+          { svg: EX.svg(EX.text(40, 36, '100 women, each with a 4% risk', { size: 'm', bold: true }) + EX.dots(100, { x: 46, y: 70, cols: 10, gap: 14, r: 5, k: 2, hrole: 'obs', hd: 0.3, stagger: 0.01 }) + bars(2, 3, 1.0) + EX.text(40, 236, '4 − 2 = 2 births prevented', { d: 1.0 }) + EX.text(40, 258, 'still 3 side-effects; net loss 1 per 100', { d: 2.0 }) + EX.text(40, 280, 'Do not treat', { bold: true, d: 2.8 })),
+            say: 'Now 100 women who each have a four per cent risk. Treatment halves it, from four births to two: two prevented. But it still causes three side-effects. A net loss of one per hundred. Do not treat.' },
+          { svg: EX.svg(EX.text(40, 30, 'Slide the risk: where do benefit and harm cross?', { size: 'm', bold: true }) + B.s + benefit + EX.text(B.X(0.06), B.Y(6.0), 'benefit: half the risk', { size: 's', d: 1.2 }) + harm + EX.text(B.X(0.12), B.Y(3.8), 'harm: 3 per 100', { size: 's', d: 1.8 }) + cross + EX.text(B.X(0.065), B.Y(1.2), 'break-even at 6%', { bold: true, d: 3.0 })),
+            say: 'Slide the risk up from zero. The benefit, half the risk, rises in a straight line. The harm stays at three per hundred. They cross where half the risk equals three per cent: at a risk of six per cent. That is the threshold.' },
+          { svg: EX.svg(EX.text(280, 80, 'Below 6%: do not treat.  Above 6%: treat.', { size: 'l', bold: true, anchor: 'middle' }) + EX.text(280, 124, 'threshold = harm ÷ (1 − RR) = 0.03 ÷ 0.5 = 6%', { anchor: 'middle', d: 0.8 }) + EX.text(280, 170, 'The threshold comes from weighing harm against benefit:', { anchor: 'middle', d: 1.6 }) + EX.text(280, 194, 'a judgement about what matters to women, not a statistic.', { anchor: 'middle', d: 1.6 }) + EX.text(280, 232, 'The model\'s job is an accurate risk for each woman,', { anchor: 'middle', d: 2.4 }) + EX.text(280, 256, 'especially near 6%.', { anchor: 'middle', d: 2.4 })),
+            say: 'Below six per cent, do not treat; above it, treat. The threshold comes from weighing harm against benefit, which is a judgement about what matters to women, not a statistic. The model\'s job is to give each woman an accurate risk, especially near six per cent.' }
+        ];
+      })()
+    }
+  ],
   cases: [
     {
       id: 'c1',
@@ -57,7 +103,8 @@ registerModule({
 </ul>
 <p><b>Number needed to treat</b> is how many women must be treated to prevent one preterm birth: 100 ÷ (number prevented per 100). At a 10% risk that is 100 ÷ 5 = 20.</p>
 <p><b>The same idea as formulas.</b> If the treatment keeps a fraction RR of the risk (here RR = 0.5) and causes harm H (here 3%), treat when the risk r is above H ÷ (1 − RR); here 0.03 ÷ 0.5 = 6%. More generally, threshold = harm ÷ (harm + benefit): if missing a case is 9 times worse than treating someone unnecessarily, the threshold is 1 ÷ (1 + 9) = 10%.</p>
-<p>The threshold is a judgement about what matters to women and clinicians. Statistics only tell us each woman's risk.</p>`,
+<p>The threshold is a judgement about what matters to women and clinicians. Statistics only tell us each woman's risk.</p>
+<div data-explainer="threshold"></div>`,
       scenario: `<p>The team's model will also guide a preventive treatment in pregnancy that lowers the risk of preterm birth but has side-effects of its own. The team must decide whom to treat.</p>`,
       widgets: '',
       tasks: [2, 3],
@@ -281,7 +328,7 @@ registerModule({
     {
       id: 't1',
       title: 'The design and the predictors',
-      level: 'Analyze',
+      level: 'Analyse',
       scenario: `<p>Open the ptb_dev dataset card in Case 1 and read the summary and the codebook.</p>`,
       questions: [
         '<b>(a)</b> Is ptb_dev a prognostic or a diagnostic design? Justify your answer, and say what would make a preterm birth question diagnostic instead.',
@@ -320,7 +367,7 @@ registerModule({
     {
       id: 't3',
       title: 'A capacity limit is not a threshold',
-      level: 'Analyze',
+      level: 'Analyse',
       scenario: `<p>The programme can afford the preventive treatment for only the 20% of women with the highest predicted risk.</p>`,
       questions: [
         '<b>(a)</b> How does choosing "the top 20%" differ from choosing "everyone above the break-even risk"?',
