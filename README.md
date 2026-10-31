@@ -36,6 +36,16 @@ A daily scheduled task on the instructor's computer runs steps 2 to 4 and report
 
 Learner data (progress, notes, answers) stay in Supabase and are never copied to GitHub.
 
+## Module format and learning aids
+
+Every module (Primer, Modules 1 to 15 and the capstone) uses the case-led format: Essentials, four cases (what you need, the situation, a simulator, two tasks, a take-away), a quiz, worked answers and short reference notes. Each module also has:
+
+- **Narrated explainers** (`explainers` in the module file): short animated scenes with captions, a transcript, speed control and keyboard control (space, arrow keys, M). Scenes are drawn with the `EX` helpers in `src/explain.js`. The visual code is the same everywhere: solid ink is what was observed, dashed violet is what a model predicts, red is the error between them.
+- **Recorded narration** in `narration/` (Google Cloud Text-to-Speech, voice en-GB-Chirp3-HD-Kore). Each clip is keyed to the exact text of its scene. If a scene's narration is edited, that scene falls back to the device's own voice until it is recorded again: `GCP_TTS_KEY=<key> python3 tools/tts.py en-GB-Chirp3-HD-Kore`, then `node build.js --site`. Only changed scenes are recorded again. The key is never stored in the repository.
+- **Tap definitions** (`defs`): the first use of a key term in each step has a dotted underline; tapping it shows a plain definition. Other terms fall back to the glossary.
+- **Try and Notice** in every simulator: `data-try` on the widget says what to change first; the simulator's Notice line comments on what the learner just did.
+- **Go deeper** (`reading`): three to five sources per module, each checked against PubMed, shown at the end of the reference notes.
+
 ## Writing level
 
 The course starts at a high-school reading level and becomes more technical module by module.

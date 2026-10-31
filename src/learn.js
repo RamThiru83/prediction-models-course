@@ -29,7 +29,7 @@ function hash(s) { var h = 5381, i; for (i = 0; i < s.length; i++) h = ((h << 5)
 function textOf(el) { var c = el.cloneNode(true); Array.prototype.forEach.call(c.querySelectorAll('[data-live]'), function (n) { n.textContent = ''; }); return c.textContent.replace(/\s+/g, ' ').trim(); }
 /* Second set of editable blocks (titles, objectives, story, case aims, tables, formulas, callout titles,
    quiz explanations). They are numbered after the first set, so keys of existing edits never shift. */
-var BSEL2 = '.col > h1,.goals li,.story p,.caim,.meta span,.flowhint,.sec td,.sec th,.callout td,.callout th,.formula,.callout > b,.whysrc';
+var BSEL2 = '.col > h1,.goals li,.story p,.caim,.meta span,.flowhint,.sec td,.sec th,.callout td,.callout th,.formula,.callout > b,.whysrc,.exh b,.ex-tr li,.deeper > h2,.deeper > p,.rnote';
 /* on the other pages (home, about, how to, datasets, glossary, formulas, checklist, chapter map) all plain text is editable */
 var PSEL = BSEL2 + ',.col p,.col h2,.col h3,.col li,.col td,.col th,.col dt,.col dd,.col summary,.col .card b,.col .card span';
 App.EDIT_PAGES = { home: 1, about: 1, howto: 1, datasets: 1 };
@@ -47,7 +47,7 @@ App.blocks = function (root, page) {
   }
   function add(el) { el.setAttribute('data-bi', out.length); el.__orig = el.innerHTML; el.__hash = hash(textOf(el)); out.push(el); }
   Array.prototype.forEach.call(root.querySelectorAll(BSEL), function (el) {
-    if (skip(el) || el.querySelector(BSEL)) return; add(el);
+    if (skip(el) || el.closest('.exp,.deeper') || el.querySelector(BSEL)) return; add(el);
   });
   var first = out.slice();
   Array.prototype.forEach.call(root.querySelectorAll(page ? PSEL : BSEL2), function (el) {
@@ -132,8 +132,8 @@ App.decorate = function (root, m) {
     try { markRange(el, h.s, h.e, h.id); } catch (e) { }
   });
   /* section note buttons */
-  Array.prototype.forEach.call(col.querySelectorAll('.sec > h2'), function (h2) {
-    var bar = document.createElement('div'); bar.className = 'secbar'; bar.innerHTML = '<button type="button" class="btn sm ghost" data-secnote>＋ Note on this section</button>'; h2.insertAdjacentElement('afterend', bar);
+  Array.prototype.forEach.call(col.querySelectorAll('.sec > h2, .chead > h2'), function (h2) {
+    var bar = document.createElement('div'); bar.className = 'secbar'; bar.innerHTML = '<button type="button" class="btn sm ghost" data-secnote>＋ Note on this section</button>'; (h2.closest('.chead') || h2).insertAdjacentElement('afterend', bar);
     bar.querySelector('button').onclick = function () { addNote(m, blocks, +h2.getAttribute('data-bi'), textOf(h2)); };
   });
   /* existing notes */

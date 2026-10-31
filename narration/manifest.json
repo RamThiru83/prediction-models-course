@@ -1,0 +1,752 @@
+{
+"cap:roadmap:0": {
+"d": 14.26,
+"f": "narration/cap-roadmap-0-vgsy2t.mp3",
+"h": "vgsy2t",
+"v": "en-GB-Chirp3-HD-Kore"
+},
+"cap:roadmap:1": {
+"d": 16.42,
+"f": "narration/cap-roadmap-1-1uso23p.mp3",
+"h": "1uso23p",
+"v": "en-GB-Chirp3-HD-Kore"
+},
+"cap:roadmap:2": {
+"d": 13.1,
+"f": "narration/cap-roadmap-2-169rru.mp3",
+"h": "169rru",
+"v": "en-GB-Chirp3-HD-Kore"
+},
+"cap:roadmap:3": {
+"d": 14.5,
+"f": "narration/cap-roadmap-3-1wq4sjp.mp3",
+"h": "1wq4sjp",
+"v": "en-GB-Chirp3-HD-Kore"
+},
+"cap:roadmap:4": {
+"d": 12.98,
+"f": "narration/cap-roadmap-4-19c74x8.mp3",
+"h": "19c74x8",
+"v": "en-GB-Chirp3-HD-Kore"
+},
+"cap:roadmap:5": {
+"d": 10.42,
+"f": "narration/cap-roadmap-5-1j8fgsx.mp3",
+"h": "1j8fgsx",
+"v": "en-GB-Chirp3-HD-Kore"
+},
+"cap:twogaps:0": {
+"d": 12.98,
+"f": "narration/cap-twogaps-0-bx2no8.mp3",
+"h": "bx2no8",
+"v": "en-GB-Chirp3-HD-Kore"
+},
+"cap:twogaps:1": {
+"d": 14.98,
+"f": "narration/cap-twogaps-1-bc0cqh.mp3",
+"h": "bc0cqh",
+"v": "en-GB-Chirp3-HD-Kore"
+},
+"cap:twogaps:2": {
+"d": 16.49,
+"f": "narration/cap-twogaps-2-1wtxl84.mp3",
+"h": "1wtxl84",
+"v": "en-GB-Chirp3-HD-Kore"
+},
+"cap:twogaps:3": {
+"d": 16.18,
+"f": "narration/cap-twogaps-3-dhkir3.mp3",
+"h": "dhkir3",
+"v": "en-GB-Chirp3-HD-Kore"
+},
+"cap:twogaps:4": {
+"d": 12.86,
+"f": "narration/cap-twogaps-4-gbincv.mp3",
+"h": "gbincv",
+"v": "en-GB-Chirp3-HD-Kore"
+},
+"m01:threshold:0": {
+"d": 9.65,
+"f": "narration/m01-threshold-0-t2fs9b.mp3",
+"h": "t2fs9b",
+"v": "en-GB-Chirp3-HD-Kore"
+},
+"m01:threshold:1": {
+"d": 18.5,
+"f": "narration/m01-threshold-1-1ohc8a5.mp3",
+"h": "1ohc8a5",
+"v": "en-GB-Chirp3-HD-Kore"
+},
+"m01:threshold:2": {
+"d": 13.78,
+"f": "narration/m01-threshold-2-ieoncd.mp3",
+"h": "ieoncd",
+"v": "en-GB-Chirp3-HD-Kore"
+},
+"m01:threshold:3": {
+"d": 13.1,
+"f": "narration/m01-threshold-3-13kkdqf.mp3",
+"h": "13kkdqf",
+"v": "en-GB-Chirp3-HD-Kore"
+},
+"m01:threshold:4": {
+"d": 16.06,
+"f": "narration/m01-threshold-4-g3qd3c.mp3",
+"h": "g3qd3c",
+"v": "en-GB-Chirp3-HD-Kore"
+},
+"m02:epv:0": {
+"d": 6.98,
+"f": "narration/m02-epv-0-9rejm3.mp3",
+"h": "9rejm3",
+"v": "en-GB-Chirp3-HD-Kore"
+},
+"m02:epv:1": {
+"d": 9.46,
+"f": "narration/m02-epv-1-13hhdzy.mp3",
+"h": "13hhdzy",
+"v": "en-GB-Chirp3-HD-Kore"
+},
+"m02:epv:2": {
+"d": 11.54,
+"f": "narration/m02-epv-2-h4sfid.mp3",
+"h": "h4sfid",
+"v": "en-GB-Chirp3-HD-Kore"
+},
+"m02:epv:3": {
+"d": 12.82,
+"f": "narration/m02-epv-3-cchxoe.mp3",
+"h": "cchxoe",
+"v": "en-GB-Chirp3-HD-Kore"
+},
+"m02:epv:4": {
+"d": 13.61,
+"f": "narration/m02-epv-4-8kp5e5.mp3",
+"h": "8kp5e5",
+"v": "en-GB-Chirp3-HD-Kore"
+},
+"m03:logodds:0": {
+"d": 13.18,
+"f": "narration/m03-logodds-0-40fd49.mp3",
+"h": "40fd49",
+"v": "en-GB-Chirp3-HD-Kore"
+},
+"m03:logodds:1": {
+"d": 18.53,
+"f": "narration/m03-logodds-1-1mviz7p.mp3",
+"h": "1mviz7p",
+"v": "en-GB-Chirp3-HD-Kore"
+},
+"m03:logodds:2": {
+"d": 17.81,
+"f": "narration/m03-logodds-2-bxmgrt.mp3",
+"h": "bxmgrt",
+"v": "en-GB-Chirp3-HD-Kore"
+},
+"m03:logodds:3": {
+"d": 19.1,
+"f": "narration/m03-logodds-3-1oqqx7c.mp3",
+"h": "1oqqx7c",
+"v": "en-GB-Chirp3-HD-Kore"
+},
+"m03:logodds:4": {
+"d": 16.61,
+"f": "narration/m03-logodds-4-1od3el9.mp3",
+"h": "1od3el9",
+"v": "en-GB-Chirp3-HD-Kore"
+},
+"m04:bootstrap:0": {
+"d": 9.7,
+"f": "narration/m04-bootstrap-0-1r0bplf.mp3",
+"h": "1r0bplf",
+"v": "en-GB-Chirp3-HD-Kore"
+},
+"m04:bootstrap:1": {
+"d": 13.42,
+"f": "narration/m04-bootstrap-1-1oknrqg.mp3",
+"h": "1oknrqg",
+"v": "en-GB-Chirp3-HD-Kore"
+},
+"m04:bootstrap:2": {
+"d": 17.74,
+"f": "narration/m04-bootstrap-2-eusnh6.mp3",
+"h": "eusnh6",
+"v": "en-GB-Chirp3-HD-Kore"
+},
+"m04:bootstrap:3": {
+"d": 13.94,
+"f": "narration/m04-bootstrap-3-15z8jt4.mp3",
+"h": "15z8jt4",
+"v": "en-GB-Chirp3-HD-Kore"
+},
+"m04:bootstrap:4": {
+"d": 13.3,
+"f": "narration/m04-bootstrap-4-18ejuum.mp3",
+"h": "18ejuum",
+"v": "en-GB-Chirp3-HD-Kore"
+},
+"m04:bootstrap:5": {
+"d": 12.14,
+"f": "narration/m04-bootstrap-5-w4ha2e.mp3",
+"h": "w4ha2e",
+"v": "en-GB-Chirp3-HD-Kore"
+},
+"m04:rtm:0": {
+"d": 9.34,
+"f": "narration/m04-rtm-0-jnsbne.mp3",
+"h": "jnsbne",
+"v": "en-GB-Chirp3-HD-Kore"
+},
+"m04:rtm:1": {
+"d": 9.05,
+"f": "narration/m04-rtm-1-7lq36h.mp3",
+"h": "7lq36h",
+"v": "en-GB-Chirp3-HD-Kore"
+},
+"m04:rtm:2": {
+"d": 9.94,
+"f": "narration/m04-rtm-2-8nzvq2.mp3",
+"h": "8nzvq2",
+"v": "en-GB-Chirp3-HD-Kore"
+},
+"m04:rtm:3": {
+"d": 12.02,
+"f": "narration/m04-rtm-3-bk0eq3.mp3",
+"h": "bk0eq3",
+"v": "en-GB-Chirp3-HD-Kore"
+},
+"m04:rtm:4": {
+"d": 11.69,
+"f": "narration/m04-rtm-4-hmojlc.mp3",
+"h": "hmojlc",
+"v": "en-GB-Chirp3-HD-Kore"
+},
+"m04:rtm:5": {
+"d": 11.14,
+"f": "narration/m04-rtm-5-1crvszh.mp3",
+"h": "1crvszh",
+"v": "en-GB-Chirp3-HD-Kore"
+},
+"m05:mechanisms:0": {
+"d": 11.21,
+"f": "narration/m05-mechanisms-0-1aa2nj3.mp3",
+"h": "1aa2nj3",
+"v": "en-GB-Chirp3-HD-Kore"
+},
+"m05:mechanisms:1": {
+"d": 11.69,
+"f": "narration/m05-mechanisms-1-cvk72c.mp3",
+"h": "cvk72c",
+"v": "en-GB-Chirp3-HD-Kore"
+},
+"m05:mechanisms:2": {
+"d": 10.66,
+"f": "narration/m05-mechanisms-2-1y77aw0.mp3",
+"h": "1y77aw0",
+"v": "en-GB-Chirp3-HD-Kore"
+},
+"m05:mechanisms:3": {
+"d": 13.34,
+"f": "narration/m05-mechanisms-3-12cl3ay.mp3",
+"h": "12cl3ay",
+"v": "en-GB-Chirp3-HD-Kore"
+},
+"m05:mechanisms:4": {
+"d": 13.3,
+"f": "narration/m05-mechanisms-4-h2tstp.mp3",
+"h": "h2tstp",
+"v": "en-GB-Chirp3-HD-Kore"
+},
+"m05:mechanisms:5": {
+"d": 11.78,
+"f": "narration/m05-mechanisms-5-10rsupc.mp3",
+"h": "10rsupc",
+"v": "en-GB-Chirp3-HD-Kore"
+},
+"m05:mi:0": {
+"d": 7.78,
+"f": "narration/m05-mi-0-r2c05x.mp3",
+"h": "r2c05x",
+"v": "en-GB-Chirp3-HD-Kore"
+},
+"m05:mi:1": {
+"d": 9.5,
+"f": "narration/m05-mi-1-1pyjwpj.mp3",
+"h": "1pyjwpj",
+"v": "en-GB-Chirp3-HD-Kore"
+},
+"m05:mi:2": {
+"d": 15.62,
+"f": "narration/m05-mi-2-1v3wopz.mp3",
+"h": "1v3wopz",
+"v": "en-GB-Chirp3-HD-Kore"
+},
+"m05:mi:3": {
+"d": 17.33,
+"f": "narration/m05-mi-3-s6urrp.mp3",
+"h": "s6urrp",
+"v": "en-GB-Chirp3-HD-Kore"
+},
+"m05:mi:4": {
+"d": 16.34,
+"f": "narration/m05-mi-4-80ifde.mp3",
+"h": "80ifde",
+"v": "en-GB-Chirp3-HD-Kore"
+},
+"m05:mi:5": {
+"d": 13.13,
+"f": "narration/m05-mi-5-19fv72u.mp3",
+"h": "19fv72u",
+"v": "en-GB-Chirp3-HD-Kore"
+},
+"m06:cutage:0": {
+"d": 15.46,
+"f": "narration/m06-cutage-0-197kt3m.mp3",
+"h": "197kt3m",
+"v": "en-GB-Chirp3-HD-Kore"
+},
+"m06:cutage:1": {
+"d": 12.34,
+"f": "narration/m06-cutage-1-fyl8of.mp3",
+"h": "fyl8of",
+"v": "en-GB-Chirp3-HD-Kore"
+},
+"m06:cutage:2": {
+"d": 12.89,
+"f": "narration/m06-cutage-2-hgy2xt.mp3",
+"h": "hgy2xt",
+"v": "en-GB-Chirp3-HD-Kore"
+},
+"m06:cutage:3": {
+"d": 12.29,
+"f": "narration/m06-cutage-3-12xs69.mp3",
+"h": "12xs69",
+"v": "en-GB-Chirp3-HD-Kore"
+},
+"m06:cutage:4": {
+"d": 12.5,
+"f": "narration/m06-cutage-4-1pkqfxa.mp3",
+"h": "1pkqfxa",
+"v": "en-GB-Chirp3-HD-Kore"
+},
+"m06:cutage:5": {
+"d": 9.98,
+"f": "narration/m06-cutage-5-1m6e607.mp3",
+"h": "1m6e607",
+"v": "en-GB-Chirp3-HD-Kore"
+},
+"m07:shortlist:0": {
+"d": 10.34,
+"f": "narration/m07-shortlist-0-do13dz.mp3",
+"h": "do13dz",
+"v": "en-GB-Chirp3-HD-Kore"
+},
+"m07:shortlist:1": {
+"d": 8.66,
+"f": "narration/m07-shortlist-1-1gar24d.mp3",
+"h": "1gar24d",
+"v": "en-GB-Chirp3-HD-Kore"
+},
+"m07:shortlist:2": {
+"d": 11.66,
+"f": "narration/m07-shortlist-2-szb7j6.mp3",
+"h": "szb7j6",
+"v": "en-GB-Chirp3-HD-Kore"
+},
+"m07:shortlist:3": {
+"d": 10.54,
+"f": "narration/m07-shortlist-3-1twwmlo.mp3",
+"h": "1twwmlo",
+"v": "en-GB-Chirp3-HD-Kore"
+},
+"m07:shortlist:4": {
+"d": 12.41,
+"f": "narration/m07-shortlist-4-1vny7rw.mp3",
+"h": "1vny7rw",
+"v": "en-GB-Chirp3-HD-Kore"
+},
+"m08:testimation:0": {
+"d": 13.85,
+"f": "narration/m08-testimation-0-l0f0t4.mp3",
+"h": "l0f0t4",
+"v": "en-GB-Chirp3-HD-Kore"
+},
+"m08:testimation:1": {
+"d": 13.66,
+"f": "narration/m08-testimation-1-kmr5ww.mp3",
+"h": "kmr5ww",
+"v": "en-GB-Chirp3-HD-Kore"
+},
+"m08:testimation:2": {
+"d": 14.18,
+"f": "narration/m08-testimation-2-1gtfq4r.mp3",
+"h": "1gtfq4r",
+"v": "en-GB-Chirp3-HD-Kore"
+},
+"m08:testimation:3": {
+"d": 13.42,
+"f": "narration/m08-testimation-3-gkz2f7.mp3",
+"h": "gkz2f7",
+"v": "en-GB-Chirp3-HD-Kore"
+},
+"m08:testimation:4": {
+"d": 14.5,
+"f": "narration/m08-testimation-4-st2m3f.mp3",
+"h": "st2m3f",
+"v": "en-GB-Chirp3-HD-Kore"
+},
+"m08:testimation:5": {
+"d": 12.77,
+"f": "narration/m08-testimation-5-qwlygj.mp3",
+"h": "qwlygj",
+"v": "en-GB-Chirp3-HD-Kore"
+},
+"m09:chance:0": {
+"d": 10.37,
+"f": "narration/m09-chance-0-181wqqz.mp3",
+"h": "181wqqz",
+"v": "en-GB-Chirp3-HD-Kore"
+},
+"m09:chance:1": {
+"d": 18.29,
+"f": "narration/m09-chance-1-nm5p10.mp3",
+"h": "nm5p10",
+"v": "en-GB-Chirp3-HD-Kore"
+},
+"m09:chance:2": {
+"d": 12.58,
+"f": "narration/m09-chance-2-1pqai1t.mp3",
+"h": "1pqai1t",
+"v": "en-GB-Chirp3-HD-Kore"
+},
+"m09:chance:3": {
+"d": 14.81,
+"f": "narration/m09-chance-3-7i8wmg.mp3",
+"h": "7i8wmg",
+"v": "en-GB-Chirp3-HD-Kore"
+},
+"m09:pairs:0": {
+"d": 10.73,
+"f": "narration/m09-pairs-0-1gsqqoe.mp3",
+"h": "1gsqqoe",
+"v": "en-GB-Chirp3-HD-Kore"
+},
+"m09:pairs:1": {
+"d": 7.61,
+"f": "narration/m09-pairs-1-1aohk7g.mp3",
+"h": "1aohk7g",
+"v": "en-GB-Chirp3-HD-Kore"
+},
+"m09:pairs:2": {
+"d": 13.42,
+"f": "narration/m09-pairs-2-c7qwlx.mp3",
+"h": "c7qwlx",
+"v": "en-GB-Chirp3-HD-Kore"
+},
+"m09:pairs:3": {
+"d": 13.3,
+"f": "narration/m09-pairs-3-1txdazh.mp3",
+"h": "1txdazh",
+"v": "en-GB-Chirp3-HD-Kore"
+},
+"m09:pairs:4": {
+"d": 13.54,
+"f": "narration/m09-pairs-4-vepjqd.mp3",
+"h": "vepjqd",
+"v": "en-GB-Chirp3-HD-Kore"
+},
+"m10:shrink:0": {
+"d": 13.3,
+"f": "narration/m10-shrink-0-13hci1m.mp3",
+"h": "13hci1m",
+"v": "en-GB-Chirp3-HD-Kore"
+},
+"m10:shrink:1": {
+"d": 14.38,
+"f": "narration/m10-shrink-1-e0nwza.mp3",
+"h": "e0nwza",
+"v": "en-GB-Chirp3-HD-Kore"
+},
+"m10:shrink:2": {
+"d": 13.42,
+"f": "narration/m10-shrink-2-13rfz8f.mp3",
+"h": "13rfz8f",
+"v": "en-GB-Chirp3-HD-Kore"
+},
+"m10:shrink:3": {
+"d": 15.98,
+"f": "narration/m10-shrink-3-1txsduz.mp3",
+"h": "1txsduz",
+"v": "en-GB-Chirp3-HD-Kore"
+},
+"m10:shrink:4": {
+"d": 14.18,
+"f": "narration/m10-shrink-4-1td2uib.mp3",
+"h": "1td2uib",
+"v": "en-GB-Chirp3-HD-Kore"
+},
+"m11:calib:0": {
+"d": 14.09,
+"f": "narration/m11-calib-0-puvz65.mp3",
+"h": "puvz65",
+"v": "en-GB-Chirp3-HD-Kore"
+},
+"m11:calib:1": {
+"d": 13.01,
+"f": "narration/m11-calib-1-1apy8vp.mp3",
+"h": "1apy8vp",
+"v": "en-GB-Chirp3-HD-Kore"
+},
+"m11:calib:2": {
+"d": 12.5,
+"f": "narration/m11-calib-2-1mtc2nt.mp3",
+"h": "1mtc2nt",
+"v": "en-GB-Chirp3-HD-Kore"
+},
+"m11:calib:3": {
+"d": 14.62,
+"f": "narration/m11-calib-3-9yjeqv.mp3",
+"h": "9yjeqv",
+"v": "en-GB-Chirp3-HD-Kore"
+},
+"m11:calib:4": {
+"d": 13.85,
+"f": "narration/m11-calib-4-vkn3b4.mp3",
+"h": "vkn3b4",
+"v": "en-GB-Chirp3-HD-Kore"
+},
+"m11:pairs:0": {
+"d": 10.85,
+"f": "narration/m11-pairs-0-t1rq6t.mp3",
+"h": "t1rq6t",
+"v": "en-GB-Chirp3-HD-Kore"
+},
+"m11:pairs:1": {
+"d": 11.3,
+"f": "narration/m11-pairs-1-lfulsq.mp3",
+"h": "lfulsq",
+"v": "en-GB-Chirp3-HD-Kore"
+},
+"m11:pairs:2": {
+"d": 16.42,
+"f": "narration/m11-pairs-2-evqvmc.mp3",
+"h": "evqvmc",
+"v": "en-GB-Chirp3-HD-Kore"
+},
+"m11:pairs:3": {
+"d": 13.3,
+"f": "narration/m11-pairs-3-1201i25.mp3",
+"h": "1201i25",
+"v": "en-GB-Chirp3-HD-Kore"
+},
+"m11:pairs:4": {
+"d": 14.45,
+"f": "narration/m11-pairs-4-1wip631.mp3",
+"h": "1wip631",
+"v": "en-GB-Chirp3-HD-Kore"
+},
+"m12:dca:0": {
+"d": 17.54,
+"f": "narration/m12-dca-0-452ipi.mp3",
+"h": "452ipi",
+"v": "en-GB-Chirp3-HD-Kore"
+},
+"m12:dca:1": {
+"d": 15.41,
+"f": "narration/m12-dca-1-oi6edn.mp3",
+"h": "oi6edn",
+"v": "en-GB-Chirp3-HD-Kore"
+},
+"m12:dca:2": {
+"d": 13.85,
+"f": "narration/m12-dca-2-kpaufk.mp3",
+"h": "kpaufk",
+"v": "en-GB-Chirp3-HD-Kore"
+},
+"m12:dca:3": {
+"d": 15.53,
+"f": "narration/m12-dca-3-10hqjmh.mp3",
+"h": "10hqjmh",
+"v": "en-GB-Chirp3-HD-Kore"
+},
+"m12:dca:4": {
+"d": 12.58,
+"f": "narration/m12-dca-4-a6llms.mp3",
+"h": "a6llms",
+"v": "en-GB-Chirp3-HD-Kore"
+},
+"m12:dca:5": {
+"d": 13.85,
+"f": "narration/m12-dca-5-16w6ck1.mp3",
+"h": "16w6ck1",
+"v": "en-GB-Chirp3-HD-Kore"
+},
+"m13:boot:0": {
+"d": 12.98,
+"f": "narration/m13-boot-0-10vdsdm.mp3",
+"h": "10vdsdm",
+"v": "en-GB-Chirp3-HD-Kore"
+},
+"m13:boot:1": {
+"d": 12.58,
+"f": "narration/m13-boot-1-1oqgiia.mp3",
+"h": "1oqgiia",
+"v": "en-GB-Chirp3-HD-Kore"
+},
+"m13:boot:2": {
+"d": 15.41,
+"f": "narration/m13-boot-2-1ayt6rw.mp3",
+"h": "1ayt6rw",
+"v": "en-GB-Chirp3-HD-Kore"
+},
+"m13:boot:3": {
+"d": 17.93,
+"f": "narration/m13-boot-3-um4gvt.mp3",
+"h": "um4gvt",
+"v": "en-GB-Chirp3-HD-Kore"
+},
+"m13:boot:4": {
+"d": 18.94,
+"f": "narration/m13-boot-4-1yrldyn.mp3",
+"h": "1yrldyn",
+"v": "en-GB-Chirp3-HD-Kore"
+},
+"m13:boot:5": {
+"d": 17.93,
+"f": "narration/m13-boot-5-1trbhwa.mp3",
+"h": "1trbhwa",
+"v": "en-GB-Chirp3-HD-Kore"
+},
+"m14:casemix:0": {
+"d": 9.7,
+"f": "narration/m14-casemix-0-ws4neu.mp3",
+"h": "ws4neu",
+"v": "en-GB-Chirp3-HD-Kore"
+},
+"m14:casemix:1": {
+"d": 12.58,
+"f": "narration/m14-casemix-1-1oppt4z.mp3",
+"h": "1oppt4z",
+"v": "en-GB-Chirp3-HD-Kore"
+},
+"m14:casemix:2": {
+"d": 13.66,
+"f": "narration/m14-casemix-2-eaklp5.mp3",
+"h": "eaklp5",
+"v": "en-GB-Chirp3-HD-Kore"
+},
+"m14:casemix:3": {
+"d": 15.5,
+"f": "narration/m14-casemix-3-qln7ok.mp3",
+"h": "qln7ok",
+"v": "en-GB-Chirp3-HD-Kore"
+},
+"m14:casemix:4": {
+"d": 14.66,
+"f": "narration/m14-casemix-4-zxnn6q.mp3",
+"h": "zxnn6q",
+"v": "en-GB-Chirp3-HD-Kore"
+},
+"m14:casemix:5": {
+"d": 15.14,
+"f": "narration/m14-casemix-5-7u77v5.mp3",
+"h": "7u77v5",
+"v": "en-GB-Chirp3-HD-Kore"
+},
+"m15:points:0": {
+"d": 17.06,
+"f": "narration/m15-points-0-1f1spe4.mp3",
+"h": "1f1spe4",
+"v": "en-GB-Chirp3-HD-Kore"
+},
+"m15:points:1": {
+"d": 20.42,
+"f": "narration/m15-points-1-15b0r03.mp3",
+"h": "15b0r03",
+"v": "en-GB-Chirp3-HD-Kore"
+},
+"m15:points:2": {
+"d": 16.37,
+"f": "narration/m15-points-2-1i54sqb.mp3",
+"h": "1i54sqb",
+"v": "en-GB-Chirp3-HD-Kore"
+},
+"m15:points:3": {
+"d": 16.85,
+"f": "narration/m15-points-3-3vbx7b.mp3",
+"h": "3vbx7b",
+"v": "en-GB-Chirp3-HD-Kore"
+},
+"m15:points:4": {
+"d": 14.81,
+"f": "narration/m15-points-4-1ml200j.mp3",
+"h": "1ml200j",
+"v": "en-GB-Chirp3-HD-Kore"
+},
+"m15:points:5": {
+"d": 13.73,
+"f": "narration/m15-points-5-10bc3um.mp3",
+"h": "10bc3um",
+"v": "en-GB-Chirp3-HD-Kore"
+},
+"p0:optimism:0": {
+"d": 9.1,
+"f": "narration/p0-optimism-0-1du37mz.mp3",
+"h": "1du37mz",
+"v": "en-GB-Chirp3-HD-Kore"
+},
+"p0:optimism:1": {
+"d": 12.74,
+"f": "narration/p0-optimism-1-1ujh2dw.mp3",
+"h": "1ujh2dw",
+"v": "en-GB-Chirp3-HD-Kore"
+},
+"p0:optimism:2": {
+"d": 13.7,
+"f": "narration/p0-optimism-2-1c59qbq.mp3",
+"h": "1c59qbq",
+"v": "en-GB-Chirp3-HD-Kore"
+},
+"p0:optimism:3": {
+"d": 16.34,
+"f": "narration/p0-optimism-3-fo3dt2.mp3",
+"h": "fo3dt2",
+"v": "en-GB-Chirp3-HD-Kore"
+},
+"p0:optimism:4": {
+"d": 10.42,
+"f": "narration/p0-optimism-4-7n6k59.mp3",
+"h": "7n6k59",
+"v": "en-GB-Chirp3-HD-Kore"
+},
+"p0:scurve:0": {
+"d": 13.13,
+"f": "narration/p0-scurve-0-52igxk.mp3",
+"h": "52igxk",
+"v": "en-GB-Chirp3-HD-Kore"
+},
+"p0:scurve:1": {
+"d": 11.81,
+"f": "narration/p0-scurve-1-1f54hjk.mp3",
+"h": "1f54hjk",
+"v": "en-GB-Chirp3-HD-Kore"
+},
+"p0:scurve:2": {
+"d": 17.54,
+"f": "narration/p0-scurve-2-nxzuso.mp3",
+"h": "nxzuso",
+"v": "en-GB-Chirp3-HD-Kore"
+},
+"p0:scurve:3": {
+"d": 19.18,
+"f": "narration/p0-scurve-3-vxismi.mp3",
+"h": "vxismi",
+"v": "en-GB-Chirp3-HD-Kore"
+},
+"p0:scurve:4": {
+"d": 16.25,
+"f": "narration/p0-scurve-4-bho14l.mp3",
+"h": "bho14l",
+"v": "en-GB-Chirp3-HD-Kore"
+}
+}

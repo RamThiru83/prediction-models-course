@@ -1,8 +1,10 @@
 const fs = require('fs'), path = require('path');
 const dir = __dirname, src = p => fs.readFileSync(path.join(dir, p), 'utf8');
 const order = ['p0', 'm01', 'm02', 'm03', 'm04', 'm05', 'm06', 'm07', 'm08', 'm09', 'm10', 'm11', 'm12', 'm13', 'm14', 'm15', 'cap', 'ref_glossary', 'ref_formulas', 'ref_steps', 'ref_map'];
-const js = ['src/charts.js', 'src/engine.js', 'src/data.js', 'src/casemix.js', 'src/core.js', 'src/sync.js', 'src/learn.js', 'src/pages.js', 'src/dash.js', 'src/widgets_a.js', 'src/widgets_b.js', 'src/widgets_c.js', 'src/analysislab.js']
+const js = ['src/charts.js', 'src/engine.js', 'src/data.js', 'src/casemix.js', 'src/core.js', 'src/explain.js', 'src/sync.js', 'src/learn.js', 'src/pages.js', 'src/dash.js', 'src/widgets_a.js', 'src/widgets_b.js', 'src/widgets_c.js', 'src/analysislab.js']
   .map(src).map(t=>t.replace('__LOGO__',src('src/logo.b64').trim())).concat(order.map(n => src('content/' + n + '.js'))).join('\n;\n').replace(/<\/script/gi, '<\\/script');
+const narr = fs.existsSync(path.join(dir, 'narration', 'manifest.json')) ? fs.readFileSync(path.join(dir, 'narration', 'manifest.json'), 'utf8').trim() : '{}';
+const js2 = js + '\n;\nApp.NARR = ' + narr + ';';
 const css = src('src/style.css');
 const fonts = 'https://fonts.googleapis.com/css2?family=Instrument+Sans:wght@400;500;600&family=Instrument+Serif:ital@0;1&display=swap';
 const body = `<title>CliPr</title>
@@ -18,7 +20,7 @@ ${css}
 <main class="main" id="page"></main>
 </div>
 <script>
-${js}
+${js2}
 ;App.init();
 </script>
 `;

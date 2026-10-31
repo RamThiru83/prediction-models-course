@@ -10,7 +10,8 @@ Chart.nice = function (lo, hi, n) {
   return { lo: a, hi: b, ticks: t, step: step };
 };
 Chart.fmtTick = function (v, step) { var d = step >= 1 ? 0 : Math.min(4, Math.ceil(-Math.log10(step))); return v.toFixed(d); };
-Chart.color = function (c) { return { a: 'var(--c1)', b: 'var(--c2)', c: 'var(--c3)', d: 'var(--c4)', ink: 'var(--ink)', muted: 'var(--muted)' }[c] || c || 'var(--c1)'; };
+/* roles of the course's visual code: obs = observed (solid), pred = model prediction (dashed), err = error (red) */
+Chart.color = function (c) { return { a: 'var(--c1)', b: 'var(--c2)', c: 'var(--c3)', d: 'var(--c4)', ink: 'var(--ink)', muted: 'var(--muted)', obs: 'var(--obs)', pred: 'var(--pred)', err: 'var(--err)' }[c] || c || 'var(--c1)'; };
 /* spec: {w,h,xlim:[lo,hi],ylim:[lo,hi],xlabel,ylabel,xticks,yticks,xfmt,yfmt,layers:[...],legend:[{label,color,dash}],title} */
 Chart.plot = function (spec) {
   var W = spec.w || 560, H = spec.h || 340, m = { l: 52, r: 14, t: spec.title ? 26 : 12, b: 44 };

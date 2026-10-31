@@ -48,9 +48,14 @@
       });
     }
     buildCfg(); var curDs = P.v.ds;
-    P.onchange = function () { if (P.v.ds !== curDs) { curDs = P.v.ds; buildCfg(); last = null; P.draw(); } };
+    function settingNote() {
+      var ds = P.v.ds, rows = PM.data.get(ds), oc = PM.data.sets[ds].outcome, inc = rows.reduce(function (a, r) { return a + r[oc]; }, 0) / rows.length, terms = makeTerms(), df = terms.reduce(function (a, t) { return a + termDf(t); }, 0), nu = Math.min(P.v.n, split(ds).dev.length), ev = nu * inc;
+      P.notice(!terms.length ? 'No predictor is ticked: select at least one before running.' : 'About ' + f(ev, 0) + ' events in ' + nu + ' records against ' + df + ' candidate df gives an EPV near ' + f(ev / df, 1) + (ev / df < 10 ? ': expect optimism, so selection or shrinkage choices will matter.' : ': enough to fit the chosen terms without heavy overfitting.') + (P.v.miss === 'cc' ? ' Complete-case analysis will lower this.' : '') + (last ? ' Press Run analysis to refresh the results shown.' : ''));
+    }
+    P.onchange = function () { if (P.v.ds !== curDs) { curDs = P.v.ds; buildCfg(); last = null; P.draw(); } else settingNote(); };
     P.onreset = function () { curDs = P.v.ds; buildCfg(); seed = 99; last = null; };
     P.draw = function () {
+      settingNote();
       if (last) return;
       var sp = split(P.v.ds);
       P.out.innerHTML = '<p class="note">Choose a dataset, predictors, coding and strategy, then press <b>Run analysis</b>. The workbench fits a logistic regression, estimates optimism by bootstrap (replaying selection and shrinkage), and validates the final model on <b>' + esc(sp.valName) + '</b>. All data are synthetic. Time grows with sample size, selection and replications.</p>';
@@ -86,7 +91,7 @@
       var sm = PM.smoothCalib(y, p, grid), mx = Math.min(1, Math.max(0.25, Math.max.apply(null, g.map(function (r) { return Math.max(r.pred, r.obs); })) * 1.15));
       var roc = PM.rocCurve(y, lp).map(function (r) { return { x: r.fpr, y: r.tpr }; });
       var dc = PM.decisionCurve(y, p, 0.01, 0.6, 0.01), ymax = Math.max(0.02, Math.max.apply(null, dc.map(function (d) { return d.model; })) * 1.2), ymin = -ymax * 0.6, nb = PM.netBenefit(y, p, thr);
-      return '<div class="grid2"><div>' + Chart.plot({ w: 360, h: 300, xlim: [0, mx], ylim: [0, mx], title: 'Calibration', xlabel: 'Predicted', ylabel: 'Observed', xfmt: fmtP, yfmt: fmtP, layers: [{ type: 'diag', color: 'muted' }, { type: 'line', pts: sm.filter(function (z) { return z.x <= mx; }), color: 'a' }, { type: 'points', pts: g.map(function (r) { return { x: r.pred, y: r.obs }; }), color: 'b', r: 4 }] }) + '</div><div>' +
+      return '<div class="grid2"><div>' + Chart.plot({ w: 360, h: 300, xlim: [0, mx], ylim: [0, mx], title: 'Calibration', xlabel: 'Predicted', ylabel: 'Observed', xfmt: fmtP, yfmt: fmtP, layers: [{ type: 'diag', color: 'muted' }, { type: 'errbars', pts: g.map(function (r) { return { x: r.pred, lo: Math.min(r.pred, r.obs), hi: Math.max(r.pred, r.obs) }; }), color: 'err' }, { type: 'line', pts: sm.filter(function (z) { return z.x <= mx; }), color: 'obs' }, { type: 'points', pts: g.map(function (r) { return { x: r.pred, y: r.obs }; }), color: 'obs', r: 4 }] }) + '</div><div>' +
         Chart.plot({ w: 360, h: 300, xlim: [0, 1], ylim: [0, 1], title: 'ROC', xlabel: '1 − specificity', ylabel: 'Sensitivity', layers: [{ type: 'diag', color: 'muted' }, { type: 'line', pts: roc, color: 'a', width: 2 }] }) + '</div><div>' +
         Chart.plot({ w: 360, h: 300, xlim: [0, 0.6], ylim: [ymin, ymax], title: 'Decision curve', xlabel: 'Threshold', ylabel: 'Net benefit', xfmt: fmtP, layers: [{ type: 'hline', y: 0, color: 'muted', dash: '' }, { type: 'line', pts: dc.map(function (d) { return { x: d.t, y: d.all }; }), color: 'c' }, { type: 'line', pts: dc.map(function (d) { return { x: d.t, y: d.model }; }), color: 'a', width: 2.5 }, { type: 'vline', x: thr, color: 'b' }], legend: [{ label: 'Model', color: 'a' }, { label: 'Treat all', color: 'c' }] }) + '</div></div>';
     }
@@ -134,6 +139,8 @@
             '<p class="note">Each bootstrap sample replays the whole strategy (' + (S.sel !== 'none' ? 'selection, ' : '') + 'fitting' + (S.shr === 'ridge' ? ', ridge' : '') + (S.shr === 'heur' ? ', heuristic shrinkage' : '') + '). ' + (S.shr === 'boot' ? 'Shrinkage factor from the bootstrap slope: <b>' + f(shrinkS, 3) + '</b>; coefficients multiplied by it and the intercept re-estimated. Corrected figures are for the strategy before shrinkage; uniform shrinkage does not change c. ' : '') + (S.miss !== 'cc' ? 'Imputation was done once before the bootstrap and is not replayed. ' : '') + '</p>';
           SUM.push('Bootstrap-corrected (B ' + bo.B + '): c ' + f(bo.corrected.c, 3) + ', slope ' + f(bo.corrected.slope, 2) + ', scaled Brier ' + f(bo.corrected.brierScaled, 3) + (S.shr === 'boot' ? '; bootstrap shrinkage factor ' + f(shrinkS, 3) : '') + '.');
           var el = P.out.querySelector('#alboot'); if (!el) return; el.innerHTML = bhtml;
+          var bnote = 'Bootstrap correction cuts the apparent c from ' + f(app.c, 3) + ' to ' + f(bo.corrected.c, 3) + ' and the calibration slope from ' + f(app.slope, 2) + ' to ' + f(bo.corrected.slope, 2) + ' (EPV ' + f(epv, 1) + ').';
+          P.notice(bnote);
           // external validation
           var vrows = PM.complete(sp.val, usedCols), yv = PM.yOf(vrows, outcome), vh;
           if (vrows.length < 30 || yv.reduce(function (a, b) { return a + b; }, 0) < 5) vh = '<p class="note">Too few validation records for the chosen predictors.</p>';
@@ -143,12 +150,13 @@
               K.stats([['Calibration-in-the-large', K.sgn(cal.citl, 2) + ' ± ' + f(1.96 * cal.citlSE, 2)], ['Calibration slope', f(cal.slope, 2) + ' ± ' + f(1.96 * cal.slopeSE, 2)], ['c statistic (95% CI)', f(pv.c, 3) + ' (' + f(pv.c - 1.96 * se_c, 3) + ' to ' + f(pv.c + 1.96 * se_c, 3) + ')'], ['Scaled Brier', f(pv.brierScaled, 3)]]) +
               K.verdict('Net benefit at ' + pct(S.thr, 0) + ': model ' + f(nbv.model, 4) + ', treat all ' + f(nbv.all, 4) + ', treat none 0. ' + (nbv.model > Math.max(0, nbv.all) ? 'The model beats both default policies here.' : 'The model does not beat the best default policy here.'), nbv.model > Math.max(0, nbv.all) ? 'good' : 'bad') + charts(yv, lpv, S.thr, 'val') +
               '<p class="note">' + (S.ds === 'ptb_dev' ? 'The validation cohort differs in case-mix and in the strength of predictor effects, so a calibration slope below 1 and a non-zero calibration-in-the-large are expected: this is what a transported model faces. ' : 'The held-out records come from the same synthetic setting, so this is an internal-external check rather than a test in a different population. ') + 'Validation uses records complete on the chosen predictors.</p>';
+            P.notice('c falls from ' + f(app.c, 3) + ' (apparent) to ' + f(bo.corrected.c, 3) + ' (corrected) and ' + f(pv.c, 3) + ' in validation, where the calibration slope is ' + f(cal.slope, 2) + (cal.slope < 0.9 ? ': predictions are too extreme in new data.' : '.'));
             SUM.push('External validation (' + sp.valName + ', n ' + vrows.length + ', events ' + n1 + '): calibration-in-the-large ' + K.sgn(cal.citl, 2) + ', slope ' + f(cal.slope, 2) + ', c ' + f(pv.c, 3) + ' (95% CI ' + f(pv.c - 1.96 * se_c, 3) + ' to ' + f(pv.c + 1.96 * se_c, 3) + '), net benefit at ' + pct(S.thr, 0) + ' = ' + f(nbv.model, 4) + ' vs treat all ' + f(nbv.all, 4) + '. Synthetic data.');
           }
           P.out.querySelector('#alval').innerHTML = vh + '<p><button type="button" class="btn" id="alcopy">Copy summary</button></p>';
           var cb = P.out.querySelector('#alcopy'); cb.onclick = function () { K.copy(SUM.join('\n'), cb); };
         }, tok);
-      } catch (e) { P.out.innerHTML = K.verdict('The analysis could not be completed: ' + esc(e.message), 'bad'); }
+      } catch (e) { P.notice(''); P.out.innerHTML = K.verdict('The analysis could not be completed: ' + esc(e.message), 'bad'); }
     }
     P.btn('Run analysis', run, true);
     P.btn('New random subsample', function () { seed = Math.floor(Math.random() * 1e6); last = null; P.draw(); });

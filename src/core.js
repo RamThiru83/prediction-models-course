@@ -104,11 +104,16 @@ K.titles = { datasetCard: 'Dataset', oddsConverter: 'Odds converter', logisticCu
 K.widget = function (name, fn) { App.widgets[name] = fn; };
 K.uid = 0;
 K.panel = function (root, title) {
-  root.classList.add('wg'); root.innerHTML = '<div class="wg-h"><b></b><button class="btn sm" type="button">Reset</button></div><div class="wg-c"></div><div class="wg-b" hidden></div><div class="wg-o"></div>';
+  var tryTxt = root.getAttribute('data-try');
+  root.classList.add('wg'); root.innerHTML = '<div class="wg-h"><b></b><button class="btn sm" type="button">Reset</button></div>' + (tryTxt ? '<p class="wg-try"><b>Try</b> <span></span></p>' : '') + '<div class="wg-c"></div><div class="wg-b" hidden></div><div class="wg-o"></div><div class="wg-n" aria-live="polite" hidden><b>Notice</b> <span></span></div>';
+  if (tryTxt) root.querySelector('.wg-try span').textContent = tryTxt;
   root.querySelector('b').textContent = title;
   var P = { root: root, v: {}, defs: {}, ui: {}, out: root.querySelector('.wg-o'), cbox: root.querySelector('.wg-c'), bbox: root.querySelector('.wg-b'), token: { stop: false } };
   var pend = false;
   P.draw = function () { };
+  var nbox = root.querySelector('.wg-n');
+  /* P.notice(html): a short live comment on what the learner just did; P.notice('') hides it */
+  P.notice = function (html) { nbox.hidden = !html; nbox.querySelector('span').innerHTML = html || ''; return P; };
   P.onchange = function () { P.draw(); };
   P.touch = function () { if (pend) return; pend = true; requestAnimationFrame(function () { pend = false; P.onchange(); }); };
   function ctl(cls, key, label, html) { var d = document.createElement('div'); d.className = 'ctl ' + cls; var id = 'w' + (++K.uid); d.innerHTML = html.replace(/#ID#/g, id).replace('#LABEL#', label); P.cbox.appendChild(d); return d; }
@@ -234,7 +239,7 @@ App.pageHome = function () {
     '<p class="lede">How to build a model that estimates an individual patient’s risk, show whether it works, and judge whether it is useful, taught with maternal and child health examples and data you can analyse in the browser.</p>' +
     '<div class="callout key"><b>How the course works</b><p>Each module teaches one stage of model development or validation from first principles: the idea, the formula, a worked example, and the pitfalls. Interactive simulators let you see the effect of sample size, missing data, selection and shrinkage rather than take it on trust. Each module ends with a quiz, three case tasks, and worked answers placed at the end so that you attempt the tasks first.</p></div>' +
     '<p>The method follows the framework in E. W. Steyerberg, <i>Clinical Prediction Models</i> (2009), chapters 1 to 19 (development and validation). Model updating and the book’s case studies are outside its scope.</p>' +
-    '<p>All datasets are <b>synthetic</b>. They describe no real person and were generated from known rules, so you can check what an analysis should recover.</p>';
+    App.CODE_HTML + '<p>All datasets are <b>synthetic</b>. They describe no real person and were generated from known rules, so you can check what an analysis should recover.</p>';
   h += '<div class="prog" aria-hidden="true"><i style="width:' + (100 * done / mods.length).toFixed(0) + '%"></i></div><p class="num" style="color:var(--muted);font-size:14px">' + done + ' of ' + mods.length + ' modules marked complete (stored in this browser only).</p>';
   h += '<h3>Start where you are</h3><div class="home-grid">';
   h += App.homeBanner();
@@ -296,14 +301,14 @@ App.pageCaseModule = function (m, prev, next) {
       body = '<p class="lede">' + m.summary + '</p><div class="meta"><span><b>Source</b> ' + m.book + '</span><span><b>Study time</b> about ' + m.minutes + ' minutes</span></div>' +
         '<div class="goals"><b>After this module you can</b><ul>' + m.objectives.map(function (o) { return '<li>' + o + '</li>'; }).join('') + '</ul></div>' +
         '<p class="flowhint">Work through the steps in the bar above, one at a time. Start with the essentials, then do each case: read what you need and the situation, try the simulator, and write your answer to each task before checking the worked answer. Finish with the quiz.</p>' +
-        '<section class="sec essentials" id="' + m.id + '-ess"><h2>The essentials</h2>' + m.essentials + '</section>' + storyBox(true);
+        '<section class="sec essentials" id="' + m.id + '-ess"><h2>The essentials</h2>' + App.fillExplainers(m.essentials, m) + '</section>' + storyBox(true);
     } else if (s.tasks) {
       var c = m.cases[i - 1];
       body = storyBox(i === 1) + '<section class="sec case" id="' + m.id + '-' + c.id + '"><div class="ccard"><div class="chead">' +
         '<span class="cnum">Case ' + i + ' of ' + ncase + '</span><h2 class="ctitle">' + c.title + '</h2>' +
         '<span class="caim">In this case you will ' + c.aim + '</span><span class="cfoot">' + c.tasks.length + ' tasks · about ' + (c.minutes || 10) + ' min</span></div><div class="cbody">' +
-        '<div class="need"><b>What you need</b>' + c.need + '</div>' +
-        '<div class="situation"><b>The situation</b>' + c.scenario + '</div>' + (c.widgets || '') +
+        '<div class="need"><b>What you need</b>' + App.fillExplainers(c.need, m) + '</div>' +
+        '<div class="situation"><b>The situation</b>' + App.fillExplainers(c.scenario, m) + '</div>' + (c.widgets || '') +
         '<div class="turn"><b class="turnh">Your turn</b>' + c.tasks.map(function (n) { return taskHtml(m.tasks[n], n); }).join('') + '</div>' +
         '<div class="takeaway"><b>Take-away</b><p>' + c.takeaway + '</p></div></div></div></section>';
     } else if (s.key === 'quiz') {
@@ -314,7 +319,7 @@ App.pageCaseModule = function (m, prev, next) {
         '<div class="callout key"><b>Finished?</b><p><button type="button" class="btn pri" id="markdone">' + (P.done[m.id] ? 'Marked complete (click to undo)' : 'Mark this module complete') + '</button></p></div>';
     } else if (s.key === 'notes') {
       var strip = function (x) { return x.replace(/<div data-widget="[^"]*"[^>]*><\/div>/g, '<p class="muted">The simulator for this part is in the cases.</p>').replace(/<ul class="try">[\s\S]*?<\/ul>/g, ''); };
-      body = '<p class="flowhint">Short reference notes for this module, to revise from or look things up. You do not need them to complete the cases.</p>' + m.sections.map(function (x) { return '<section class="sec" id="' + m.id + '-' + x.id + '"><h2>' + x.title + '</h2>' + strip(x.html) + '</section>'; }).join('');
+      body = '<p class="flowhint">Short reference notes for this module, to revise from or look things up. You do not need them to complete the cases.</p>' + m.sections.map(function (x) { return '<section class="sec" id="' + m.id + '-' + x.id + '"><h2>' + x.title + '</h2>' + strip(x.html) + '</section>'; }).join('') + App.readingHtml(m);
     }
     h += '<div class="step" id="' + m.id + '-st-' + s.key + '" data-si="' + i + '"' + (i ? ' hidden' : '') + '>' + body + nav(i) + '</div>';
   });
@@ -324,7 +329,7 @@ App.pageCaseModule = function (m, prev, next) {
     var key = 'pmc.step.' + m.id, cur = 0;
     var bar = root.querySelectorAll('.stp'), panes = root.querySelectorAll('.step');
     function show(i, scroll) {
-      i = Math.max(0, Math.min(steps.length - 1, i)); cur = i;
+      i = Math.max(0, Math.min(steps.length - 1, i)); cur = i; App.stopExplainers();
       Array.prototype.forEach.call(panes, function (p, k) { p.hidden = k !== i; });
       Array.prototype.forEach.call(bar, function (b, k) { b.classList.toggle('on', k === i); if (k === i) b.setAttribute('aria-current', 'step'); else b.removeAttribute('aria-current'); });
       try { localStorage.setItem(key, String(i)); if (i > 0) localStorage.setItem('pmc.ess.' + m.id, '1'); } catch (e) {}
@@ -377,14 +382,14 @@ App.pageModule = function (m) {
       '<button type="button" class="fl check" data-goto="' + m.id + '-quiz"><b>Check yourself</b><span>' + m.quiz.length + ' questions</span></button>' +
       '<button type="button" class="fl answers" data-goto="' + m.id + '-answers"><b>Worked answers</b><span>compare yours</span></button></div>' +
       '<p class="flowhint">Read the essentials, then work through the cases in order. In each case, read what you need, then the situation, try the simulator, and write your answer to each task in its box before checking the worked answer.</p>';
-    h += '<section class="sec essentials" id="' + m.id + '-ess"><h2>The essentials</h2>' + m.essentials + '</section>';
+    h += '<section class="sec essentials" id="' + m.id + '-ess"><h2>The essentials</h2>' + App.fillExplainers(m.essentials, m) + '</section>';
     if (m.story) h += '<div class="story" id="' + m.id + '-cases"><b>The story in this module</b><p>' + m.story + '</p></div>';
     m.cases.forEach(function (c, k) {
       h += '<section class="sec case" id="' + m.id + '-' + c.id + '"><details class="ccard"' + (k === 0 ? ' open' : '') + '><summary>' +
         '<span class="cnum">Case ' + (k + 1) + ' of ' + ncase + '</span><span class="ctitle">' + c.title + '</span>' +
         '<span class="caim">In this case you will ' + c.aim + '</span><span class="cfoot">' + c.tasks.length + ' tasks · about ' + (c.minutes || 10) + ' min</span></summary><div class="cbody">' +
-        '<div class="need"><b>What you need</b>' + c.need + '</div>' +
-        '<div class="situation"><b>The situation</b>' + c.scenario + '</div>' + (c.widgets || '') +
+        '<div class="need"><b>What you need</b>' + App.fillExplainers(c.need, m) + '</div>' +
+        '<div class="situation"><b>The situation</b>' + App.fillExplainers(c.scenario, m) + '</div>' + (c.widgets || '') +
         '<div class="turn"><b class="turnh">Your turn</b>' + c.tasks.map(function (n) { return taskHtml(m.tasks[n], n); }).join('') + '</div>' +
         '<div class="takeaway"><b>Take-away</b><p>' + c.takeaway + '</p></div>' +
         (k < ncase - 1 ? '<p class="nextc"><button type="button" class="btn" data-next="' + m.id + '-' + m.cases[k + 1].id + '">Next: Case ' + (k + 2) + '. ' + m.cases[k + 1].title + '</button></p>' : '') +
@@ -466,6 +471,7 @@ App.pageMastery = function () {
 /* ===== router ===== */
 App.cur = 'home';
 App.route = function (keepScroll) {
+  if (App.stopExplainers) App.stopExplainers();
   var id = (location.hash || '#home').slice(1) || 'home', page;
   if (id === 'home') page = App.pageHome(); else if (id === 'about') page = App.pageAbout(); else if (id === 'howto') page = App.pageHowto(); else if (id === 'datasets') page = App.pageDatasets(); else if (id === 'mastery') page = App.pageMastery(); else if (id === 'account') page = App.pageAccount(); else if (id === 'notes') page = App.pageNotes(); else if (id === 'dashboard' && App.acct.isInstructor()) page = App.pageDashboard();
   else if (App.byId[id]) page = App.pageModule(App.byId[id]); else if (App.refs[id]) page = App.pageRef(id); else { id = 'home'; page = App.pageHome(); }
@@ -475,6 +481,7 @@ App.route = function (keepScroll) {
   App.clearEdbar(); if (App.byId[id] ? !App.lockInfo(App.byId[id]) : App.editable(id)) App.decorate(root, App.byId[id] || { id: id });
   Array.prototype.forEach.call(root.querySelectorAll('[data-widget]'), K.mount);
   App.fillLive(); if (page.after) page.after(root);
+  if (App.byId[id] && !App.lockInfo(App.byId[id])) { App.wireExplainers(root, App.byId[id]); if (!(App.edit && App.acct.isInstructor())) App.linkDefs(root, App.byId[id]); }
   App.markNav(); App.askBtn();
   document.getElementById('rail').classList.remove('open');
   if (!keepScroll) window.scrollTo(0, 0);

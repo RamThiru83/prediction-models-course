@@ -25,7 +25,7 @@
     P.slider('k', 'True predictors (each β = 0.5)', 0, 5, 1, 3, function (x) { return String(x); });
     P.slider('q', 'Noise predictors (β = 0)', 0, 30, 1, 10, function (x) { return String(x); });
     var prog = P.progress();
-    P.draw = function () { var ev = P.v.n * P.v.inc, d = P.v.k + P.v.q; P.out.innerHTML = '<p class="num">Expected events ' + f(ev, 0) + ' with ' + d + ' candidate predictors: EPV = ' + (d ? f(ev / d, 1) : 'n/a') + '. Press <b>Run 40 simulations</b>.</p>'; };
+    P.draw = function () { var ev = P.v.n * P.v.inc, d = P.v.k + P.v.q; P.notice(d ? 'With ' + f(ev, 0) + ' expected events for ' + d + ' candidate predictors, EPV is ' + f(ev / d, 1) + (ev / d < 10 ? ': below 10, so expect the apparent c to exceed the honest c by a clear margin.' : ': high enough that optimism should be small.') : 'With no predictors only an intercept is fitted, so there is nothing to overfit.'); P.out.innerHTML = '<p class="num">Expected events ' + f(ev, 0) + ' with ' + d + ' candidate predictors: EPV = ' + (d ? f(ev / d, 1) : 'n/a') + '. Press <b>Run 40 simulations</b>.</p>'; };
     P.btn('Run 40 simulations', function () {
       P.token.stop = true; P.token = { stop: false }; var tok = P.token;
       var n = P.v.n, inc = P.v.inc, k = P.v.k, q = P.v.q, p = k + q, R = PM.rng(Math.floor(Math.random() * 1e9)), NF = 6000;
@@ -42,7 +42,8 @@
         res.push({ app: PM.auc(y, lpA), hon: PM.auc(yf, lpF), slope: PM.calib(yf, lpF).slope });
       }, function (a, b) { prog(a, b); }, function () {
         var ma = PM.mean(res.map(function (r) { return r.app; })), mh = PM.mean(res.map(function (r) { return r.hon; })), ms = PM.mean(res.map(function (r) { return r.slope; }));
-        var d = p || 1, ev = n * inc;
+        var d = p || 1, ev = n * inc, below = res.filter(function (r) { return r.app > r.hon; }).length;
+        P.notice(res.length ? 'Apparent c averaged ' + f(ma, 3) + ' against an honest ' + f(mh, 3) + ' in fresh data (optimism ' + f(ma - mh, 3) + '); ' + below + ' of ' + res.length + ' dots lie below the diagonal. At EPV ' + f(ev / d, 1) + ' that gap is ' + (ma - mh > 0.05 ? 'large.' : 'modest.') : 'Too few usable samples: raise the sample size or incidence.');
         P.out.innerHTML = K.stats([['EPV', f(ev / d, 1)], ['Apparent c (mean)', f(ma, 3)], ['Honest c in fresh data', f(mh, 3)], ['Optimism in c', f(ma - mh, 3)], ['Calibration slope (fresh)', f(ms, 2)], ['c of the true model', f(cTrue, 3)]]) +
           Chart.plot({ w: 560, h: 300, xlim: [0.45, 1], ylim: [0.45, 1], xlabel: 'Apparent c (development sample)', ylabel: 'Honest c (fresh sample)', layers: [{ type: 'diag', color: 'muted' }, { type: 'hline', y: cTrue, color: 'c' }, { type: 'points', pts: res.map(function (r) { return { x: r.app, y: r.hon }; }), color: 'a', alpha: 0.6, r: 3 }] }) +
           '<p class="note">Each dot is one simulated development sample. Dots below the dashed diagonal show apparent performance exceeding honest performance. The horizontal line is the c of the true model in the fresh sample (the best any model could do). A mean slope below 1 means predictions are too extreme in new data.</p>';
@@ -62,6 +63,7 @@
       var mean = sel.length ? PM.mean(sel) : NaN, share = sel.length / Z.length;
       var pts = []; for (var r = 0.2; r <= 4.001; r += 0.1) { var s = 0, c = 0; for (i = 0; i < Z.length; i++) { var zz = r + Z[i]; if (Math.abs(zz) > zc) { s += zz; c++; } } if (c > 20) pts.push({ x: r, y: s / c / r }); }
       var rc = se > 0 ? b / se : 0;
+      P.notice(b === 0 ? 'With a true coefficient of 0, ' + pct(share, 1) + ' of estimates still pass p < ' + f(P.v.p, 2) + ': every one of them is spurious.' : !sel.length ? 'No estimate passes the threshold at β / SE = ' + f(rc, 2) + '.' : 'At β / SE = ' + f(rc, 2) + ' only ' + pct(share, 0) + ' of estimates are kept, and they average ' + f(mean, 2) + ' against a true ' + f(b, 2) + ' (' + K.sgn(100 * (mean - b) / b, 0) + '%). ' + (rc < 3 ? 'Low power inflates what survives selection.' : 'Power is high enough that the bias is small.'));
       P.out.innerHTML = K.stats([['Ratio β / SE', f(rc, 2)], ['Share selected (power)', pct(share, 1)], ['Mean estimate when selected', f(mean, 3)], ['Bias in selected estimate', b > 0 ? K.sgn(100 * (mean - b) / b, 0) + '%' : 'n/a']]) +
         Chart.plot({ w: 560, h: 290, xlim: [0, 4], ylim: [0.8, Math.max(2.2, Math.min(5, Math.max.apply(null, pts.map(function (q) { return q.y; })) * 1.05))], xlabel: 'True ratio β / SE', ylabel: 'Mean selected estimate / true β', layers: [{ type: 'hline', y: 1, color: 'muted' }, { type: 'line', pts: pts, color: 'a' }, { type: 'vline', x: Math.min(4, rc), color: 'b' }] }) +
         '<p class="note">Only estimates that pass the significance filter are kept. When power is low the kept estimates are inflated (testimation bias), and the less power the larger the inflation. At a ratio above about 3 the bias becomes small. The vertical line marks the current setting.</p>';
@@ -73,7 +75,7 @@
     P.slider('pm', 'Missing X2 (%)', 5, 60, 5, 30, function (x) { return x + '%'; });
     P.select('meth', 'Method', [['cc', 'Complete case'], ['mean', 'Mean imputation'], ['reg', 'Regression imputation without Y'], ['stoch', 'Stochastic imputation with Y'], ['mi', 'Multiple imputation, m = 5, with Y']], 'cc');
     var prog = P.progress();
-    P.draw = function () { P.out.innerHTML = '<p class="note">Simulation: n = 500; Y = X1 + X2 + error; X1 and X2 are standard normal with correlation 0.5; true coefficients are 1 and 1. Press <b>Run 200 simulations</b>.</p>'; };
+    P.draw = function () { var mn = { mcar: 'completely at random', mar_x1: 'depending on X1', mar_y: 'depending on Y', mnar: 'depending on X2 itself' }[P.v.mech]; P.notice('With X2 missing ' + mn + ' for ' + P.v.pm + '% of the 500 subjects, about ' + Math.round(500 * (1 - P.v.pm / 100)) + ' remain for complete-case analysis. Press Run to see how the chosen method copes; the true β for X2 is 1.'); P.out.innerHTML = '<p class="note">Simulation: n = 500; Y = X1 + X2 + error; X1 and X2 are standard normal with correlation 0.5; true coefficients are 1 and 1. Press <b>Run 200 simulations</b>.</p>'; };
     P.onchange = function () { P.draw(); };
     function ols(X, y) { return PM.ols(X, y); }
     P.btn('Run 200 simulations', function () {
@@ -103,6 +105,8 @@
         out.push({ b1: fitv.beta[1], b2: fitv.beta[2], s1: fitv.se[1], s2: fitv.se[2] });
       }, prog, function () {
         var m1 = PM.mean(out.map(function (o) { return o.b1; })), m2 = PM.mean(out.map(function (o) { return o.b2; }));
+        var sdb = PM.sd(out.map(function (o) { return o.b2; })), mse = PM.mean(out.map(function (o) { return o.s2; })), bi = m2 - 1, mname = { cc: 'Complete case', mean: 'Mean imputation', reg: 'Regression imputation', stoch: 'Stochastic imputation', mi: 'Multiple imputation' }[meth];
+        P.notice(out.length ? mname + ' gave a mean β for X2 of ' + f(m2, 2) + ' (bias ' + K.sgn(bi, 2) + ') ' + (Math.abs(bi) < 0.05 ? 'under this mechanism: close to unbiased. ' : 'under this mechanism: clearly biased. ') + (mse < 0.85 * sdb ? 'Its reported SE of ' + f(mse, 3) + ' understates the real spread of ' + f(sdb, 3) + '.' : 'Its reported SE of ' + f(mse, 3) + ' matches the real spread of ' + f(sdb, 3) + '.') : 'Too few usable simulations: reduce the missing percentage.');
         var bins = Chart.hist(out.map(function (o) { return o.b2; }), 0, 1.6, 32), mx = Math.max.apply(null, bins.map(function (b) { return b.y; })) * 1.1;
         P.out.innerHTML = K.tbl(['', 'True', 'Mean estimate', 'Bias', 'Mean SE'], [['β for X1', '1.00', f(m1, 3), K.sgn(m1 - 1, 3), f(PM.mean(out.map(function (o) { return o.s1; })), 3)], ['β for X2', '1.00', f(m2, 3), K.sgn(m2 - 1, 3), f(PM.mean(out.map(function (o) { return o.s2; })), 3)]]) +
           Chart.plot({ w: 560, h: 240, xlim: [0, 1.6], ylim: [0, mx], xlabel: 'Estimate of β for X2 across simulations (vertical line = truth)', ylabel: 'Count', layers: [{ type: 'bars', pts: bins, color: 'a', bw: 12 }, { type: 'vline', x: 1, color: 'c' }] }) +
@@ -123,8 +127,11 @@
       var lp = m.lp(grid), pts = grid.map(function (g, i) { return { x: g.age, y: plogis(lp[i]) }; });
       var obs = []; for (var s = 15; s <= 42; s += 3) { var grp = rows.filter(function (r) { return r.age >= s && r.age < s + 3; }); if (grp.length >= 15) obs.push({ x: s + 1, y: PM.mean(grp.map(function (r) { return r.preterm; })), n: grp.length }); }
       var aic = -2 * m.fit.ll + 2 * m.design.p, ymax = Math.max(0.3, Math.max.apply(null, pts.map(function (p) { return p.y; })) * 1.1, Math.max.apply(null, obs.map(function (p) { return p.y; })) * 1.1);
+      var gaps = obs.map(function (o) { var fy = pts[o.x - 15].y; return { x: o.x, lo: Math.min(fy, o.y), hi: Math.max(fy, o.y), gap: Math.abs(fy - o.y) }; }), mg = gaps.reduce(function (a, g) { return g.gap > a.gap ? g : a; }, { gap: -1 });
+      var cname = { dich: 'Dichotomising at ' + P.v.cut, lin: 'A straight line', sq: 'A quadratic', r3: 'A 3-knot spline', r4: 'A 4-knot spline', r5: 'A 5-knot spline' }[c];
+      P.notice(cname + ' (' + m.dfModel + ' df, AIC ' + f(aic, 1) + ') ' + (mg.gap < 0 ? 'has no age group with enough women to compare.' : 'misses the observed risk by up to ' + f(100 * mg.gap, 1) + ' points, at about ' + mg.x + ' years' + (mg.gap < 0.02 ? ': a close fit.' : '; the red bars show each gap.')));
       P.out.innerHTML = K.stats([['Subsample n / events', rows.length + ' / ' + m.events], ['LR χ²', f(m.chi2, 1)], ['Model df', m.dfModel], ['AIC', f(aic, 1)]]) +
-        Chart.plot({ w: 560, h: 300, xlim: [15, 44], ylim: [0, ymax], xlabel: 'Maternal age (years)', ylabel: 'Risk of preterm birth', yfmt: function (v) { return (100 * v).toFixed(0) + '%'; }, layers: [{ type: 'line', pts: pts, color: 'a', step: c === 'dich' }, { type: 'points', pts: obs, color: 'b', r: 4, hollow: true }], legend: [{ label: 'Fitted risk', color: 'a' }, { label: 'Observed risk in 3-year groups', color: 'b' }] }) +
+        Chart.plot({ w: 560, h: 300, xlim: [15, 44], ylim: [0, ymax], xlabel: 'Maternal age (years)', ylabel: 'Risk of preterm birth', yfmt: function (v) { return (100 * v).toFixed(0) + '%'; }, layers: [{ type: 'errbars', pts: gaps, color: 'err' }, { type: 'line', pts: pts, color: 'pred', dash: '6 4', step: c === 'dich' }, { type: 'points', pts: obs, color: 'obs', r: 4, hollow: true }], legend: [{ label: 'Fitted risk', color: 'pred', dash: '6 4' }, { label: 'Observed risk in 3-year groups', color: 'obs' }, { label: 'Gap', color: 'err' }] }) +
         '<p class="note">A lower AIC (or a higher χ² relative to df) means a better trade-off between fit and complexity. In these synthetic data the true relation of age to risk is U-shaped around 27 years, so a straight line and a single cut-point miss the pattern that a quadratic or spline term captures.</p>';
     };
   });
@@ -135,7 +142,7 @@
     P.slider('n', 'Sample size', 300, 1600, 100, 600, function (x) { return String(x); });
     P.select('rule', 'Selection rule', [['full', 'Full model (no selection)'], ['p05', 'Backward, p < 0.05'], ['aic', 'Backward, AIC-like (p ≈ 0.157)'], ['p50', 'Backward, p < 0.5']], 'p05');
     var prog = P.progress();
-    P.draw = function () { P.out.innerHTML = '<p class="note">Uses complete cases from the preterm development data (14 candidate terms; <code>age</code> includes a squared term). Press <b>Run 100 bootstraps</b>: the selection is first made in a random sample of the chosen size, then repeated in 100 bootstrap resamples of it.</p>'; };
+    P.draw = function () { P.notice(P.v.rule === 'full' ? 'The full model keeps all 14 terms in every resample, so selection is stable by construction; compare it with a selection rule at n = ' + P.v.n + '.' : 'At n = ' + P.v.n + ' with ' + { p05: 'p < 0.05', aic: 'AIC-like', p50: 'p < 0.5' }[P.v.rule] + ' selection, press Run to see how often the chosen terms, and the noise terms, survive resampling.'); P.out.innerHTML = '<p class="note">Uses complete cases from the preterm development data (14 candidate terms; <code>age</code> includes a squared term). Press <b>Run 100 bootstraps</b>: the selection is first made in a random sample of the chosen size, then repeated in 100 bootstrap resamples of it.</p>'; };
     P.onchange = function () { P.draw(); };
     function select(rows, rule) {
       if (rule === 'full') return PM.ptbTerms.slice();
@@ -154,6 +161,8 @@
         sel.forEach(function (x) { freq[x.name || x.col]++; }); counts.push(sel.length); if (key(sel) === okey) same++;
       }, prog, function () {
         var B = counts.length, items = names.map(function (n) { return { label: n, v: 100 * freq[n] / B }; });
+        var nz = names.filter(function (n) { return ['anc_visits', 'female_fetus', 'conception_monsoon', 'height_cm'].indexOf(n) >= 0; }), nzm = nz.length ? PM.mean(nz.map(function (n) { return 100 * freq[n] / B; })) : NaN;
+        P.notice(B ? 'Only ' + pct(same / B, 0) + ' of ' + B + ' bootstraps reproduced the original ' + orig.length + '-term model' + (nz.length ? ', and the four pure-noise terms were selected in ' + f(nzm, 0) + '% of resamples on average.' : '.') + (P.v.rule === 'full' ? ' With no selection every term is always kept.' : (same / B < 0.5 ? ' Selection is unstable at ' + ev + ' events.' : ' Selection is fairly stable at ' + ev + ' events.')) : 'No bootstrap completed.');
         var bins = Chart.hist(counts, 0.5, 14.5, 14), mx = Math.max.apply(null, bins.map(function (b) { return b.y; })) * 1.15;
         P.out.innerHTML = '<p class="num">Sample: ' + rows.length + ' women, ' + ev + ' events. Original selection kept ' + orig.length + ' of 14 terms: ' + K.esc(orig.map(function (x) { return x.name || x.col; }).join(', ')) + '.</p>' +
           K.stats([['Bootstraps run', B], ['Reproduce the original model', pct(same / B, 0)], ['Terms kept: mean', f(PM.mean(counts), 1)]]) +
@@ -177,6 +186,7 @@
       var rows = idx.slice(0, P.v.n).map(function (i) { return cc[i]; }), M = fitAll(rows, P.v.lam), ev = rows.reduce(function (a, r) { return a + r.preterm; }, 0);
       var nm = M.ml.design.names, rws = nm.map(function (n, k) { return [n, f(M.ml.beta[k], 3), f(M.sh.beta[k], 3), f(M.rd.beta[k], 3)]; });
       P.cur = M;
+      P.notice('With ' + ev + ' events and 15 df (EPV ' + f(ev / 15, 1) + '), the uniform shrinkage factor is ' + f(M.sh.s, 2) + ': ' + (M.sh.s < 0.9 ? 'maximum-likelihood coefficients are estimated to be about ' + pct(1 - M.sh.s, 0) + ' too large.' : 'little shrinkage is needed.') + (P.v.lam === 0 ? ' A ridge penalty of 0 is identical to standard ML.' : ''));
       P.out.innerHTML = '<p class="num">Subsample of ' + rows.length + ' women with ' + ev + ' events; model has 15 df (EPV ' + f(ev / 15, 1) + '). Uniform shrinkage factor s = (χ² − df)/χ² = (' + f(M.ml.chi2, 1) + ' − 15)/' + f(M.ml.chi2, 1) + ' = <b>' + f(M.sh.s, 3) + '</b>.</p>' +
         '<div class="scroll">' + K.tbl(['Term', 'Standard ML', 'Uniform shrinkage', 'Ridge'], rws, 'tbl-s').replace(/<div class="tw">|<\/div>$/g, '') + '</div>' +
         '<p class="note">Press <b>Run 30 replications</b> to draw 30 new development samples of this size and test each fitted model in a large fresh sample from the same setting.</p><div id="shres"></div>';
@@ -190,6 +200,8 @@
       }, prog, function () {
         function mm(k, key) { return PM.mean(res[k].map(function (r) { return r[key]; })); }
         var el = P.out.querySelector('#shres'); if (!el) return;
+        var sm = mm('ml', 'b'), ss = mm('sh', 'b'), sr = mm('rd', 'b');
+        P.notice(isNaN(sm) ? 'No replication could be fitted at this sample size.' : 'In fresh data the mean calibration slope was ' + f(sm, 2) + ' for ML, ' + f(ss, 2) + ' for uniform shrinkage and ' + f(sr, 2) + ' for ridge. ' + (sm < 0.95 ? 'ML predictions are too extreme; shrinkage moves the slope towards 1 without changing c much.' : 'At this sample size the methods barely differ.'));
         el.innerHTML = K.tbl(['Method', 'Mean calibration slope', 'Mean c (fresh data)'], [['Standard ML', f(mm('ml', 'b'), 2), f(mm('ml', 'c'), 3)], ['Uniform shrinkage', f(mm('sh', 'b'), 2), f(mm('sh', 'c'), 3)], ['Ridge (λ = ' + lam + ')', f(mm('rd', 'b'), 2), f(mm('rd', 'c'), 3)]]) +
           '<p class="note">Mean heuristic shrinkage factor over replications: ' + f(PM.mean(sS), 3) + '. A slope near 1 means predictions are neither too extreme nor too modest. Shrinkage matters most when events per variable are low; with large samples all three methods agree. Results vary from run to run.</p>';
       }, tok);
