@@ -43,24 +43,7 @@ registerModule({
     'events per variable': 'The number of people with the outcome divided by the number of coefficients you try in the model.',
     'composite': 'An outcome made by combining several events into one, such as preterm birth or stillbirth.'
   },
-  explainers: [
-    {
-      id: 'epv',
-      title: 'Why events, not women, set the sample size',
-      scenes: [
-        { svg: EX.svg(EX.text(40, 36, '2,000 women at booking (each dot is 2 women)', { size: 'm', bold: true }) + EX.dots(1000, { x: 46, y: 60, cols: 50, gap: 9.4, r: 3.1, stagger: 0.0012 })),
-          say: 'The team follows 2,000 women from their first antenatal visit to the birth. Two thousand sounds like a lot of information.' },
-        { svg: EX.svg(EX.text(40, 36, '240 of them deliver before 37 weeks', { size: 'm', bold: true }) + EX.dots(1000, { x: 46, y: 60, cols: 50, gap: 9.4, r: 3.1, k: 120, hrole: 'obs', hd: 0.4, stagger: 0.0006 })),
-          say: 'But only 240 of them deliver early. For a yes or no outcome, these events carry most of the information. The other women mostly tell us what normal looks like.' },
-        { svg: EX.svg(EX.text(40, 36, 'Share the 240 events between the coefficients you try', { size: 'm', bold: true }) + (function () { var s = ''; for (var i = 0; i < 15; i++) s += EX.rect(40 + i * 32, 90, 26, 120, { role: 'obs', op: 0.85, grow: true, d: 0.15 * i }) + EX.text(53 + i * 32, 228, '16', { size: 's', anchor: 'middle', d: 0.15 * i + 0.4 }); return s; })() + EX.text(40, 270, '15 candidate coefficients: 240 ÷ 15 = 16 events each (EPV 16)', { d: 2.6 })),
-          say: 'Now share those events between everything the model is allowed to try. With 15 candidate coefficients, each one gets 16 events. That number is the events per variable, or E P V.' },
-        { svg: EX.svg(EX.text(40, 36, 'A rare outcome: 10,000 women, 0.5% have it', { size: 'm', bold: true }) + EX.dots(1000, { x: 46, y: 60, cols: 50, gap: 9.4, r: 3.1, k: 5, hrole: 'obs', hd: 0.5 }) + EX.text(40, 270, '50 events: enough for only about 5 coefficients at EPV 10', { bold: true, d: 1.2 })),
-          say: 'A rare outcome is harder. Ten thousand women with an outcome of half a percent give only 50 events. At the usual minimum of 10 events per coefficient, that supports about 5 coefficients, whatever the number of women.' },
-        { svg: EX.svg(EX.text(280, 120, 'Count the events first', { size: 'l', bold: true, anchor: 'middle' }) + EX.text(280, 156, 'Below 10 per coefficient: expect the model to fit the noise', { anchor: 'middle', d: 0.6 }) + EX.text(280, 182, '20 or more: a model fixed in advance may need no correction', { anchor: 'middle', d: 1.2 }) + EX.text(280, 208, '50 or more: needed to let the data choose predictors', { anchor: 'middle', d: 1.8 })),
-          say: 'So count the events before anything else. Below 10 per coefficient, expect the model to fit noise. Twenty or more is safer for a model fixed in advance, and choosing predictors from the data needs about 50.' }
-      ]
-    }
-  ],
+  explainers: [],
   cases: [
     {
       id: 'c1',
@@ -135,8 +118,7 @@ registerModule({
 <li>EPV 20 or more: a model fixed in advance may need no correction for overfitting.</li>
 <li>EPV 50 or more: needed to let the data choose the predictors reliably.</li>
 </ul>
-<p>Example: 2,000 women with 12% preterm births give 240 events. With 15 candidate coefficients, EPV = 240 ÷ 15 = 16.</p>
-<div data-explainer="epv"></div>`,
+<p>Example: 2,000 women with 12% preterm births give 240 events. With 15 candidate coefficients, EPV = 240 ÷ 15 = 16.</p>`,
       scenario: `<p>A smaller satellite clinic wants a model of its own. Meanwhile, the research committee sends the team a published preterm birth model from another hospital to comment on.</p>`,
       widgets: `<div data-widget="epvCalculator" data-try="Enter 240 events and 15 coefficients, then raise the coefficients to 40 and watch the verdict change."></div>`,
       tasks: [6, 7],
