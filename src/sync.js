@@ -129,6 +129,8 @@ Acct.signOut = function () {
   var tok = Acct.session && Acct.session.access_token;
   return Acct.push().then(function () {
     if (tok) fetch(PMC.url + '/auth/v1/logout', { method: 'POST', headers: { apikey: PMC.key, Authorization: 'Bearer ' + tok } }).catch(function () { });
+    /* a shared computer: the next learner must not use this learner's OpenRouter account */
+    if (App.clippy && App.clippy.disconnect) App.clippy.disconnect();
     Acct.session = null; saveSession(null); App.slot = null; App.load();
     Acct.set({ profile: null, cohort: null, fb: [], tutor: null, sync: 'idle' }); App.afterAccount();
   });

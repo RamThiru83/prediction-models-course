@@ -39,6 +39,7 @@
     } };
   };
   var TAB = {};
+  if (App.clippyInsights) { TABS.splice(2, 0, ['clippy', 'Clippy']); TAB.clippy = function (body) { App.clippyInsights(body, D.cohorts); }; }
   TAB.class = function (body) {
     var mods = App.mods_sorted(), n = D.rows.length;
     var tot = D.rows.reduce(function (a, r) { a.ans += r.st.ans; a.ok += r.st.ok; a.f += r.st.f; a.fn += r.st.fn; a.done += r.st.done; return a; }, { ans: 0, ok: 0, f: 0, fn: 0, done: 0 });

@@ -179,18 +179,21 @@ App.showFeedback = function (el, key) {
   el.innerHTML = items.map(function (f) { return '<div class="fb"><b>Instructor feedback</b> <small>' + new Date(f.created_at).toLocaleDateString() + '</small><p>' + K.esc(f.body).replace(/\n/g, '<br>') + '</p></div>'; }).join('');
 };
 
-/* ---------- selection toolbar ---------- */
+/* ---------- selection toolbar: Highlight, Note, then the study assistant's actions (src/assistant.js) ---------- */
 (function () {
-  var tb = null, cur = null;
-  function hide() { if (tb) tb.hidden = true; cur = null; }
+  var tb = null, cur = null, clText = null;
+  function hide() { if (tb) tb.hidden = true; cur = null; clText = null; }
   function ensure() {
     if (tb) return tb; tb = document.createElement('div'); tb.className = 'seltb'; tb.hidden = true;
-    tb.innerHTML = '<button type="button" data-a="hl">Highlight</button><button type="button" data-a="note">Note</button><button type="button" data-a="rm">Remove highlight</button>';
-    tb.addEventListener('mousedown', function (e) { e.preventDefault(); }); tb.addEventListener('touchstart', function (e) { e.preventDefault(); }, { passive: false });
-    tb.addEventListener('click', function (e) { var b = e.target.closest('button'); if (!b || !cur) return; act(b.getAttribute('data-a')); });
+    tb.setAttribute('role', 'toolbar'); tb.setAttribute('aria-label', 'Selected text');
+    var cl = App.clippy ? App.clippy.ACTIONS.map(function (a) { return '<button type="button" data-a="cl:' + a[0] + '" data-cl>' + a[1] + '</button>'; }).join('') + '<button type="button" data-a="cl:ask" data-cl>Ask…</button>' : '';
+    tb.innerHTML = '<button type="button" data-a="hl">Highlight</button><button type="button" data-a="note">Note</button><button type="button" data-a="rm">Remove highlight</button>' + (cl ? '<span class="tbsep" data-cl aria-hidden="true"></span>' + cl : '');
+    tb.addEventListener('mousedown', function (e) { e.preventDefault(); }); tb.addEventListener('touchstart', function (e) { if (e.target.closest('button')) e.preventDefault(); }, { passive: false });
+    tb.addEventListener('click', function (e) { var b = e.target.closest('button'); if (!b || !(cur || clText)) return; act(b.getAttribute('data-a')); });
     document.body.appendChild(tb); return tb;
   }
   function act(a) {
+    if (a.indexOf('cl:') === 0) { var text = clText; hide(); window.getSelection().removeAllRanges(); if (text && App.clippy) App.clippy.open({ action: a === 'cl:ask' ? null : a.slice(3), excerpt: text }); return; }
     var m = App.byId[App.cur], P = App.prog, o = cur; if (!m || !o) return; var root = document.getElementById('page');
     if (a === 'hl') {
       var id = 'h' + uid8(), item = { id: id, b: o.bi, s: o.s, e: o.e, q: o.q, at: Date.now() };
@@ -204,11 +207,12 @@ App.showFeedback = function (el, key) {
   }
   function update() {
     if (!App.byId[App.cur] || (App.edit && App.acct.isInstructor())) return hide();
-    var o = selOffsets(window.getSelection()); if (!o) return hide(); cur = o;
-    var r = o.range.getBoundingClientRect(), t = ensure(), root = document.getElementById('page'), over = false;
-    Array.prototype.forEach.call(root.querySelectorAll('mark.hl'), function (mk) { if (o.range.intersectsNode(mk)) over = true; });
-    t.querySelector('[data-a="rm"]').hidden = !over; t.hidden = false;
-    var w = t.offsetWidth, x = Math.min(Math.max(8, r.left + r.width / 2 - w / 2), window.innerWidth - w - 8), y = r.top - t.offsetHeight - 8; if (y < 8) y = r.bottom + 8;
+    var s = window.getSelection(), o = selOffsets(s), ct = App.clippy ? App.clippy.selText(s) : null; if (!o && !ct) return hide(); cur = o; clText = ct;
+    var r = (o ? o.range : s.getRangeAt(0)).getBoundingClientRect(), t = ensure(), root = document.getElementById('page'), over = false;
+    if (o) Array.prototype.forEach.call(root.querySelectorAll('mark.hl'), function (mk) { if (o.range.intersectsNode(mk)) over = true; });
+    t.querySelector('[data-a="hl"]').hidden = !o; t.querySelector('[data-a="note"]').hidden = !o;
+    t.querySelector('[data-a="rm"]').hidden = !over; Array.prototype.forEach.call(t.querySelectorAll('[data-cl]'), function (b) { b.hidden = !ct || (b.className === 'tbsep' && !o); }); t.hidden = false;
+    t.style.left = '0px'; var w = t.offsetWidth, x = Math.min(Math.max(8, r.left + r.width / 2 - w / 2), window.innerWidth - w - 8), y = r.top - t.offsetHeight - 8; if (y < 8) y = r.bottom + 8;
     t.style.left = x + 'px'; t.style.top = y + 'px';
   }
   var dt; document.addEventListener('selectionchange', function () { clearTimeout(dt); dt = setTimeout(update, 120); });

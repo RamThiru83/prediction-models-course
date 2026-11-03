@@ -21,16 +21,22 @@ App.homeBanner = function () {
 };
 
 /* ---------- ask your instructor ---------- */
+/* the WhatsApp link to the instructor for the current page, or null when none is set up (also used by Clippy) */
+App.askHref = function () {
+  if (!Ac.session || !Ac.tutor || Ac.isInstructor()) return null;
+  var m = App.byId[App.cur], num = String(Ac.tutor).replace(/\D/g, '');
+  return 'https://wa.me/' + num + '?text=' + encodeURIComponent('Hello, this is ' + (Ac.profile ? Ac.profile.full_name : '') + ' (Prediction Models Course).\nPage: ' + (m ? m.title : App.cur) + ' ' + location.href.split('#')[0] + '#' + App.cur + '\nMy question: ');
+};
 App.askBtn = function () {
   var old = document.getElementById('askbtn'); if (old) old.remove();
-  if (!Ac.session || !Ac.tutor || Ac.isInstructor()) return;
+  var href = App.askHref(); if (!href) return;
   var a = document.createElement('a'); a.id = 'askbtn'; a.className = 'btn pri'; a.target = '_blank'; a.rel = 'noopener noreferrer'; a.textContent = 'Ask your instructor';
-  var m = App.byId[App.cur], num = String(Ac.tutor).replace(/\D/g, '');
-  a.href = 'https://wa.me/' + num + '?text=' + encodeURIComponent('Hello, this is ' + (Ac.profile ? Ac.profile.full_name : '') + ' (Prediction Models Course).\nPage: ' + (m ? m.title : App.cur) + ' ' + location.href.split('#')[0] + '#' + App.cur + '\nMy question: ');
+  a.href = href;
   document.body.appendChild(a);
 };
 
 /* ---------- account page ---------- */
+var CLSET = '<div id="clippyset" class="clset"></div>';
 App.pageAccount = function () {
   var h = '<p class="eyebrow">Account</p><h1>' + (Ac.session ? 'Your account' : 'Sign in or join') + '</h1>';
   if (Ac.session && Ac.profile) {
@@ -38,8 +44,9 @@ App.pageAccount = function () {
     h += '<div class="card-plain"><p><b>' + K.esc(p.full_name) + '</b><br>' + K.esc(p.email) + '<br>' + (p.role === 'instructor' ? 'Instructor' : 'Learner') + (Ac.cohort ? ' · ' + K.esc(Ac.cohort) : '') + '</p><p class="note sync">' + syncText() + '</p>' +
       '<p><button type="button" class="btn" id="exp">Download my data</button> <button type="button" class="btn" id="so">Sign out</button></p></div>' +
       '<h3>Change password</h3><form id="pwf" class="form"><label>New password (at least 8 characters)<input type="password" id="npw" autocomplete="new-password" minlength="8" required></label><button class="btn" type="submit">Change password</button><p class="msg" id="pwm" role="status"></p></form>' +
-      '<h3>What is stored</h3><p>Your name, email, module progress, quiz answers, notes, highlights and written answers are stored on a secure server so that they follow you across devices. Your instructor can read them. They are used for teaching only; using them for research would need ethics approval and your separate consent. To have your data removed, ask your instructor. If you forget your password, your instructor can set a temporary one.</p>';
+      '<h3>What is stored</h3><p>Your name, email, module progress, quiz answers, notes, highlights and written answers are stored on a secure server so that they follow you across devices. Your instructor can read them. They are used for teaching only; using them for research would need ethics approval and your separate consent. To have your data removed, ask your instructor. If you forget your password, your instructor can set a temporary one.</p>' + CLSET;
     return { html: h, after: function (root) {
+      if (App.clippy) App.clippy.settings(root.querySelector('#clippyset'));
       root.querySelector('#exp').onclick = App.exportMine;
       root.querySelector('#so').onclick = function () { this.disabled = true; Ac.signOut().then(function () { location.hash = '#home'; }); };
       root.querySelector('#pwf').onsubmit = function (e) { e.preventDefault(); var m = root.querySelector('#pwm'); m.textContent = 'Changing…'; Ac.changePassword(root.querySelector('#npw').value).then(function (er) { m.textContent = er || 'Password changed.'; m.className = 'msg' + (er ? ' bad' : ' ok'); if (!er) root.querySelector('#npw').value = ''; }); };
@@ -50,8 +57,9 @@ App.pageAccount = function () {
     '<div class="tabs"><button type="button" class="tab on" data-t="in">Sign in</button><button type="button" class="tab" data-t="join">Join with a code</button></div>' +
     '<form id="inf" class="form"><label>Email<input type="email" id="e1" autocomplete="username" required></label><label>Password<input type="password" id="p1" autocomplete="current-password" required></label><button class="btn pri" type="submit">Sign in</button><p class="msg" id="m1" role="status"></p><p class="note">Forgotten your password? Ask your instructor for a temporary one.</p></form>' +
     '<form id="jnf" class="form" hidden><label>Join code from your instructor<input type="text" id="jc" autocomplete="off" autocapitalize="characters" required></label><p class="msg" id="jcm"></p><label>Full name<input type="text" id="fn" autocomplete="name" required></label><label>Email<input type="email" id="e2" autocomplete="email" required></label><label>Choose a password (at least 8 characters)<input type="password" id="p2" autocomplete="new-password" minlength="8" required></label>' +
-    '<label class="chk"><input type="checkbox" id="cs"> <span>I understand that my name, email, progress, notes and written answers are stored on a secure server for teaching, that my instructor can read them, and that they are not used for research without separate ethics approval and my consent.</span></label><button class="btn pri" type="submit">Create account</button><p class="msg" id="m2" role="status"></p></form>';
+    '<label class="chk"><input type="checkbox" id="cs"> <span>I understand that my name, email, progress, notes and written answers are stored on a secure server for teaching, that my instructor can read them, and that they are not used for research without separate ethics approval and my consent.</span></label><button class="btn pri" type="submit">Create account</button><p class="msg" id="m2" role="status"></p></form>' + CLSET;
   return { html: h, after: function (root) {
+    if (App.clippy) App.clippy.settings(root.querySelector('#clippyset'));
     var tabs = root.querySelectorAll('.tab'), fi = root.querySelector('#inf'), fj = root.querySelector('#jnf');
     Array.prototype.forEach.call(tabs, function (t) { t.onclick = function () { Array.prototype.forEach.call(tabs, function (x) { x.classList.toggle('on', x === t); }); var j = t.getAttribute('data-t') === 'join'; fi.hidden = j; fj.hidden = !j; }; });
     function msg(el, t, bad) { el.textContent = t || ''; el.className = 'msg' + (t ? (bad ? ' bad' : ' ok') : ''); }
@@ -127,10 +135,11 @@ App.pageHowto = function () {
     '<li><b>Task answers.</b> Your written answers save automatically as you type. If your instructor replies, the feedback appears under your answer.</li>' +
     '<li><b>My notes and answers</b> collects all of it in one place, with options to copy it or download it as a Markdown file.</li>' +
     '<li><b>Ask your instructor</b> opens a WhatsApp message to your instructor, if one has been set up for your class.</li></ul>';
+  h += '<h2>Clippy, your study assistant</h2><p>Clippy is an AI tutor for the page you are on. Select a passage in a module and choose <b>Explain this</b>, <b>Give an example</b>, <b>Why does it matter?</b>, <b>Quiz me on this</b> or <b>Ask…</b>, or press <b>Ask Clippy</b> to type a question. For a case task it gives a hint or the next step, not the worked answer. It runs on your own OpenRouter account: a free account is enough (about 50 questions a day), and you connect it once on the <a href="#account">Account</a> page. Your key stays in this browser and your questions go straight to OpenRouter; CliPr never sees the key or the conversation. Clippy can make mistakes, so the course text is the authority. It is switched off during each module’s quiz and the Mastery check, so that your answers show what you know.</p>';
   h += '<p>The small status line under your name shows whether your work has been saved to your account. If it says a save is pending, it will retry on your next change.</p>';
   if (ins) {
     h += '<h2>For instructors</h2><ul>' +
-      '<li><b>Class dashboard</b> has six tabs. Class shows the roster, the concept mastery grid and CSV downloads. Questions lists the questions learners miss most on their first attempt. Learners opens one learner: their modules, written answers (where you can leave feedback), notes, and a temporary password if they are locked out.</li>' +
+      '<li><b>Class dashboard</b> has seven tabs. Class shows the roster, the concept mastery grid and CSV downloads. Questions lists the questions learners miss most on their first attempt. Clippy shows, for learners who agreed to share it, which modules, steps and passages they asked the study assistant about (totals only, never who asked). Learners opens one learner: their modules, written answers (where you can leave feedback), notes, and a temporary password if they are locked out.</li>' +
       '<li><b>Release</b> hides a module or sets the date it opens. Hidden or not-yet-open modules are also left out of learners’ mastery check.</li>' +
       '<li><b>Edit course text.</b> Tick the box in the contents panel, open any module or reference page, click into any text (headings, paragraphs, list items, table cells, formulas, objectives, the story, quiz questions, options and explanations), change it, and Save. Text that appears on several steps, such as the story, changes everywhere at once. The edit is published to every learner at once. Revert this page restores the original. Edits to text that was later changed in a new version of the course are flagged as outdated under Course text.</li>' +
       '<li><b>Setup</b> is where join codes are created or switched off, and where the WhatsApp number for Ask your instructor is set.</li></ul>' +

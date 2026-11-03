@@ -211,7 +211,7 @@ registerModule({
 <tr><td>Test negative</td><td>21</td><td>602</td></tr>
 </table>
 <p>With sensitivity 85% and specificity 70% (illustrative values): PPV = 119 / 377 = 32%, NPV = 602 / 623 = 97%. Where 40% deliver within 7 days, the same test gives PPV 65% and NPV 87.5%.</p>
-<p class="src">Source: Ch. 4, §4.4</p>`
+<p class="src">Source: Ch. 4, §4.2.4-4.2.5</p>`
     },
     {
       id: 'n5',

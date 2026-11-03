@@ -239,7 +239,8 @@ App.pageHome = function () {
     '<p class="lede">How to build a model that estimates an individual patient’s risk, show whether it works, and judge whether it is useful, taught with maternal and child health examples and data you can analyse in the browser.</p>' +
     '<div class="callout key"><b>How the course works</b><p>Each module teaches one stage of model development or validation from first principles: the idea, the formula, a worked example, and the pitfalls. Interactive simulators let you see the effect of sample size, missing data, selection and shrinkage rather than take it on trust. Each module ends with a quiz, three case tasks, and worked answers placed at the end so that you attempt the tasks first.</p></div>' +
     '<p>The method follows the framework in E. W. Steyerberg, <i>Clinical Prediction Models</i> (2009), chapters 1 to 19 (development and validation). Model updating and the book’s case studies are outside its scope.</p>' +
-    App.CODE_HTML + '<p>All datasets are <b>synthetic</b>. They describe no real person and were generated from known rules, so you can check what an analysis should recover.</p>';
+    App.CODE_HTML + '<p>All datasets are <b>synthetic</b>. They describe no real person and were generated from known rules, so you can check what an analysis should recover.</p>' +
+    '<p><b>Clippy</b>, the study assistant, explains a passage, gives an example or quizzes you on it: select text in a module, or press <b>Ask Clippy</b>. It runs on your own free OpenRouter account, and your key stays in this browser. Clippy is an AI and can make mistakes, so the course text is the authority. It is switched off during the quiz. <a href="#account">Set it up</a>.</p>';
   h += '<div class="prog" aria-hidden="true"><i style="width:' + (100 * done / mods.length).toFixed(0) + '%"></i></div><p class="num" style="color:var(--muted);font-size:14px">' + done + ' of ' + mods.length + ' modules marked complete (stored in this browser only).</p>';
   h += '<h3>Start where you are</h3><div class="home-grid">';
   h += App.homeBanner();
@@ -334,6 +335,7 @@ App.pageCaseModule = function (m, prev, next) {
       Array.prototype.forEach.call(bar, function (b, k) { b.classList.toggle('on', k === i); if (k === i) b.setAttribute('aria-current', 'step'); else b.removeAttribute('aria-current'); });
       try { localStorage.setItem(key, String(i)); if (i > 0) localStorage.setItem('pmc.ess.' + m.id, '1'); } catch (e) {}
       marks && marks();
+      if (App.onStep) App.onStep(m, steps[i]);
       if (scroll !== false) root.querySelector('.stepbar').scrollIntoView({ block: 'start' });
     }
     function marks() {
@@ -482,7 +484,7 @@ App.route = function (keepScroll) {
   Array.prototype.forEach.call(root.querySelectorAll('[data-widget]'), K.mount);
   App.fillLive(); if (page.after) page.after(root);
   if (App.byId[id] && !App.lockInfo(App.byId[id])) { App.wireExplainers(root, App.byId[id]); if (!(App.edit && App.acct.isInstructor())) App.linkDefs(root, App.byId[id]); }
-  App.markNav(); App.askBtn();
+  App.markNav(); App.askBtn(); if (App.clippy) App.clippy.route();
   document.getElementById('rail').classList.remove('open');
   if (!keepScroll) window.scrollTo(0, 0);
 };
@@ -497,6 +499,7 @@ App.theme = {
   toggle: function () { var t = App.theme.current() === 'dark' ? 'light' : 'dark'; try { localStorage.setItem('pmc.theme', t); } catch (e) {} App.theme.apply(t); }
 };
 App.init = function () {
+  if (App.clippy) App.clippy.init();
   App.theme.apply(App.theme.stored());
   document.addEventListener('click', function (e) { if (e.target.closest('.themebtn')) App.theme.toggle(); });
   App.load(); App.buildNav();

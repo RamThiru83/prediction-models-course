@@ -370,3 +370,55 @@ li > .defpop, p > .defpop { display: block; }
 .vc { display: inline-flex; align-items: center; gap: 8px; }
 .sw { display: inline-block; width: 28px; height: 0; border-top: 3px solid var(--obs); }
 .sw.pred { border-top: 3px dashed var(--pred); } .sw.err { border-top-color: var(--err); }
+
+/* ===== Clippy, the study assistant (src/assistant.js) ===== */
+.seltb { flex-wrap: wrap; max-width: calc(100vw - 16px); align-items: center; }
+.seltb .tbsep { width: 1px; align-self: stretch; margin: 4px 3px; background: currentColor; opacity: .3; }
+.seltb .tbsep[hidden] { display: none; }
+.clfab { position: fixed; z-index: 41; right: max(16px, env(safe-area-inset-right, 0px)); bottom: calc(16px + env(safe-area-inset-bottom, 0px)); display: inline-flex; align-items: center; gap: 8px; max-width: calc(100vw - 32px);
+  border: 1px solid var(--line); background: var(--surface); color: var(--ink); border-radius: 999px; padding: 9px 16px 9px 12px; font: inherit; font-size: 14px; line-height: 1.2; cursor: pointer; box-shadow: 0 4px 14px rgba(0,0,0,.18); }
+.clfab svg { color: var(--accent); flex: none; } .clfab b { font-weight: 600; } .clfab-sub { color: var(--muted); }
+.clfab:hover { border-color: var(--accent); } .clfab[hidden] { display: none; }
+body.cl-ask .clfab { bottom: calc(68px + env(safe-area-inset-bottom, 0px)); }
+.clpanel { position: fixed; z-index: 55; right: max(16px, env(safe-area-inset-right, 0px)); bottom: calc(16px + env(safe-area-inset-bottom, 0px)); width: min(420px, calc(100vw - 32px)); height: min(640px, calc(100vh - 32px)); height: min(640px, calc(100dvh - 32px));
+  display: flex; flex-direction: column; background: var(--surface); color: var(--ink); border: 1px solid var(--line); border-radius: 14px; box-shadow: 0 10px 40px rgba(0,0,0,.28); overflow: hidden; }
+.clpanel[hidden] { display: none; }
+.cl-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 10px; padding: 12px 14px 10px; border-bottom: 1px solid var(--line); background: var(--bg); }
+.cl-head h2 { font-size: 22px; margin: 0; display: flex; align-items: center; gap: 6px; } .cl-head h2 svg { color: var(--accent); }
+.cl-hint { display: block; font-size: 12.5px; color: var(--muted); line-height: 1.4; }
+.cl-body { flex: 1 1 auto; min-height: 0; display: flex; flex-direction: column; }
+.cl-setup { padding: 14px; overflow-y: auto; font-size: 14.5px; } .cl-setup ol { padding-left: 20px; }
+.cl-err { color: var(--bad); background: var(--bad-soft); border-radius: 6px; padding: 6px 10px; font-size: 14px; } .cl-err[hidden] { display: none; }
+.cl-actions { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 12px; margin: 8px 0; }
+.cl-actions [hidden] { display: none; }
+.cl-link { background: none; border: 0; padding: 0; color: var(--accent); text-decoration: underline; cursor: pointer; font: inherit; font-size: 13.5px; }
+.cl-list { flex: 1 1 auto; min-height: 0; overflow-y: auto; padding: 12px 14px; display: flex; flex-direction: column; gap: 10px; overscroll-behavior: contain; }
+.cl-empty { color: var(--muted); font-size: 14.5px; }
+.cl-msg { max-width: 92%; font-size: 14.5px; line-height: 1.5; overflow-wrap: anywhere; }
+.cl-msg p, .cl-msg ul, .cl-msg ol { margin: 0 0 8px; } .cl-msg > :last-child, .cl-prose > :last-child { margin-bottom: 0; }
+.cl-msg ul, .cl-msg ol { padding-left: 20px; }
+.cl-msg.me { align-self: flex-end; background: var(--accent-soft); color: var(--ink); border-radius: 12px 12px 2px 12px; padding: 8px 12px; }
+.cl-msg.me blockquote { margin: 0 0 6px; padding-left: 8px; border-left: 2px solid var(--accent); color: var(--muted); font-size: 13px; }
+.cl-msg.ai { align-self: flex-start; background: var(--bg); border: 1px solid var(--line2); border-radius: 12px 12px 12px 2px; padding: 8px 12px; }
+.cl-msg.ai.err { background: var(--warn-soft); color: var(--ink); border-color: transparent; }
+.cl-msg code { font-size: .88em; }
+.cl-wait { color: var(--muted); font-style: italic; }
+.cl-form { border-top: 1px solid var(--line); padding: 10px 14px 4px; }
+.cl-form textarea { width: 100%; resize: none; font: inherit; font-size: 14.5px; line-height: 1.4; color: var(--ink); background: var(--surface); border: 1px solid var(--line); border-radius: 8px; padding: 7px 10px; }
+.cl-chip { display: flex; align-items: center; gap: 6px; font-size: 12.5px; color: var(--muted); background: var(--bg); border-radius: 6px; padding: 3px 4px 3px 8px; margin-bottom: 6px; }
+.cl-chip[hidden] { display: none; } .cl-chip span { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.cl-chip button { border: 0; background: none; color: inherit; font-size: 16px; line-height: 1; padding: 2px 6px; cursor: pointer; }
+.cl-foot { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 4px 12px; padding: 8px 14px calc(8px + env(safe-area-inset-bottom, 0px)); border-top: 1px solid var(--line2); font-size: 12.5px; color: var(--muted); }
+.cl-foot .cl-quota { min-width: 0; overflow-wrap: anywhere; }
+.clset { margin-top: 28px; border-top: 1px solid var(--line); padding-top: 4px; }
+.cl-set ol { padding-left: 20px; } .cl-more summary { cursor: pointer; font-size: 14px; color: var(--muted); margin: 4px 0; }
+.cl-paste { display: flex; flex-wrap: wrap; gap: 8px; margin: 6px 0; } .cl-paste input { flex: 1 1 200px; min-width: 0; max-width: 300px; padding: 6px 10px; border: 1px solid var(--line); border-radius: 6px; background: var(--surface); }
+.cl-plans { display: grid; gap: 8px; margin: 6px 0; } .cl-plan { display: flex; gap: 10px; align-items: flex-start; padding: 10px 12px; border: 1px solid var(--line); border-radius: 8px; cursor: pointer; }
+.cl-plan.on { border-color: var(--accent); background: var(--accent-soft); } .cl-plan input { margin-top: 4px; flex: none; }
+.cl-toggle { display: flex; gap: 10px; align-items: flex-start; margin: 8px 0; cursor: pointer; } .cl-toggle input { margin-top: 5px; flex: none; }
+.cl-top { margin: 0; padding-left: 16px; font-size: 13.5px; } table.cl-asks td { vertical-align: top; }
+@media (max-width: 600px) {
+  .clfab-sub { display: none; }
+  .clpanel { left: 8px; right: 8px; width: auto; bottom: calc(8px + env(safe-area-inset-bottom, 0px)); top: calc(8px + env(safe-area-inset-top, 0px)); height: auto; }
+}
+.cl-note { color: var(--muted); font-size: 13.5px; line-height: 1.5; } .clset h3 { margin-bottom: 2px; } .clset .cl-note + .card-plain { margin-top: 6px; }
