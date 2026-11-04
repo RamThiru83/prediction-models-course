@@ -1,8 +1,11 @@
 /* ===== Clippy, the study assistant =====
    Ported from the EpiCompass study assistant (Kenny). A floating button opens a chat about the page; the selection
-   toolbar (src/learn.js) adds "Explain this", "Give an example", … for a selected passage. It runs on the learner's
-   own OpenRouter account: the key is obtained with OpenRouter's OAuth (PKCE) flow and kept in this browser only, and
-   requests go straight from the browser to OpenRouter. CliPr's database never sees the key or the conversation.
+   toolbar (src/learn.js) adds "Explain this", "Give an example", … for a selected passage.
+   Signed-in learners use Clippy on the course's Claude API credit: questions go to the Supabase Edge Function "clippy"
+   (supabase/functions/clippy), which holds the Anthropic key, applies the daily limit and the monthly budget, and
+   streams the reply (Claude Haiku first, Claude Sonnet when the learner is struggling). Nothing typed or replied is stored.
+   The learner's own OpenRouter account is the backup: the key is obtained with OpenRouter's OAuth (PKCE) flow and kept
+   in this browser only, and those requests go straight from the browser to OpenRouter.
    With the learner's consent, only WHERE they asked (module, step, button, selected course passage) is recorded. */
 (function () {
   var API = 'https://openrouter.ai/api/v1';
@@ -179,6 +182,72 @@
       return pump().catch(function (e) { release(); throw e; });
     });
   }
+
+  /* ---------- the course account (as EpiCompass course.ts) ---------- */
+  var FN = (PMC.url || '') + '/functions/v1/clippy', K_SRC = 'pmc.clippy.source';
+  var CR = { checked: false, enabled: false, daily: null, left: null, source: ls.get(K_SRC) === 'openrouter' ? 'openrouter' : 'course' };
+  function setSource(v) { CR.source = v === 'openrouter' ? 'openrouter' : 'course'; ls.set(K_SRC, CR.source); S.model = ''; setOR({}); }
+  function signedIn() { return !!(Ac.session && Ac.session.access_token); }
+  /* Clippy uses the course account when it is switched on, the learner is signed in and has not chosen OpenRouter
+     (or has chosen OpenRouter but has not connected it). */
+  function useCourse() { return CR.enabled && signedIn() && (CR.source === 'course' || !OR.key); }
+  function ready() { return useCourse() || !!OR.key; }
+  function checkCourse() {
+    if (!PMC.url || !PMC.key) { CR.checked = true; return Promise.resolve(); }
+    return fetch(FN, { headers: { apikey: PMC.key } }).then(function (r) { return r.ok ? r.json() : null; }).catch(function () { return null; }).then(function (j) {
+      CR.checked = true; CR.enabled = !!(j && j.enabled); CR.daily = (j && j.daily) || null; setOR({}); if (CR.enabled) courseLeft();
+    });
+  }
+  function courseLeft() {
+    if (!CR.daily || !signedIn()) { CR.left = null; return Promise.resolve(null); }
+    return SB.rpc('pmc_clippy_left', { daily_limit: CR.daily }).then(function (n) { CR.left = typeof n === 'number' ? n : null; renderFoot(); return CR.left; }, function () { return null; });
+  }
+  /* Has the learner not followed an earlier explanation? True when Clippy has already answered in this conversation
+     and the new message says so, or repeats a question or a quick action on the same passage. */
+  var CONFUSED = /\b(don'?t|do not|didn'?t|did not|still( don'?t| not)?|can'?t|cannot)\b.{0,25}\b(get|understand|follow|see|clear)|\bconfus|\bnot clear|\bunclear|\blost\b|\bsimpler|\bexplain (it )?(again|differently|another way)|\banother way|\bwhat do you mean|\bi'?m not sure|\bhuh\b|\bsorry\??$/i;
+  function isStruggling(history) {
+    var users = history.filter(function (t) { return t.role === 'user'; });
+    if (!history.some(function (t) { return t.role === 'assistant'; }) || users.length < 2) return false;
+    var last = users[users.length - 1], prev = users[users.length - 2];
+    if (CONFUSED.test(last.label || last.content)) return true;
+    if (last.excerpt && last.excerpt === prev.excerpt && last.label === prev.label) return true;
+    var norm = function (t) { return String(t.label || '').trim().toLowerCase(); };
+    return norm(last) !== '' && norm(last) === norm(prev);
+  }
+  function courseChat(messages, struggling, onText, signal) {
+    return SB.token().then(function (tok) {
+      if (!tok) throw AErr('Please sign in to use Clippy on the course account.', 'auth');
+      var system = messages[0].role === 'system' ? messages[0].content : '';
+      var rest = messages.filter(function (m) { return m.role !== 'system'; }).map(function (m) { return { role: m.role, content: String(m.content).slice(0, 6000) }; });
+      while (rest.length && rest[0].role !== 'user') rest.shift(); // the conversation must start with the learner
+      return fetch(FN, { method: 'POST', signal: signal, headers: { Authorization: 'Bearer ' + tok, apikey: PMC.key, 'Content-Type': 'application/json' }, body: JSON.stringify({ system: system, messages: rest, struggling: !!struggling }) });
+    }).then(function (r) {
+      if (!r.ok || !r.body) return r.json().catch(function () { return {}; }).then(function (j) {
+        if (j.error === 'unavailable') { CR.enabled = false; setOR({}); }
+        if (j.error === 'quota') CR.left = 0;
+        throw AErr(j.message || 'Clippy could not answer (error ' + r.status + '). Please try again.', j.error === 'auth' ? 'course-auth' : j.error || 'other');
+      });
+      var reader = r.body.getReader(), dec = new TextDecoder(), buf = '', text = '', model = '', left = null;
+      function pump() {
+        return reader.read().then(function (x) {
+          if (x.done) return { text: text, model: model, left: left };
+          buf += dec.decode(x.value, { stream: true });
+          var i;
+          while ((i = buf.indexOf('\n\n')) >= 0) {
+            var line = buf.slice(0, i).trim(); buf = buf.slice(i + 2);
+            if (line.indexOf('data:') !== 0) continue;
+            var j; try { j = JSON.parse(line.slice(5)); } catch (e) { continue; }
+            if (typeof j.t === 'string') { text = j.t; onText(text); }
+            if (j.error && !text) throw AErr(j.message || 'Clippy stopped part-way. Please try again.', 'busy');
+            if (j.done) { model = j.model || ''; left = typeof j.left === 'number' ? j.left : null; }
+          }
+          return pump();
+        });
+      }
+      return pump().then(function (res) { if (res.left !== null) CR.left = res.left; return res; }, function (e) { try { reader.cancel().catch(function () { /* closed */ }); } catch (x) { /* ignore */ } throw e; });
+    });
+  }
+  function modelName(m) { return /haiku/i.test(m) ? 'Claude Haiku' : /sonnet/i.test(m) ? 'Claude Sonnet' : /opus/i.test(m) ? 'Claude Opus' : String(m || '').replace(/:free$/, ''); }
 
   /* ---------- instructions and course material (as EpiCompass prompt.ts) ---------- */
   var ACTIONS = [['explain', 'Explain this'], ['example', 'Give an example'], ['why', 'Why does it matter?'], ['quiz', 'Quiz me on this']];
@@ -368,20 +437,26 @@
     if (d && d.excerpt && d.action && !S.busy) runAction(d.action, d.excerpt);
     else if (d && d.excerpt) { S.excerpt = d.excerpt; render(); }
     requestAnimationFrame(function () { var t = panel.querySelector('textarea') || panel.querySelector('.cl-body .btn') || panel.querySelector('.cl-close'); if (t) t.focus(); });
-    if (OR.key) refreshInfo();
+    refreshInfo();
   }
   function close() { S.open = false; if (S.abort) S.abort.abort(); render(); requestAnimationFrame(function () { if (fab) fab.focus(); }); }
-  function refreshInfo() { keyInfo().then(function (i) { S.info = i; renderFoot(); }); }
+  function refreshInfo() { if (useCourse()) { courseLeft(); return; } if (OR.key) keyInfo().then(function (i) { S.info = i; renderFoot(); }); }
 
   function render() {
     if (!fab) return;
     fab.hidden = S.open; panel.hidden = !S.open;
     if (!S.open) { mode = null; return; }
-    var m = !OR.key ? 'setup' : offReason() ? 'off:' + offReason() : 'chat';
+    var m = !ready() ? 'setup' + (CR.enabled ? ':signin' : '') : offReason() ? 'off:' + offReason() : 'chat';
     var body = panel.querySelector('.cl-body');
     if (m !== mode) {
       mode = m;
-      if (m === 'setup') {
+      if (m === 'setup:signin') {
+        body.innerHTML = '<div class="cl-setup"><p>Clippy, your study assistant, answers questions about the page you are on. <b>Sign in to CliPr</b> and Clippy is ready: it runs on the course account, so there is nothing to set up or pay.</p>' +
+          '<div class="cl-actions"><a href="#account" class="btn pri" data-c="signin">Sign in</a></div>' +
+          '<p class="cl-hint">Prefer not to sign in? You can <button type="button" class="cl-link" data-c="connect">connect your own OpenRouter account</button> instead.</p><p class="cl-err" role="alert" hidden></p></div>';
+        body.querySelector('[data-c="signin"]').onclick = function () { close(); };
+        body.querySelector('[data-c="connect"]').onclick = function () { connect(); };
+      } else if (m === 'setup') {
         body.innerHTML = '<div class="cl-setup"><p>Clippy, your study assistant, answers questions about the page you are on, using an AI model on <b>your own OpenRouter account</b>. A free account is enough: it gives 50 questions a day.</p>' +
           '<ol><li>Press <b>Connect OpenRouter</b>. Sign in, or create a free account, and approve CliPr.</li><li>You come straight back here, ready to ask.</li></ol>' +
           '<p class="cl-err" role="alert" hidden></p><div class="cl-actions"><button type="button" class="btn pri" data-c="connect">Connect OpenRouter</button><a href="#account" class="cl-link" data-c="more">More about Clippy</a></div>' +
@@ -405,6 +480,7 @@
       }
     }
     if (m === 'setup') { var er = body.querySelector('.cl-err'); er.hidden = !OR.error; er.textContent = OR.error || ''; var cb = body.querySelector('[data-c="connect"]'); cb.disabled = OR.connecting; cb.textContent = OR.connecting ? 'Connecting…' : 'Connect OpenRouter'; }
+    if (m === 'setup:signin') { var er2 = body.querySelector('.cl-err'); er2.hidden = !OR.error; er2.textContent = OR.error || ''; }
     if (m === 'chat') { renderList(); renderForm(); }
     renderFoot();
   }
@@ -439,14 +515,15 @@
     if (!panel || panel.hidden) return;
     var q = panel.querySelector('.cl-quota'), a = panel.querySelector('.cl-ask'), i = S.info, quota = null;
     if (OR.key && i) quota = OR.plan === 'free' ? (i.freeLeft !== null && i.freeLimit !== null ? i.freeLeft + ' of ' + i.freeLimit + ' free questions left today' : null) : (i.creditLeft !== null ? 'Credit left on this key: US$' + Number(i.creditLeft).toFixed(2) : null);
-    q.textContent = OR.key ? (quota || PLAN_LABEL[OR.plan]) + (S.model ? ' · ' + S.model.replace(/:free$/, '') : '') : '';
+    if (useCourse()) q.textContent = 'Course account' + (CR.left !== null ? ' · ' + CR.left + ' question' + (CR.left === 1 ? '' : 's') + ' left today' : '') + (S.model ? ' · ' + modelName(S.model) : '');
+    else q.textContent = OR.key ? (quota || PLAN_LABEL[OR.plan]) + (S.model ? ' · ' + modelName(S.model) : '') : '';
     var href = App.askHref ? App.askHref() : null;
     a.innerHTML = href ? '<a class="cl-link" target="_blank" rel="noopener noreferrer">Ask your instructor</a>' : '';
     if (href) a.firstChild.href = href;
   }
 
   function send(user, action) {
-    if (S.busy || !OR.key || offReason()) return;
+    if (S.busy || !ready() || offReason()) return;
     var gen = S.gen, history = S.turns.concat([user]).filter(function (t) { return !t.error; });
     S.turns = S.turns.concat([user, { role: 'assistant', content: '' }]); S.busy = true; renderList(); renderForm();
     logAsk(action, user.excerpt);
@@ -455,14 +532,19 @@
     var msgs = [{ role: 'system', content: systemPrompt(visibleText(), notes) }].concat(history.slice(-HISTORY).map(function (t) { return { role: t.role, content: t.content }; }));
     var ac = new AbortController(); S.abort = ac;
     function setLast(t) { if (gen !== S.gen) return; S.turns[S.turns.length - 1] = t; renderLast(); }
-    chat(msgs, function (text) { setLast({ role: 'assistant', content: text }); }, ac.signal).then(function (r) {
+    var onText = function (text) { setLast({ role: 'assistant', content: text }); };
+    // on the course account; if its daily questions or credit are used up and OpenRouter is connected, OpenRouter answers
+    (useCourse() ? courseChat(msgs, isStruggling(history), onText, ac.signal).catch(function (e) {
+      if (e && e.assistant && (e.kind === 'quota' || e.kind === 'unavailable') && OR.key && gen === S.gen) { onText(''); return chat(msgs, onText, ac.signal); }
+      throw e;
+    }) : chat(msgs, onText, ac.signal)).then(function (r) {
       if (gen !== S.gen) return; S.model = r.model;
       if (!r.text.trim()) setLast({ role: 'assistant', content: 'No answer came back. Please try again.', error: true });
       else if (r.cut) setLast({ role: 'assistant', content: r.text + '\n\n(The answer was cut off. Ask again, or ask for a shorter answer.)' });
     }, function (e) {
       if (gen !== S.gen) return;
       if (e && e.name === 'AbortError') { var last = S.turns[S.turns.length - 1]; if (!(last && last.content)) S.turns = S.turns.slice(0, -2); }
-      else setLast({ role: 'assistant', content: e && e.assistant ? e.message : 'Could not reach OpenRouter. Check your internet connection and try again.', error: true });
+      else setLast({ role: 'assistant', content: e && e.assistant ? e.message : 'Could not reach Clippy. Check your internet connection and try again.', error: true });
       if (window.console && !(e && (e.assistant || e.name === 'AbortError'))) console.warn('Clippy:', e);
     }).then(function () {
       if (gen !== S.gen) return; S.busy = false; S.abort = null; if (mode === 'chat') { renderList(); renderForm(); } else render(); refreshInfo();
@@ -479,14 +561,21 @@
   var setEl = null, setMsg = null;
   function redrawSettings() { if (setEl && document.body.contains(setEl)) drawSettings(); }
   function drawSettings() {
-    var e = setEl, h = '<h3 id="h-assistant">Clippy, your study assistant</h3><p class="cl-note">An AI tutor for the page you are on, using your own OpenRouter account.</p><div class="card-plain cl-set">';
-    if (OR.key) h += '<p><b>Connected</b> on this device. Open Clippy with the <b>Ask Clippy</b> button, or select a passage in any module.</p><p><button type="button" class="btn pri" data-s="open">Ask Clippy</button> <button type="button" class="btn" data-s="disc">Disconnect</button></p>';
+    var e = setEl, h = '<h3 id="h-assistant">Clippy, your study assistant</h3><p class="cl-note">An AI tutor for the page you are on.</p>';
+    if (CR.enabled) {
+      h += '<div class="card-plain"><div role="radiogroup" aria-labelledby="h-assistant" class="cl-plans">' +
+        '<label class="cl-plan' + (CR.source === 'course' ? ' on' : '') + '"><input type="radio" name="cl-src" value="course"' + (CR.source === 'course' ? ' checked' : '') + '><span><b>Course account</b> (recommended)<br><span class="cl-note">Runs on the course’s Claude account: Claude Haiku answers, and Claude Sonnet takes over when you say an answer did not help. Nothing to set up or pay. Up to <b>' + (CR.daily || 150) + ' questions a day</b>, renewed at midnight (India time). ' + (signedIn() ? (CR.left !== null ? 'You have ' + CR.left + ' left today.' : '') : 'You need to be signed in.') + ' Your questions and Clippy’s answers are not stored; CliPr records only how many questions you asked each day.</span></span></label>' +
+        '<label class="cl-plan' + (CR.source === 'openrouter' ? ' on' : '') + '"><input type="radio" name="cl-src" value="openrouter"' + (CR.source === 'openrouter' ? ' checked' : '') + '><span><b>My own OpenRouter account</b><br><span class="cl-note">A backup, for when the course account’s daily questions are used up or it is switched off, or if you prefer not to sign in. Set it up below.</span></span></label></div></div>' +
+        '<h3 id="h-or">Your own OpenRouter account (backup)</h3>';
+    }
+    h += '<div class="card-plain cl-set">';
+    if (OR.key) h += '<p><b>OpenRouter connected</b> on this device' + (useCourse() ? ', ready as a backup' : '') + '. Open Clippy with the <b>Ask Clippy</b> button, or select a passage in any module.</p><p><button type="button" class="btn pri" data-s="open">Ask Clippy</button> <button type="button" class="btn" data-s="disc">Disconnect</button></p>';
     else h += '<ol><li>Press <b>Connect OpenRouter</b>. On OpenRouter, sign in or create a free account (Google or email), then approve CliPr.</li><li>You return here with Clippy ready. No payment or card details are needed for the free models.</li><li>On each new device or browser, connect once more.</li></ol>' +
       (OR.error ? '<p class="msg bad" role="alert"></p>' : '') +
       '<p><button type="button" class="btn pri" data-s="conn"' + (OR.connecting ? ' disabled' : '') + '>' + (OR.connecting ? 'Connecting…' : 'Connect OpenRouter') + '</button></p>' +
       '<details class="cl-more"><summary>I already have an OpenRouter key</summary><form class="cl-paste"><input type="password" autocomplete="off" placeholder="sk-or-…" aria-label="OpenRouter key"><button class="btn" type="submit">Use this key</button></form><p class="cl-note cl-pm"></p></details>';
     h += '<p class="cl-note">Your key is kept in this browser only, and is removed when you sign out of CliPr. Your questions go straight from this browser to OpenRouter; CliPr never sees the key or the conversation. Clippy can make mistakes: the course text is the authority, and your instructor is a WhatsApp message away.</p></div>';
-    h += '<h3 id="h-model">AI model</h3><p class="cl-note">Chosen automatically: if your OpenRouter account has credit, Qwen3.5 9B; otherwise the free models. Pick one below to override. A backup takes over if a model is busy.</p><div class="card-plain"><div role="radiogroup" aria-labelledby="h-model" class="cl-plans">' +
+    h += '<h3 id="h-model">' + (CR.enabled ? 'OpenRouter model' : 'AI model') + '</h3><p class="cl-note">Chosen automatically: if your OpenRouter account has credit, Qwen3.5 9B; otherwise the free models. Pick one below to override. A backup takes over if a model is busy.</p><div class="card-plain"><div role="radiogroup" aria-labelledby="h-model" class="cl-plans">' +
       ['free', 'low-cost'].map(function (p) { return '<label class="cl-plan' + (OR.plan === p ? ' on' : '') + '"><input type="radio" name="cl-plan" value="' + p + '"' + (OR.plan === p ? ' checked' : '') + '><span><b>' + PLAN_LABEL[p] + '</b>' + (p === 'free' ? ' (recommended)' : '') + '<br><span class="cl-note">' + PLAN_TEXT[p] + '</span></span></label>'; }).join('') + '</div></div>';
     if (Ac.session && Ac.profile && C.avail) h += '<h3 id="h-insights">Help your instructor improve the course</h3><p class="cl-note">Optional, and you can change your mind at any time.</p><div class="card-plain"><label class="cl-toggle"><input type="checkbox" data-s="consent"' + (C.at ? ' checked' : '') + '><span>Share which modules and passages I ask Clippy about, so that Dr Ram can see where the course text is unclear.</span></label>' +
       '<p class="cl-note">Only the module, the step, the button you pressed and the passage of course text you selected are recorded. Your instructor sees totals for each module and passage, not who asked. What you type and Clippy’s answers are never recorded. Unticking deletes everything recorded so far. This is used only to improve the course, not for research or marks.</p>' + (setMsg ? '<p class="msg bad" role="status"></p>' : '') + '</div>';
@@ -499,6 +588,7 @@
     if (q('[data-s="conn"]')) q('[data-s="conn"]').onclick = function () { connect(); };
     var pf = q('.cl-paste'); if (pf) pf.onsubmit = function (ev) { ev.preventDefault(); var inp = pf.querySelector('input'), err = pasteKey(inp.value); if (err) { q('.cl-pm').textContent = err; } else inp.value = ''; };
     Array.prototype.forEach.call(e.querySelectorAll('input[name="cl-plan"]'), function (r) { r.onchange = function () { setPlan(r.value); }; });
+    Array.prototype.forEach.call(e.querySelectorAll('input[name="cl-src"]'), function (r) { r.onchange = function () { setSource(r.value); }; });
     if (cm) cm.onchange = function () { cm.disabled = true; setConsent(cm.checked).then(function (err) { setMsg = err; drawSettings(); }); };
   }
   function settings(container) { if (!container) return; setEl = container; setMsg = null; drawSettings(); }
@@ -509,6 +599,37 @@
     if (!k) return null; var base = { ess: 'Essentials', quiz: 'Quiz', answers: 'Answers', notes: 'Notes' };
     if (Object.prototype.hasOwnProperty.call(base, k)) return base[k];
     var ci = m && m.cases ? m.cases.map(function (c) { return c.id; }).indexOf(k) : -1; return ci >= 0 ? 'Case ' + (ci + 1) : k;
+  }
+  /* the instructor's central controls for Clippy on the course account (table pmc_clippy_settings) */
+  var ctl = { s: null, sum: null, err: null, msg: null, msgOk: false };
+  function money(x) { return 'US$' + Number(x || 0).toFixed(2); }
+  function ctlHtml() {
+    var h = '<h2>Clippy on the course account</h2>';
+    if (ctl.err) return h + '<p class="cl-note">' + (/pmc_clippy|does not exist|schema cache|HTTP 404/i.test(ctl.err) ? 'Not set up yet: the database tables for this have not been created (supabase/pmc_clippy.sql).' : 'Could not load: ' + esc(ctl.err)) + '</p>';
+    if (!ctl.s) return h + '<p class="cl-note">Loading…</p>';
+    var c = ctl.s, u = ctl.sum;
+    h += '<p class="cl-note">Signed-in learners use Clippy on the course’s Claude API credit (Claude Haiku, with Claude Sonnet when a learner is struggling). Learners can still use their own OpenRouter account. The credit is shared with Kenny in EpiCompass.</p>';
+    if (u) h += '<p>This month: <b>' + u.questions + '</b> question' + (u.questions == 1 ? '' : 's') + ' from <b>' + u.learners + '</b> learner' + (u.learners == 1 ? '' : 's') + ', costing <b>' + money(u.cost_usd) + '</b> of Clippy’s ' + money(c.monthly_budget) + '. Kenny has used ' + money(u.kenny_cost_usd) + '; together ' + money(Number(u.cost_usd) + Number(u.kenny_cost_usd)) + ' of the shared ' + money(c.shared_cap) + '.</p>';
+    h += '<form class="form" id="clctl"><label class="cl-toggle"><input type="checkbox" id="clon"' + (c.enabled ? ' checked' : '') + '><span>Clippy on the course account is <b>' + (c.enabled ? 'on' : 'off') + '</b> for all learners</span></label>' +
+      '<label>Questions per learner per day<input type="number" id="cldl" min="1" max="1000" step="1" value="' + esc(c.daily_limit) + '"></label>' +
+      '<label>Clippy’s monthly budget (US$)<input type="number" id="clmb" min="0" max="500" step="1" value="' + esc(c.monthly_budget) + '"></label>' +
+      '<label>Shared cap for Clippy and Kenny together (US$ a month)<input type="number" id="clsc" min="0" max="500" step="1" value="' + esc(c.shared_cap) + '"></label>' +
+      '<button class="btn" type="submit">Save</button> <span class="msg' + (ctl.msg ? (ctl.msgOk ? ' ok' : ' bad') : '') + '" id="clcm">' + esc(ctl.msg || '') + '</span></form>';
+    return h;
+  }
+  function loadCtl() {
+    return Promise.all([SB.get('/rest/v1/pmc_clippy_settings?id=eq.1&select=enabled,daily_limit,monthly_budget,shared_cap'), SB.rpc('pmc_clippy_month_summary').catch(function () { return null; })]).then(function (r) {
+      ctl.s = (r[0] && r[0][0]) || null; ctl.sum = (r[1] && r[1][0]) || null; ctl.err = ctl.s ? null : 'pmc_clippy_settings is empty';
+    }, function (e) { ctl.err = (e && e.message) || 'error'; });
+  }
+  function wireCtl(body, draw) {
+    var f = body.querySelector('#clctl'); if (!f) return;
+    f.onsubmit = function (ev) {
+      ev.preventDefault();
+      var row = { enabled: f.querySelector('#clon').checked, daily_limit: Math.round(+f.querySelector('#cldl').value), monthly_budget: +f.querySelector('#clmb').value, shared_cap: +f.querySelector('#clsc').value };
+      if (!(row.daily_limit >= 1 && row.daily_limit <= 1000) || !(row.monthly_budget >= 0 && row.monthly_budget <= 500) || !(row.shared_cap >= 0 && row.shared_cap <= 500)) { ctl.msg = 'Daily limit 1 to 1,000; budgets US$0 to 500.'; ctl.msgOk = false; draw(); return; }
+      SB.patch('pmc_clippy_settings', 'id=eq.1', row).then(function () { ctl.msg = 'Saved. It applies to the next question each learner asks.'; ctl.msgOk = true; return loadCtl(); }, function (e) { ctl.msg = 'Could not save: ' + e.message; ctl.msgOk = false; }).then(function () { if (document.body.contains(body)) draw(); });
+    };
   }
   App.clippyInsights = function (body, cohorts) {
     function draw() {
@@ -534,10 +655,12 @@
         return [(m ? '<a href="#' + esc(e.id) + '">' + App.modLabel(m) + ' · ' + m.title + '</a>' : esc(e.id)) + (steps ? '<div class="cl-note">' + steps + '</div>' : ''), e.n, e.asks,
           top.length ? '<ul class="cl-top">' + top.map(function (p) { return '<li>“' + esc(p) + (p.length >= 160 ? '…' : '') + '” <span class="cl-note">×' + e.passages[p] + '</span></li>'; }).join('') + '</ul>' : '<span class="cl-note">Typed questions only</span>'];
       }), 'cl-asks');
-      body.innerHTML = h;
+      body.innerHTML = ctlHtml() + h;
+      wireCtl(body, draw);
       var sel = body.querySelector('#clcoh'); if (sel) sel.onchange = function () { ins.cohort = sel.value; draw(); };
     }
-    ins.rows = null; ins.err = null; draw();
+    ins.rows = null; ins.err = null; ctl.msg = null; draw();
+    loadCtl().then(function () { if (document.body.contains(body)) draw(); });
     var since = new Date(Date.now() - DAYS * 864e5).toISOString();
     SB.rpc('pmc_insights_consent_count').then(function (c) { ins.consented = typeof c === 'number' ? c : null; }, function () { ins.consented = null; }).then(function () {
       return SB.get('/rest/v1/pmc_assistant_asks?select=module_id,step,action,excerpt,cohort_id,user_id,created_at&created_at=gte.' + encodeURIComponent(since) + '&limit=5000');
@@ -546,13 +669,19 @@
 
   /* ---------- wiring ---------- */
   subs.push(function () { render(); redrawSettings(); });
-  Ac.on(function () { loadConsent(); document.body.classList.toggle('cl-ask', !!document.getElementById('askbtn')); renderFoot(); });
+  var lastUid = null;
+  Ac.on(function () {
+    loadConsent(); document.body.classList.toggle('cl-ask', !!document.getElementById('askbtn'));
+    var uid = signedIn() ? Ac.session.user.id : null; if (uid !== lastUid) { lastUid = uid; CR.left = null; if (CR.enabled) courseLeft(); render(); redrawSettings(); }
+    renderFoot();
+  });
   App.clippy = {
-    ACTIONS: ACTIONS, selText: selText, open: open, route: route, settings: settings, disconnect: disconnect,
+    ACTIONS: ACTIONS, selText: selText, open: open, route: route, settings: settings, disconnect: disconnect, setSource: setSource, isStruggling: isStruggling, _cr: CR,
     init: function () {
       build();
       finishConnect(); // restores the saved #hash synchronously, before the first route
       if (OR.key) keyInfo(); // settle the automatic plan as soon as the app loads with a connected key
+      checkCourse();
     },
     /* for tests */
     _state: S, _or: OR, _md: md, _bookNotes: bookNotes, _systemPrompt: systemPrompt
